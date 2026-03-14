@@ -1,90 +1,72 @@
 #include <spdlog/spdlog.h>
 #include <entt/entt.hpp>
-#include <glm/vec2.hpp>
 
-struct position { float x; float y; };
-struct velocity { float dx; float dy; };
-struct tag { entt::id_type id; std::string value; };
-
-// 上下文变量
-struct game_state {
-	int score = 0;
+struct position {
+	float x;
+	float y;
 };
 
-// 1. 定义事件
-// 事件通常是简单的结构体，用于携带数据。
-// 这个事件携带了被消灭的敌人的信息。
-struct enemy_destroyed_event {
-	entt::entity enemy_entity;
-	// 可以在此添加更多信息，比如敌人类型、掉落物品等
+struct velocity {
+	float dx;
+	float dy;
 };
 
-// 2. 创建一个监听器，监听器可以是一个独立的类或一个函数。
-// 这里使用类来组织逻辑。
-class ScoreSystem {
-	entt::registry& registry;   // 需要 registry 的引用，以便获取上下文
-public:
-	ScoreSystem(entt::registry& reg) : registry(reg) {}
+// 新增一个组件来存储实体的“标签”
+// 这里用 entt::hashed_string 作为标签的类型 (不推荐这样用)
+// struct tag {
+//     entt::hashed_string value;   // 它只保留字符串的“指针”，不保证字符串不会被销毁（类似std::string_view）
+// };                               // 将来使用value.data() 很可能为空
 
-	// 这是事件处理函数。当接收到 enemy_destroyed_event 时，这个函数会被调用。
-	void on_enemy_destroyed(const enemy_destroyed_event& event) {
-		// 从上下文中获取游戏状态并增加分数
-		auto& state = registry.ctx().get<game_state>();
-		state.score += 10;
-
-		spdlog::info("杀死敌人 {}，分数增加！当前分数: {}", entt::to_integral(event.enemy_entity), state.score);
-		/* entt::entity 的底层是 entt::id_type，即 uint32_t，但不可直接当成整数用（保证类型安全），
-												可以用 entt::to_integral 显式转换为 uint32_t */
-	}
+// 确保字符串不被销毁的正确做法：value用于储存，id用于比较/查询
+struct tag {
+	entt::id_type id;
+	std::string value;
 };
-
-// 另一种监听器，直接使用函数
-void dummy_listener(const enemy_destroyed_event& event) {
-	spdlog::info("DummyListener 收到事件：敌人 {} 被摧毁！", entt::to_integral(event.enemy_entity));
-}
 
 int main() {
+	// 使用 using namespace 来简化哈希字符串字面量的使用
 	using namespace entt::literals;
+
 	entt::registry registry;
 
-	// 初始化上下文变量
-	registry.ctx().emplace<game_state>();
+	// 创建实体并添加基础组件
+	entt::entity player = registry.create();
+	registry.emplace<position>(player, 10.f, 20.f);
+	registry.emplace<velocity>(player, 1.f, 0.5f);
 
-	// 3. 创建事件分发器 (dispatcher) 和监听器实例
-	entt::dispatcher dispatcher{};
-	ScoreSystem score_system(registry);
+	entt::entity enemy = registry.create();
+	registry.emplace<position>(enemy, 100.f, 50.f);
+	registry.emplace<velocity>(enemy, -0.5f, -1.f);
 
-	// 4. 连接监听器到分发器
-	// dispatcher.sink<EventType>().connect<&Class::MemberFunction>(instance)
-	// 这行代码告诉分发器：当有 enemy_destroyed_event 类型的事件时，
-	// 调用 score_system 实例的 on_enemy_destroyed 方法。
-	dispatcher.sink<enemy_destroyed_event>().connect<&ScoreSystem::on_enemy_destroyed>(score_system);
+	// 1. 使用哈希字符串作为组件数据
+	// "player"_hs 和 "enemy"_hs 在编译时就会被转换成一个整数。
+	// 这意味着在运行时，我们比较的是两个整数，速度极快。
+	// hashed_string可以隐式转换为id_type，既可以赋值...
+	registry.emplace<tag>(player, "player"_hs, "player");
+	registry.emplace<tag>(enemy, "enemy"_hs, "enemy");
 
-	// 同一个事件可以连接多个函数（注意调用的顺序，后进先调）
-	dispatcher.sink<enemy_destroyed_event>().connect<&dummy_listener>();
+	spdlog::info("=== 使用哈希字符串标签 ===");
 
-	// 创建实体
-	entt::entity enemy_to_destroy = registry.create();
-	registry.emplace<tag>(enemy_to_destroy, "enemy"_hs, "enemy");
+	// 2. 通过视图遍历并识别实体
+	auto view = registry.view<const tag, const position>();
 
-	spdlog::info("=== 游戏进行中 ===");
-	spdlog::info("初始分数: {}", registry.ctx().get<game_state>().score);
+	view.each([](const auto& entity_tag, const auto& pos) {
+		// 我们可以直接比较哈希值（...也可以比较）
+		if (entity_tag.id == "player"_hs) {
+			spdlog::info("找到玩家，位置: ({}, {})", pos.x, pos.y);
+		}
 
-	// ... 战斗发生 ...
-	spdlog::info("玩家摧毁了敌人 {}!", static_cast<uint32_t>(enemy_to_destroy));
-	registry.destroy(enemy_to_destroy); // 从 registry 中移除实体
+		if (entity_tag.id == "enemy"_hs) {
+			spdlog::info("找到敌人，位置: ({}, {})", pos.x, pos.y);
+		}
+		});
 
-	// 5. 发布事件
-	// 使用 enqueue 来将事件放入队列，通常在游戏循环的末尾统一处理。 (trigger 会立即触发)
-	dispatcher.enqueue(enemy_destroyed_event{ enemy_to_destroy });
-
-	// 6. 更新分发器
-	// 在游戏循环的某个固定点（比如末尾），调用 update() 来处理队列中的所有事件。
-	// 这时，所有连接的监听器函数才会被调用。
-	dispatcher.update();
-
-	spdlog::info("=== 游戏循环结束 ===");
-	spdlog::info("最终分数: {}", registry.ctx().get<game_state>().score);
+	// 3. 哈希值与原始值
+	auto player_tag = registry.get<tag>(player);
+	// spdlog::info("玩家标签的哈希值: {}", player_tag.value.value());
+	// spdlog::info("玩家标签的原始文本: {}", player_tag.value.data());
+	spdlog::info("玩家标签的哈希值: {}", player_tag.id);
+	spdlog::info("玩家标签的原始文本: {}", player_tag.value);
 
 	return 0;
 }
