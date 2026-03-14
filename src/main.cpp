@@ -1,183 +1,90 @@
-#include <iostream>
-#include <SDL3/SDL.h>
-#include <SDL3/SDL_main.h>
-#include <SDL3_image/SDL_image.h>
-#include <SDL3_mixer/SDL_mixer.h>
-#include <SDL3_ttf/SDL_ttf.h>
-#include <glm/glm.hpp>
-#include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 #include <entt/entt.hpp>
-#include <imgui.h>
-#include <imgui_impl_sdl3.h>
-#include <imgui_impl_sdlrenderer3.h>
+#include <glm/vec2.hpp>
 
-int main(int, char**) {
+struct position { float x; float y; };
+struct velocity { float dx; float dy; };
+struct tag { entt::id_type id; std::string value; };
 
-	// --- entt 测试 ---
+// 上下文变量
+struct game_state {
+	int score = 0;
+};
+
+// 1. 定义事件
+// 事件通常是简单的结构体，用于携带数据。
+// 这个事件携带了被消灭的敌人的信息。
+struct enemy_destroyed_event {
+	entt::entity enemy_entity;
+	// 可以在此添加更多信息，比如敌人类型、掉落物品等
+};
+
+// 2. 创建一个监听器，监听器可以是一个独立的类或一个函数。
+// 这里使用类来组织逻辑。
+class ScoreSystem {
+	entt::registry& registry;   // 需要 registry 的引用，以便获取上下文
+public:
+	ScoreSystem(entt::registry& reg) : registry(reg) {}
+
+	// 这是事件处理函数。当接收到 enemy_destroyed_event 时，这个函数会被调用。
+	void on_enemy_destroyed(const enemy_destroyed_event& event) {
+		// 从上下文中获取游戏状态并增加分数
+		auto& state = registry.ctx().get<game_state>();
+		state.score += 10;
+
+		spdlog::info("杀死敌人 {}，分数增加！当前分数: {}", entt::to_integral(event.enemy_entity), state.score);
+		/* entt::entity 的底层是 entt::id_type，即 uint32_t，但不可直接当成整数用（保证类型安全），
+												可以用 entt::to_integral 显式转换为 uint32_t */
+	}
+};
+
+// 另一种监听器，直接使用函数
+void dummy_listener(const enemy_destroyed_event& event) {
+	spdlog::info("DummyListener 收到事件：敌人 {} 被摧毁！", entt::to_integral(event.enemy_entity));
+}
+
+int main() {
+	using namespace entt::literals;
 	entt::registry registry;
 
-	// 创建一个实体
-	entt::entity player = registry.create();
-	entt::entity enemy = registry.create();
+	// 初始化上下文变量
+	registry.ctx().emplace<game_state>();
 
-	// 打印出实体ID，但它就是一个数字，本身没有意义
-	// entt会保证这个数字是独一无二的
-	std::cout << "Player entity ID: " << static_cast<uint32_t>(player) << std::endl;
-	std::cout << "Enemy entity ID: " << static_cast<uint32_t>(enemy) << std::endl;
+	// 3. 创建事件分发器 (dispatcher) 和监听器实例
+	entt::dispatcher dispatcher{};
+	ScoreSystem score_system(registry);
 
-	// --- spdlog json 测试 ---
-	spdlog::info("你好，世界!");
-	nlohmann::json json_data = { {"a",10} };
-	auto num = json_data["a"].get<int>();
-	spdlog::warn("json: {}", num);
+	// 4. 连接监听器到分发器
+	// dispatcher.sink<EventType>().connect<&Class::MemberFunction>(instance)
+	// 这行代码告诉分发器：当有 enemy_destroyed_event 类型的事件时，
+	// 调用 score_system 实例的 on_enemy_destroyed 方法。
+	dispatcher.sink<enemy_destroyed_event>().connect<&ScoreSystem::on_enemy_destroyed>(score_system);
 
-	// -- glm 测试 --
-	glm::vec2 a = glm::vec2(1.0f, 2.0f);
-	glm::vec2 b = glm::vec2(3.0f, 4.0f);
-	auto c = a * b;
-	auto d = glm::distance(a, b);
-	SDL_Log("d = (%f)", d);
+	// 同一个事件可以连接多个函数（注意调用的顺序，后进先调）
+	dispatcher.sink<enemy_destroyed_event>().connect<&dummy_listener>();
 
-	SDL_Log("c = (%f, %f)", c.x, c.y);
+	// 创建实体
+	entt::entity enemy_to_destroy = registry.create();
+	registry.emplace<tag>(enemy_to_destroy, "enemy"_hs, "enemy");
 
-	std::cout << "Hello, World!" << std::endl;
-	// SDL初始化
-	if (!SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO)) {
-		std::cerr << "SDL_Init Error: " << SDL_GetError() << std::endl;
-		return 1;
-	}
-	// 创建窗口
-	SDL_Window* window = SDL_CreateWindow("Hello World!", 800, 600, 0);
-	// 创建渲染器
-	SDL_Renderer* renderer = SDL_CreateRenderer(window, NULL);
+	spdlog::info("=== 游戏进行中 ===");
+	spdlog::info("初始分数: {}", registry.ctx().get<game_state>().score);
 
-	// SDL3_Image不需要手动初始化
+	// ... 战斗发生 ...
+	spdlog::info("玩家摧毁了敌人 {}!", static_cast<uint32_t>(enemy_to_destroy));
+	registry.destroy(enemy_to_destroy); // 从 registry 中移除实体
 
-	// 加载图片
-	SDL_Texture* texture = IMG_LoadTexture(renderer, "assets/textures/Buildings/Castle.png");
+	// 5. 发布事件
+	// 使用 enqueue 来将事件放入队列，通常在游戏循环的末尾统一处理。 (trigger 会立即触发)
+	dispatcher.enqueue(enemy_destroyed_event{ enemy_to_destroy });
 
-	// SDL_Mixer初始化
-	if (!Mix_OpenAudio(0, NULL)) {
-		std::cerr << "Mix_OpenAudio Error: " << SDL_GetError() << std::endl;
-		return 1;
-	}
+	// 6. 更新分发器
+	// 在游戏循环的某个固定点（比如末尾），调用 update() 来处理队列中的所有事件。
+	// 这时，所有连接的监听器函数才会被调用。
+	dispatcher.update();
 
-	// 读取音乐
-	Mix_Music* music = Mix_LoadMUS("assets/audio/4 Battle Track INTRO TomMusic.ogg");
-	// 播放音乐
-	Mix_PlayMusic(music, -1);
-
-	// SDL_TTF初始化
-	if (!TTF_Init()) {
-		std::cerr << "TTF_Init Error: " << SDL_GetError() << std::endl;
-		return 1;
-	}
-	// 加载字体
-	TTF_Font* font = TTF_OpenFont("assets/fonts/VonwaonBitmap-16px.ttf", 24);
-
-	// 创建文本纹理
-	SDL_Color color = { 255, 255, 255, 255 };
-	SDL_Surface* surface = TTF_RenderText_Solid(font, "Hello, SDL! 中文也可以", 0, color);
-	SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, surface);
-
-	// SDL3 新的绘制文本方法
-	TTF_TextEngine* textEngine = TTF_CreateRendererTextEngine(renderer);
-	TTF_Text* text = TTF_CreateText(textEngine, font, "SDL3 新的文本渲染方式", 0);
-	TTF_SetTextColor(text, 255, 0, 0, 255);
-	TTF_SetTextWrapWidth(text, 50);
-	// Do something with the window and renderer here...
-
-	// --- ImGui 测试 ---
-	// 1. 初始化 ImGui
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-
-	// 2. ImGui: 初始化 ImGui 的 SDL3 和 SDL_Renderer3 后端
-	ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
-	ImGui_ImplSDLRenderer3_Init(renderer);
-
-	// 渲染循环
-	glm::vec2 mousePos = glm::vec2(0.0f, 0.0f);
-	while (true) {
-		SDL_Event event;
-		if (SDL_PollEvent(&event)) {
-			if (event.type == SDL_EVENT_QUIT) {
-				break;
-			}
-			// 3. ImGui:处理 ImGui 事件
-			ImGui_ImplSDL3_ProcessEvent(&event);
-		}
-		// 4. ImGui: 开始 ImGui 渲染
-		ImGui_ImplSDLRenderer3_NewFrame();
-		ImGui_ImplSDL3_NewFrame();
-		ImGui::NewFrame();
-
-		// 5. 显示一个Demo窗口
-		ImGui::ShowDemoWindow();
-
-		auto state = SDL_GetMouseState(&mousePos.x, &mousePos.y);
-		// SDL_Log("Mouse Pos: (%f, %f)", mousePos.x, mousePos.y);
-		if (state & SDL_BUTTON_LMASK) {
-			SDL_Log("Left Button Down");
-		}
-		if (state & SDL_BUTTON_RMASK) {
-			SDL_Log("Right Button Down");
-		}
-		// 清屏
-		SDL_RenderClear(renderer);
-		// 画一个长方形
-		SDL_FRect rect = { 100, 100, 200, 200 };
-		SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-		SDL_RenderFillRect(renderer, &rect);
-
-
-		// 画图片
-		SDL_FRect dstrect = { 200, 200, 200, 200 };
-		SDL_RenderTexture(renderer, texture, NULL, &dstrect);
-
-		// 画文本
-		SDL_FRect textRect = { 300, 300, static_cast<float>(surface->w), static_cast<float>(surface->h) };
-		SDL_RenderTexture(renderer, textTexture, NULL, &textRect);
-		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-
-		// 新的画文本方法：
-		TTF_DrawRendererText(text, 400, 400);
-
-		// 6. ImGui: 将 ImGui 的内容渲染出来
-		ImGui::Render();
-		ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
-
-		// 更新屏幕
-		SDL_RenderPresent(renderer);
-
-
-
-	}
-
-	// 7. ImGui: 清理工作
-	ImGui_ImplSDLRenderer3_Shutdown();
-	ImGui_ImplSDL3_Shutdown();
-	ImGui::DestroyContext();
-
-	// 清理图片资源
-	SDL_DestroyTexture(texture);
-
-	// 清理音乐资源
-	Mix_FreeMusic(music);
-	Mix_CloseAudio();
-	Mix_Quit();
-
-	// 清理字体资源
-	SDL_DestroySurface(surface);
-	SDL_DestroyTexture(textTexture);
-	TTF_CloseFont(font);
-	TTF_Quit();
-
-	// 清理并退出
-	SDL_DestroyRenderer(renderer);
-	SDL_DestroyWindow(window);
-	SDL_Quit();
+	spdlog::info("=== 游戏循环结束 ===");
+	spdlog::info("最终分数: {}", registry.ctx().get<game_state>().score);
 
 	return 0;
 }

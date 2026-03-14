@@ -379,7 +379,7 @@ if(MSVC)
     # Visual Studio: 启用所有警告 + UTF-8编码支持
     target_compile_options(${TARGET} PRIVATE /W4 /utf-8)
     # 不要弹出控制台窗口
-    target_link_options(${TARGET} PRIVATE "/SUBSYSTEM:WINDOWS")
+    target_link_options(${TARGET} PRIVATE "/SUBSYSTEM:CONSOLE")
 elseif(WIN32 AND (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
     # MinGW/Clang on Windows: 设置UTF-8编码
     target_compile_options(${TARGET} PRIVATE -Wall -Wextra -Wpedantic -finput-charset=utf-8 -fexec-charset=utf-8)
