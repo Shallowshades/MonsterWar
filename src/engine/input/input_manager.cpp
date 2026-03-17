@@ -22,13 +22,19 @@ InputManager::InputManager(SDL_Renderer* renderer, const engine::core::Config* c
 	spdlog::trace("{} 初始鼠标位置: ({}, {})", mLogTag.data(), mMousePosition.x, mMousePosition.y);
 }
 
+entt::sink<entt::sigh<void()>> InputManager::onAction(std::string_view actionName, ActionState actionState) {
+	// 如果actionName不存在, 自动创建一个std::array
+	// array.at() 会进行边界检查, 更安全
+	return mActionsToFunc[std::string(actionName)].at(static_cast<size_t>(actionState));
+}
+
 void InputManager::update() {
 	// 1.根据上一帧的值更新默认的动作状态
-	for (auto& [actionName, state] : mActionStates) {
-		if (state == ActionState::PRESSED_THIS_FRAME) {
-			state = ActionState::HELD_DOWN;
+	for (auto& [actionNameId, state] : mActionStates) {
+		if (state == ActionState::PRESSED) {
+			state = ActionState::HELD;
 		}
-		else if (state == ActionState::RELEASED_THIS_FRAME) {
+		else if (state == ActionState::RELEASED) {
 			state = ActionState::INACTIVE;
 		}
 	}
@@ -38,26 +44,36 @@ void InputManager::update() {
 	while (SDL_PollEvent(&event)) {
 		processEvent(event);
 	}
+
+	// 3.触发回调
+	for (auto& [actionNameId, state] : mActionStates) {
+		if (state != ActionState::INACTIVE) {
+			// 且有绑定函数
+			if (auto it = mActionsToFunc.find(actionNameId); it != mActionsToFunc.end()) {
+				it->second.at(static_cast<size_t>(state)).publish();
+			}
+		}
+	}
 }
 
 bool InputManager::isActionDown(std::string_view actionName) const {
 	if (auto iter = mActionStates.find(std::string(actionName)); iter != mActionStates.end()) {
-		return iter->second == ActionState::PRESSED_THIS_FRAME ||
-			iter->second == ActionState::HELD_DOWN;
+		return iter->second == ActionState::PRESSED ||
+			iter->second == ActionState::HELD;
 	}
 	return false;
 }
 
 bool InputManager::isActionPressed(std::string_view actionName) const {
 	if (auto iter = mActionStates.find(std::string(actionName)); iter != mActionStates.end()) {
-		return iter->second == ActionState::PRESSED_THIS_FRAME;
+		return iter->second == ActionState::PRESSED;
 	}
 	return false;
 }
 
 bool InputManager::isActionReleased(std::string_view actionName) const {
 	if (auto iter = mActionStates.find(std::string(actionName)); iter != mActionStates.end()) {
-		return iter->second == ActionState::RELEASED_THIS_FRAME;
+		return iter->second == ActionState::RELEASED;
 	}
 	return false;
 }
@@ -89,8 +105,8 @@ void InputManager::processEvent(const SDL_Event& event) {
 		bool isDown = event.key.down;
 		bool isRepeat = event.key.repeat;
 
-		auto iter = mInputToActionsMappings.find(scancode);
-		if (iter != mInputToActionsMappings.end()) {
+		auto iter = mInputToActions.find(scancode);
+		if (iter != mInputToActions.end()) {
 			const std::vector<std::string>& associatedActions = iter->second;
 			for (const auto& actionName : associatedActions) {
 				updateActionState(actionName, isDown, isRepeat);
@@ -102,8 +118,8 @@ void InputManager::processEvent(const SDL_Event& event) {
 	case SDL_EVENT_MOUSE_BUTTON_UP: {
 		Uint32 button = event.button.button;
 		bool isDown = event.button.down;
-		auto iter = mInputToActionsMappings.find(button);
-		if (iter != mInputToActionsMappings.end()) {
+		auto iter = mInputToActions.find(button);
+		if (iter != mInputToActions.end()) {
 			const std::vector<std::string>& associatedActions = iter->second;
 			for (const auto& actionName : associatedActions) {
 				// 鼠标事件不考虑repeat, 所以第三个参数传false
@@ -129,22 +145,22 @@ void InputManager::initializeMappings(const engine::core::Config* config) {
 		spdlog::error("{} 输入管理器: Config 为空指针", mLogTag.data());
 		throw std::runtime_error(mLogTag.data() + std::string("Config 为空指针"));
 	}
-	mActionsToKeyNameMappings = config->mInputMappings;
-	mInputToActionsMappings.clear();
+	auto actionsToKeyname = config->mInputMappings;
+	mInputToActions.clear();
 	mActionStates.clear();
 
 	// 如果配置中没有定义鼠标按钮动作(通常不需要配置), 则添加默认映射, 用于UI
-	if (mActionsToKeyNameMappings.find("MouseLeftClick") == mActionsToKeyNameMappings.end()) {
+	if (actionsToKeyname.find("MouseLeftClick") == actionsToKeyname.end()) {
 		spdlog::debug("{} 配置中没有定义 'MouseLeftClick' 动作, 添加默认映射到 'MouseLeft'.", mLogTag.data());
-		mActionsToKeyNameMappings["MouseLeftClick"] = { "MouseLeft" };
+		actionsToKeyname["MouseLeftClick"] = { "MouseLeft" };
 	}
-	if (mActionsToKeyNameMappings.find("MouseRightClick") == mActionsToKeyNameMappings.end()) {
+	if (actionsToKeyname.find("MouseRightClick") == actionsToKeyname.end()) {
 		spdlog::debug("{} 配置中没有定义 'MouseRightClick' 动作, 添加默认映射到 'MouseRight'.", mLogTag.data());
-		mActionsToKeyNameMappings["MouseRightClick"] = { "MouseRight" };
+		actionsToKeyname["MouseRightClick"] = { "MouseRight" };
 	}
 
 	// 遍历 动作 -> 按键名称 的映射
-	for (const auto& [actionName, keyNames] : mActionsToKeyNameMappings) {
+	for (const auto& [actionName, keyNames] : actionsToKeyname) {
 		// 每个动作对应一个动作状态, 初始化INACTIVE
 		mActionStates[actionName] = ActionState::INACTIVE;
 		spdlog::trace("{} 映射动作: {}", mLogTag.data(), actionName);
@@ -156,11 +172,11 @@ void InputManager::initializeMappings(const engine::core::Config* config) {
 			// TODO: 未来可添加其他输入类型 ......
 
 			if (scancode != SDL_SCANCODE_UNKNOWN) {
-				mInputToActionsMappings[scancode].push_back(actionName);
+				mInputToActions[scancode].push_back(actionName);
 				spdlog::trace("{} 按键映射: {} (Scancode: {} 到动作: {})", mLogTag.data(), keyName, static_cast<int>(scancode), actionName);
 			}
 			else if (mouseButton != 0) {	// 如果鼠标按钮有效, 则将action添加到mMouseActionMappings中
-				mInputToActionsMappings[mouseButton].push_back(actionName);
+				mInputToActions[mouseButton].push_back(actionName);
 				spdlog::trace("{} 鼠标映射: {} (Button ID: {} 到动作: {})", mLogTag.data(), keyName, static_cast<int>(mouseButton), actionName);
 			}
 			// TODO: more input type
@@ -181,14 +197,14 @@ void InputManager::updateActionState(std::string_view actionName, bool isInputAc
 
 	if (isInputActive) {
 		if (isRepeatEvent) {
-			iter->second = ActionState::HELD_DOWN;
+			iter->second = ActionState::HELD;
 		}
 		else {
-			iter->second = ActionState::PRESSED_THIS_FRAME;
+			iter->second = ActionState::PRESSED;
 		}
 	}
 	else {
-		iter->second = ActionState::RELEASED_THIS_FRAME;
+		iter->second = ActionState::RELEASED;
 	}
 }
 
