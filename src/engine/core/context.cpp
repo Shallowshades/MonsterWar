@@ -6,10 +6,12 @@
 #include "../resource/resource_manager.h"
 #include "../audio/audio_player.h"
 #include <spdlog/spdlog.h>
+#include <entt/signal/dispatcher.hpp>
 
 namespace engine::core {
-engine::core::Context::Context(engine::input::InputManager& inputManager, engine::render::Renderer& renderer, engine::render::Camera& camera, engine::render::TextRenderer& textRenderer, engine::resource::ResourceManager& resourceManager, engine::audio::AudioPlayer& audioPlayer, engine::core::GameState& gameState)
-	: mInputManager(inputManager)
+engine::core::Context::Context(entt::dispatcher& dispatcher, engine::input::InputManager& inputManager, engine::render::Renderer& renderer, engine::render::Camera& camera, engine::render::TextRenderer& textRenderer, engine::resource::ResourceManager& resourceManager, engine::audio::AudioPlayer& audioPlayer, engine::core::GameState& gameState)
+	: mDispatcher(dispatcher)
+	, mInputManager(inputManager)
 	, mRenderer(renderer)
 	, mCamera(camera)
 	, mTextRenderer(textRenderer)
@@ -18,6 +20,10 @@ engine::core::Context::Context(engine::input::InputManager& inputManager, engine
 	, mGameState(gameState)
 {
 	spdlog::trace("上下文创建并初始化, 包含输入管理器,渲染器,相机和资源管理器.");
+}
+
+entt::dispatcher& Context::getDispatcher() const {
+	return mDispatcher;
 }
 
 engine::input::InputManager& Context::getInputManager() const {

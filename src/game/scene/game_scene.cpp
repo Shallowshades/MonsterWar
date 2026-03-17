@@ -1,7 +1,9 @@
 #include "game_scene.h"
 #include "../../engine/core/context.h"
 #include "../../engine/input/input_manager.h"
+#include "../../engine/utils/events.h"
 #include <entt/signal/sigh.hpp>
+#include <entt/signal/dispatcher.hpp>
 #include <spdlog/spdlog.h>
 
 namespace game::scene {
@@ -31,6 +33,7 @@ void GameScene::clean() {
 
 void GameScene::onAttack() {
 	spdlog::info("{} : onAttack", mLogTag.data());
+	mContext.getDispatcher().enqueue<engine::utils::QuitEvent>();
 }
 
 void GameScene::onJump() {

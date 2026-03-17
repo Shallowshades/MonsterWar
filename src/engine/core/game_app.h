@@ -5,6 +5,7 @@
 
 #include <memory>
 #include <functional>
+#include <entt/signal/fwd.hpp>
 
 // 前向声明, 减少头文件依赖, 增加编译速度
 struct SDL_Window;
@@ -71,6 +72,7 @@ private:
 	void close();
 
 	// 各模块的初始化/创建函数, 在init()中调用
+	[[nodiscard]] bool initDispatcher();
 	[[nodiscard]] bool initConfig();
 	[[nodiscard]] bool initSDL();
 	[[nodiscard]] bool initTime();
@@ -83,6 +85,9 @@ private:
 	[[nodiscard]] bool initGameState();
 	[[nodiscard]] bool initContext();
 	[[nodiscard]] bool initSceneManager();
+
+	// 事件处理函数
+	void onQuitEvent();
 
 	// 测试函数
 	void testResourceManager();
@@ -103,6 +108,7 @@ private:
 	std::function<void(engine::scene::SceneManager&)> mSceneSetupFunc;
 
 	// 引擎组件
+	std::unique_ptr<entt::dispatcher> mDispatcher;
 	std::unique_ptr<engine::core::Time> mTime;
 	std::unique_ptr<engine::core::Config> mConfig;
 	std::unique_ptr<engine::resource::ResourceManager> mResourceManager;
