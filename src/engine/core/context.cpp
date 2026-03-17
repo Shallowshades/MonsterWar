@@ -4,18 +4,16 @@
 #include "../render/camera.h"
 #include "../render/text_renderer.h"
 #include "../resource/resource_manager.h"
-#include "../physics/physics_engine.h"
 #include "../audio/audio_player.h"
 #include <spdlog/spdlog.h>
 
 namespace engine::core {
-engine::core::Context::Context(engine::input::InputManager& inputManager, engine::render::Renderer& renderer, engine::render::Camera& camera, engine::render::TextRenderer& textRenderer, engine::resource::ResourceManager& resourceManager, engine::physics::PhysicsEngine& physicsEngine, engine::audio::AudioPlayer& audioPlayer, engine::core::GameState& gameState)
+engine::core::Context::Context(engine::input::InputManager& inputManager, engine::render::Renderer& renderer, engine::render::Camera& camera, engine::render::TextRenderer& textRenderer, engine::resource::ResourceManager& resourceManager, engine::audio::AudioPlayer& audioPlayer, engine::core::GameState& gameState)
 	: mInputManager(inputManager)
 	, mRenderer(renderer)
 	, mCamera(camera)
 	, mTextRenderer(textRenderer)
 	, mResourceManager(resourceManager)
-	, mPhysicsEngine(physicsEngine)
 	, mAudioPlayer(audioPlayer)
 	, mGameState(gameState)
 {
@@ -40,10 +38,6 @@ engine::render::TextRenderer& Context::getTextRenderer() const {
 
 engine::resource::ResourceManager& Context::getResourceManager() const {
 	return mResourceManager;
-}
-
-engine::physics::PhysicsEngine& Context::getPhysicsEngine() const {
-	return mPhysicsEngine;
 }
 
 engine::audio::AudioPlayer& Context::getAudioPlayer() const {

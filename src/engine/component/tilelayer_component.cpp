@@ -3,7 +3,6 @@
 #include "../core/context.h"
 #include "../render/renderer.h"
 #include "../render/camera.h"
-#include "../physics/physics_engine.h"
 #include <spdlog/spdlog.h>
 
 namespace engine::component {
@@ -81,10 +80,6 @@ void TileLayerComponent::setHidden(bool hidden) {
 	mIsHidden = hidden;
 }
 
-void TileLayerComponent::setPhysicsEngine(engine::physics::PhysicsEngine* physicsEngine) {
-	mPhysicsEngine = physicsEngine;
-}
-
 void TileLayerComponent::init() {
 	if (!mOwner) {
 		spdlog::warn("{} 的owner未设置.", mLogTag.data());
@@ -119,12 +114,6 @@ void TileLayerComponent::render(engine::core::Context& context) {
 				context.getRenderer().drawSprite(context.getCamera(), tileInfo.mSprite, tileLeftTopPosition);
 			}
 		}
-	}
-}
-
-void TileLayerComponent::clean() {
-	if (mPhysicsEngine) {
-		mPhysicsEngine->unregisterCollisionLayer(this);
 	}
 }
 } // engine::component

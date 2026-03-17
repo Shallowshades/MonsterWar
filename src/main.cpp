@@ -16,11 +16,5 @@ int main(int, char**) {
 		});
 	app.run();
 
-	// 执行测试spdlog json 库
-	{
-		// testSpdlog();
-		// testJson();
-	}
-
 	return 0;
 }

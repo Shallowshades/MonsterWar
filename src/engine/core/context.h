@@ -25,10 +25,6 @@ namespace engine::resource {
 	class ResourceManager;
 }
 
-namespace engine::physics {
-	class PhysicsEngine;
-}
-
 namespace engine::audio {
 	class AudioPlayer;
 }
@@ -55,7 +51,6 @@ public:
 		engine::render::Camera& camera,
 		engine::render::TextRenderer& textRenderer,
 		engine::resource::ResourceManager& resourceManager,
-		engine::physics::PhysicsEngine& physicsEngine,
 		engine::audio::AudioPlayer& audioPlayer,
 		engine::core::GameState& gameState);
 
@@ -70,7 +65,6 @@ public:
 	engine::render::Camera& getCamera() const;								///< @brief 获取相机
 	engine::render::TextRenderer& getTextRenderer() const;					///< @brief 获取文字渲染器
 	engine::resource::ResourceManager& getResourceManager() const;			///< @brief 获取资源管理器
-	engine::physics::PhysicsEngine& getPhysicsEngine() const;				///< @brief 获取物理引擎
 	engine::audio::AudioPlayer& getAudioPlayer() const;						///< @brief 获取音频播放器
 	engine::core::GameState& getGameState() const;							///< @brief 获取游戏状态
 private:
@@ -80,9 +74,8 @@ private:
 	engine::render::Camera& mCamera;										///< @brief 相机
 	engine::render::TextRenderer& mTextRenderer;							///< @brief 文字渲染器
 	engine::resource::ResourceManager& mResourceManager;					///< @brief 资源管理器
-	engine::physics::PhysicsEngine& mPhysicsEngine;							///< @brief 物理引擎
 	engine::audio::AudioPlayer& mAudioPlayer;								///< @brief 音频播放器
-	engine::core::GameState& mGameState;										///< @brief 游戏状态
+	engine::core::GameState& mGameState;									///< @brief 游戏状态
 };
 }
 

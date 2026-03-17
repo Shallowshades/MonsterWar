@@ -14,7 +14,7 @@ namespace game::scene {
 /**
  * @brief 游戏场景.
  */
-class GameScene : public engine::scene::Scene {
+class GameScene final : public engine::scene::Scene {
 public:
 	GameScene(engine::core::Context& context, engine::scene::SceneManager& sceneManager);
 	~GameScene();

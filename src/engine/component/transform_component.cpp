@@ -1,6 +1,5 @@
 #include "transform_component.h"
 #include "sprite_component.h"
-#include "collider_component.h"
 #include "../object/game_object.h"
 
 namespace engine::component {
@@ -35,11 +34,6 @@ void TransformComponent::setScale(const glm::vec2& scale) {
 		auto spriteComponent = mOwner->getComponent<SpriteComponent>();
 		if (spriteComponent) {
 			spriteComponent->updateOffset();
-		}
-
-		auto colliderComponent = mOwner->getComponent<ColliderComponent>();
-		if (colliderComponent) {
-			colliderComponent->updateOffset();
 		}
 	}
 }

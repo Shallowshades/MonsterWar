@@ -18,7 +18,6 @@
 
 namespace engine::render { class Sprite; }
 namespace engine::core { class Context; }
-namespace engine::physics { class PhysicsEngine; }
 namespace engine::component {
 /**
  * @brief 定义瓦片的类型, 用于游戏逻辑(例如碰撞).
@@ -99,13 +98,11 @@ public:
 
 	void setOffset(const glm::vec2& offset);								///< @brief 设置瓦片偏移量
 	void setHidden(bool hidden);											///< @brief 设置是否隐藏
-	void setPhysicsEngine(engine::physics::PhysicsEngine* physicsEngine);	///< @brief 设置物理引擎指针
 
 protected:
 	void init() override;													///< @brief 初始化
 	void update(float, engine::core::Context&) override;					///< @brief 更新
 	void render(engine::core::Context& context) override;					///< @brief 渲染
-	void clean() override;													///< @brief 清理
 
 private:
 	static constexpr std::string_view mLogTag = "TileLayerComponent";		///< @brief 日志标识
@@ -115,7 +112,6 @@ private:
 	std::vector<TileInfo> mTiles;											///< @brief 存储所有瓦片信息(行主序, index = y * mMapWidth + x)
 	glm::vec2 mOffset = glm::vec2(0.f);										///< @brief 瓦片层在世界中的偏移量(瓦片层无需缩放和旋转, 所以不需要Transform组件)
 	bool mIsHidden = false;													///< @brief 是否隐藏(不渲染)
-	engine::physics::PhysicsEngine* mPhysicsEngine = nullptr;				///< @brief 物理引擎指针, clean 函数要取消注册
 };
 } // engine::component
 

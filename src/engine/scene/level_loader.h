@@ -77,13 +77,6 @@ private:
 	std::optional<T> getTileProperty(const nlohmann::json& tileJson, std::string_view propertyName);
 
 	/**
-	 * @brief 获取瓦片碰撞器矩形.
-	 * @param tileJson 瓦片json数据
-	 * @return 碰撞器矩形, 如果碰撞器不存在则返回std::nullopt
-	 */
-	std::optional<engine::utils::Rect> getColliderRect(const nlohmann::json& tileJson);
-
-	/**
 	 * @brief 根据瓦片json对象获取瓦片类型.
 	 * 
 	 * @param tileJson瓦片json数据

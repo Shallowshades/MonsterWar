@@ -3,7 +3,6 @@
 #include "../object/game_object.h"
 #include "../core/context.h"
 #include "../core/game_state.h"
-#include "../physics/physics_engine.h"
 #include "../render/camera.h"
 #include "../ui/ui_manager.h"
 #include <algorithm>
@@ -53,10 +52,8 @@ void Scene::update(float deltaTime) {
 		});
 	}
 
-	// 只有在游戏中才更新物理引擎和相机
+	// 只有在游戏中才更新相机
 	if (mContext.getGameState().isPlaying()) {
-		// 先更新物理引擎
-		mContext.getPhysicsEngine().update(deltaTime);
 		// 更新相机
 		mContext.getCamera().update(deltaTime);
 	}

@@ -12,7 +12,6 @@
 #include "../render/camera.h"
 #include "../render/text_renderer.h"
 #include "../input/input_manager.h"
-#include "../physics/physics_engine.h"
 #include "../scene/scene_manager.h"
 
 engine::core::GameApp::GameApp() = default;
@@ -67,7 +66,6 @@ bool engine::core::GameApp::init() {
 	if (!initCamera()) return false;
 	if (!initTextRenderer()) return false;
 	if (!initInputManager()) return false;
-	if (!initPhysicsEngine()) return false;
 	if (!initGameState()) return false;
 	if (!initContext()) return false;
 	if (!initSceneManager()) return false;
@@ -256,18 +254,6 @@ bool engine::core::GameApp::initInputManager() {
 	return true;
 }
 
-bool engine::core::GameApp::initPhysicsEngine() {
-	try {
-		mPhysicsEngine = std::make_unique<engine::physics::PhysicsEngine>();
-	}
-	catch (const std::exception& e) {
-		spdlog::error("{} : 初始化物理引擎失败 : {}", mLogTag.data(), e.what());
-		return false;
-	}
-	spdlog::trace("{} : 物理引擎初始化成功.", mLogTag.data());
-	return true;
-}
-
 bool engine::core::GameApp::initGameState() {
 	try {
 		mGameState = std::make_unique<engine::core::GameState>(mWindow, mSDLRenderer);
@@ -281,7 +267,7 @@ bool engine::core::GameApp::initGameState() {
 
 bool engine::core::GameApp::initContext() {
 	try {
-		mContext = std::make_unique<engine::core::Context>(*mInputManager, *mRenderer, *mCamera, *mTextRenderer, *mResourceManager, *mPhysicsEngine, *mAudioPlayer, *mGameState);
+		mContext = std::make_unique<engine::core::Context>(*mInputManager, *mRenderer, *mCamera, *mTextRenderer, *mResourceManager, *mAudioPlayer, *mGameState);
 	}
 	catch (const std::exception& e) {
 		spdlog::error("{} 初始化上下文失败: {}", mLogTag.data(), e.what());

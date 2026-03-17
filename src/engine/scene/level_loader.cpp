@@ -3,8 +3,6 @@
 #include "../component/transform_component.h"
 #include "../component/tilelayer_component.h"
 #include "../component/sprite_component.h"
-#include "../component/collider_component.h"
-#include "../component/physics_component.h"
 #include "../component/animation_component.h"
 #include "../component/health_component.h"
 #include "../component/audio_component.h"
@@ -182,13 +180,6 @@ void LevelLoader::loadObjectLayer(const nlohmann::json& layerJson, Scene& scene)
 				auto rotation = object.value("rotation", 0.f);
 				// 添加变换组件, 缩放为设定为1.0f
 				gameObject->addComponent<engine::component::TransformComponent>(position, glm::vec2(1.f), rotation);
-				// 添加碰撞组件和物理组件
-				// 碰撞盒大小与dstSize相同
-				auto collider = std::make_unique<engine::physics::AABBCollider>(dstSize);
-				auto* cc = gameObject->addComponent<engine::component::ColliderComponent>(std::move(collider));
-				// 自定义形状通常是trigger类型, 除非显示指定 (因此默认为真)
-				cc->setTrigger(object.value("trigger", true));
-				gameObject->addComponent<engine::component::PhysicsComponent>(&scene.getContext().getPhysicsEngine(), false);
 				// 获取标签信息并设置
 				if (auto tag = getTileProperty<std::string>(object, "tag"); tag) {
 					gameObject->setTag(tag.value());
@@ -235,27 +226,8 @@ void LevelLoader::loadObjectLayer(const nlohmann::json& layerJson, Scene& scene)
 				spdlog::error("{} : gid 为 {} 的瓦片没有对应的json数据", mLogTag.data(), gid);
 				continue;
 			}
+
 			auto& tileJson = tileJsonOpt.value();
-
-			// 获取碰撞信息: 如果是SOLID类型, 则添加物理组件, 且图片源矩形区域就是碰撞盒大小
-			if (tileInfo.mType == engine::component::TileType::SOLID) {
-				auto collider = std::make_unique<engine::physics::AABBCollider>(srcSize);
-				gameObject->addComponent<engine::component::ColliderComponent>(std::move(collider));
-				// 物理组件不受重力影响
-				gameObject->addComponent<engine::component::PhysicsComponent>(&scene.getContext().getPhysicsEngine(), false);
-				// 设置标签方便物理引擎检索
-				gameObject->setTag("solid");
-			}
-			// 如果非SOLID类型, 检测自定义碰撞盒是否存在
-			else if (auto rect = getColliderRect(tileJson); rect) {
-				// 如果有, 添加碰撞组件
-				auto collider = std::make_unique<engine::physics::AABBCollider>(rect->size);
-				auto* cc = gameObject->addComponent<engine::component::ColliderComponent>(std::move(collider));
-				// 自定义碰撞盒的坐标是相对于图片坐标, 也就是针对Transform的偏移量
-				cc->setOffset(rect->position);
-				gameObject->addComponent<engine::component::PhysicsComponent>(&scene.getContext().getPhysicsEngine(), false);
-			}
-
 			// 获取标签信息并设置
 			auto tag = getTileProperty<std::string>(tileJson, "tag");
 			if (tag) {
@@ -391,30 +363,6 @@ void LevelLoader::addSound(const nlohmann::json& soundJson, engine::component::A
 		}
 		audioComponent->addSound(soundId, soundPath);
 	}
-}
-
-std::optional<engine::utils::Rect> LevelLoader::getColliderRect(const nlohmann::json& tileJson) {
-	if (!tileJson.contains("objectgroup")) {
-		return std::nullopt;
-	}
-
-	auto& objectgroup = tileJson["objectgroup"];
-	if (!objectgroup.contains("objects")) {
-		return std::nullopt;
-	}
-
-	auto& objects = objectgroup["objects"];
-	for (const auto& object : objects) {
-		auto rect = engine::utils::Rect(
-			glm::vec2(object.value("x", 0.f), object.value("y", 0.f)),
-			glm::vec2(object.value("width", 0.f), object.value("height", 0.f))
-		);
-
-		if (rect.size.x > 0 && rect.size.y > 0) {
-			return rect;
-		}
-	}
-	return std::nullopt;
 }
 
 engine::component::TileType LevelLoader::getTileType(const nlohmann::json& tileJson) {
