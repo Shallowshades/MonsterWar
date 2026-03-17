@@ -318,6 +318,51 @@ find_or_fetch_dependency(
 # 设置通用源文件
 set(SOURCES
     src/main.cpp
+    src/engine/audio/audio_player.cpp
+    src/engine/core/game_app.cpp
+    src/engine/core/time.cpp
+    src/engine/core/config.cpp
+    src/engine/core/context.cpp
+    src/engine/core/game_state.cpp
+    src/engine/component/component.cpp
+    src/engine/component/sprite_component.cpp
+    src/engine/component/transform_component.cpp
+    src/engine/component/parallax_component.cpp
+    src/engine/component/tilelayer_component.cpp
+    src/engine/component/physics_component.cpp
+    src/engine/component/collider_component.cpp
+    src/engine/component/animation_component.cpp
+    src/engine/component/health_component.cpp
+    src/engine/component/audio_component.cpp
+    src/engine/physics/physics_engine.cpp
+    src/engine/physics/collider.cpp
+    src/engine/physics/collision.cpp
+    src/engine/input/input_manager.cpp
+    src/engine/object/game_object.cpp
+    src/engine/resource/resource_manager.cpp
+    src/engine/resource/texture_manager.cpp
+    src/engine/resource/audio_manager.cpp
+    src/engine/resource/font_manager.cpp
+    src/engine/render/camera.cpp
+    src/engine/render/renderer.cpp
+    src/engine/render/sprite.cpp
+    src/engine/render/animation.cpp
+    src/engine/render/text_renderer.cpp
+    src/engine/scene/scene.cpp
+    src/engine/scene/scene_manager.cpp
+    src/engine/scene/level_loader.cpp
+    src/engine/ui/ui_manager.cpp
+    src/engine/ui/ui_element.cpp
+    src/engine/ui/ui_interactive.cpp
+    src/engine/ui/ui_panel.cpp
+    src/engine/ui/ui_image.cpp
+    src/engine/ui/ui_label.cpp
+    src/engine/ui/ui_button.cpp
+    src/engine/ui/state/ui_state.cpp
+    src/engine/ui/state/ui_normal_state.cpp
+    src/engine/ui/state/ui_pressed_state.cpp
+    src/engine/ui/state/ui_hover_state.cpp
+    src/game/scene/game_scene.cpp
 )
 
 # --- 添加 ImGui 开始 ---
@@ -377,9 +422,9 @@ target_link_libraries(${TARGET}
 
 if(MSVC)
     # Visual Studio: 启用所有警告 + UTF-8编码支持
-    target_compile_options(${TARGET} PRIVATE /W4 /utf-8)
+    target_compile_options(${TARGET} PRIVATE /W3 /utf-8)
     # 不要弹出控制台窗口
-    target_link_options(${TARGET} PRIVATE "/SUBSYSTEM:WINDOWS")
+    target_link_options(${TARGET} PRIVATE "/SUBSYSTEM:CONSOLE")
 elseif(WIN32 AND (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
     # MinGW/Clang on Windows: 设置UTF-8编码
     target_compile_options(${TARGET} PRIVATE -Wall -Wextra -Wpedantic -finput-charset=utf-8 -fexec-charset=utf-8)
