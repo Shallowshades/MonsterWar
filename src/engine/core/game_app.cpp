@@ -207,6 +207,7 @@ bool engine::core::GameApp::initResourceManager() {
 		return false;
 	}
 	spdlog::trace("{} 资源管理器成功", mLogTag.data());
+	mResourceManager->loadResources("assets/data/resource_mapping.json");
 	return true;
 }
 

@@ -65,6 +65,9 @@ public:
 	ResourceManager(ResourceManager&&) = delete;											///< @brief 删除移动构造
 	ResourceManager& operator=(ResourceManager&&) = delete;									///< @brief 删除移动赋值构造
 
+	// 加载资源
+	void loadResources(std::string_view filePath);
+
 	// --- 统一资源访问接口 ---
 	// -- Texture --
 	SDL_Texture* loadTexture(entt::id_type id, std::string_view filePath);					///< @brief 载入纹理资源(通过id + 文件路径)
