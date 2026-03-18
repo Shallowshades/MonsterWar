@@ -1,9 +1,13 @@
+#include <stdexcept>
+#include <fstream>
+#include <filesystem>
+#include <spdlog/spdlog.h>
+#include <nlohmann/json.hpp>
+#include <entt/core/hashed_string.hpp>
 #include "resource_manager.h"
 #include "texture_manager.h"
 #include "audio_manager.h"
 #include "font_manager.h"
-#include <spdlog/spdlog.h>
-#include <stdexcept>
 
 namespace engine::resource {
 ResourceManager::ResourceManager(SDL_Renderer* renderer) {
@@ -26,56 +30,111 @@ void ResourceManager::clear() {
 	spdlog::trace("{} 清空资源", mLogTag);
 }
 
-SDL_Texture* ResourceManager::loadTexture(std::string_view filePath) {
-	// 构造函数确保了mTextManager不为空, 因此不需要判空, 避免性能浪费
-	return mTextureManager->loadTexture(filePath);
+// --- 纹理接口实现 ---
+SDL_Texture* ResourceManager::loadTexture(entt::id_type id, std::string_view filePath) {
+    // 构造函数已经确保了 mTextureManager 不为空，因此不需要再进行if检查，以免性能浪费
+    return mTextureManager->loadTexture(id, filePath);
 }
-SDL_Texture* ResourceManager::getTexture(std::string_view filePath) {
-	return mTextureManager->getTexture(filePath);
+
+SDL_Texture* ResourceManager::loadTexture(entt::hashed_string strHash) {
+    return mTextureManager->loadTexture(strHash);
 }
-void ResourceManager::unloadTexture(std::string_view filePath) {
-	mTextureManager->unloadTexture(filePath);
+
+SDL_Texture* ResourceManager::getTexture(entt::id_type id, std::string_view filePath) {
+    return mTextureManager->getTexture(id, filePath);
 }
-glm::vec2 ResourceManager::getTextureSize(std::string_view filePath) {
-	return mTextureManager->getTextureSize(filePath);
+
+SDL_Texture* ResourceManager::getTexture(entt::hashed_string strHash) {
+    return mTextureManager->getTexture(strHash);
 }
+
+glm::vec2 ResourceManager::getTextureSize(entt::id_type id, std::string_view filePath) {
+    return mTextureManager->getTextureSize(id, filePath);
+}
+
+glm::vec2 ResourceManager::getTextureSize(entt::hashed_string strHash) {
+    return mTextureManager->getTextureSize(strHash);
+}
+
+void ResourceManager::unloadTexture(entt::id_type id) {
+    mTextureManager->unloadTexture(id);
+}
+
 void ResourceManager::clearTextures() {
-	mTextureManager->clearTextures();
+    mTextureManager->clearTextures();
 }
-Mix_Chunk* ResourceManager::loadSound(std::string_view filePath) {
-	return mAudioManager->loadSound(filePath);
+
+// --- 音频接口实现 ---
+Mix_Chunk* ResourceManager::loadSound(entt::id_type id, std::string_view filePath) {
+    return mAudioManager->loadSound(id, filePath);
 }
-Mix_Chunk* ResourceManager::getSound(std::string_view filePath) {
-	return mAudioManager->getSound(filePath);
+
+Mix_Chunk* ResourceManager::loadSound(entt::hashed_string strHash) {
+    return mAudioManager->loadSound(strHash);
 }
-void ResourceManager::unloadSound(std::string_view filePath) {
-	mAudioManager->unloadSound(filePath);
+
+Mix_Chunk* ResourceManager::getSound(entt::id_type id, std::string_view filePath) {
+    return mAudioManager->getSound(id, filePath);
 }
+
+Mix_Chunk* ResourceManager::getSound(entt::hashed_string strHash) {
+    return mAudioManager->getSound(strHash);
+}
+
+void ResourceManager::unloadSound(entt::id_type id) {
+    mAudioManager->unloadSound(id);
+}
+
 void ResourceManager::clearSounds() {
-	mAudioManager->clearSounds();
+    mAudioManager->clearSounds();
 }
-Mix_Music* ResourceManager::loadMusic(std::string_view filePath) {
-	return mAudioManager->loadMusic(filePath);
+
+Mix_Music* ResourceManager::loadMusic(entt::id_type id, std::string_view filePath) {
+    return mAudioManager->loadMusic(id, filePath);
 }
-Mix_Music* ResourceManager::getMusic(std::string_view filePath) {
-	return mAudioManager->getMusic(filePath);
+
+Mix_Music* ResourceManager::loadMusic(entt::hashed_string strHash) {
+    return mAudioManager->loadMusic(strHash);
 }
-void ResourceManager::unloadMusic(std::string_view filePath) {
-	mAudioManager->unloadMusic(filePath);
+
+Mix_Music* ResourceManager::getMusic(entt::id_type id, std::string_view filePath) {
+    return mAudioManager->getMusic(id, filePath);
 }
+
+Mix_Music* ResourceManager::getMusic(entt::hashed_string strHash) {
+    return mAudioManager->getMusic(strHash);
+}
+
+void ResourceManager::unloadMusic(entt::id_type id) {
+    mAudioManager->unloadMusic(id);
+}
+
 void ResourceManager::clearMusic() {
-	mAudioManager->clearMusic();
+    mAudioManager->clearMusic();
 }
-TTF_Font* ResourceManager::loadFont(std::string_view filePath, int pointSize) {
-	return mFontManager->loadFont(filePath, pointSize);
+
+// --- 字体接口实现 ---
+TTF_Font* ResourceManager::loadFont(entt::id_type id, int pointSize, std::string_view filePath) {
+    return mFontManager->loadFont(id, pointSize, filePath);
 }
-TTF_Font* ResourceManager::getFont(std::string_view filePath, int pointSize) {
-	return mFontManager->getFont(filePath, pointSize);
+
+TTF_Font* ResourceManager::loadFont(entt::hashed_string strHash, int pointSize) {
+    return mFontManager->loadFont(strHash, pointSize);
 }
-void ResourceManager::unloadFont(std::string_view filePath, int pointSize) {
-	mFontManager->unloadFont(filePath, pointSize);
+
+TTF_Font* ResourceManager::getFont(entt::id_type id, int pointSize, std::string_view filePath) {
+    return mFontManager->getFont(id, pointSize, filePath);
 }
+
+TTF_Font* ResourceManager::getFont(entt::hashed_string strHash, int pointSize) {
+    return mFontManager->getFont(strHash, pointSize);
+}
+
+void ResourceManager::unloadFont(entt::id_type id, int pointSize) {
+    mFontManager->unloadFont(id, pointSize);
+}
+
 void ResourceManager::clearFonts() {
-	mFontManager->clearFonts();
+    mFontManager->clearFonts();
 }
 }

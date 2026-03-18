@@ -5,10 +5,13 @@
 #include "../../input/input_manager.h"
 #include "../../core/context.h"
 #include <spdlog/spdlog.h>
+#include <entt/core/hashed_string.hpp>
+
+using namespace entt::literals;
 
 namespace engine::ui::state {
 void UIHoverState::enter() {
-	mOwner->setSprite("hover");
+	mOwner->setSprite("hover"_hs);
 	spdlog::debug("切换到悬停状态");
 }
 

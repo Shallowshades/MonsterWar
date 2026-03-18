@@ -1,10 +1,10 @@
 /*****************************************************************//**
  * @file	resource_manager.h
  * @brief	资源管理类
- * @version 1.0
+ * @version 2.0
  * 
  * @author	Shallowshades
- * @date	2025.10.19
+ * @date	2026.03.18
  *********************************************************************/
 #pragma once
 #ifndef RESOURCE_MANAGER_H
@@ -13,8 +13,9 @@
 #include <memory>
 #include <string>
 #include <string_view>
-
 #include <glm/glm.hpp>
+#include <entt/core/fwd.hpp>
+#include <nlohmann/json_fwd.hpp>
 
 struct SDL_Renderer;
 struct SDL_Texture;
@@ -59,37 +60,45 @@ public:
 	/**
 	 * @brief 删除拷贝和移动构造.
 	 */
-	ResourceManager(const ResourceManager&) = delete;					///< @brief 删除拷贝构造
-	ResourceManager& operator=(const ResourceManager&) = delete;		///< @brief 删除拷贝赋值构造
-	ResourceManager(ResourceManager&&) = delete;						///< @brief 删除移动构造
-	ResourceManager& operator=(ResourceManager&&) = delete;				///< @brief 删除移动赋值构造
+	ResourceManager(const ResourceManager&) = delete;										///< @brief 删除拷贝构造
+	ResourceManager& operator=(const ResourceManager&) = delete;							///< @brief 删除拷贝赋值构造
+	ResourceManager(ResourceManager&&) = delete;											///< @brief 删除移动构造
+	ResourceManager& operator=(ResourceManager&&) = delete;									///< @brief 删除移动赋值构造
 
-	// -- 统一资源访问接口 --
+	// --- 统一资源访问接口 ---
+	// -- Texture --
+	SDL_Texture* loadTexture(entt::id_type id, std::string_view filePath);					///< @brief 载入纹理资源(通过id + 文件路径)
+	SDL_Texture* loadTexture(entt::hashed_string str_hs);									///< @brief 载入纹理资源(通过字符串哈希值)
+	SDL_Texture* getTexture(entt::id_type id, std::string_view filePath = "");				///< @brief 尝试获取已加载纹理的指针，如果未加载则尝试加载(通过id + 文件路径)
+	SDL_Texture* getTexture(entt::hashed_string str_hs);									///< @brief 尝试获取已加载纹理的指针，如果未加载则尝试加载(通过字符串哈希值)
+	void unloadTexture(entt::id_type id);													///< @brief 卸载指定的纹理资源
+	glm::vec2 getTextureSize(entt::id_type id, std::string_view filePath = "");				///< @brief 获取指定纹理的尺寸(通过id + 文件路径)
+	glm::vec2 getTextureSize(entt::hashed_string str_hs);									///< @brief 获取指定纹理的尺寸(通过字符串哈希值)
+	void clearTextures();																	///< @brief 清空所有纹理资源
 
-	// Texture
-	SDL_Texture* loadTexture(std::string_view filePath);				///< @brief 载入纹理资源
-	SDL_Texture* getTexture(std::string_view filePath);					///< @brief 尝试获取已加载的纹理的指针,如果未加载则尝试加载
-	void unloadTexture(std::string_view filePath);						///< @brief 卸载指定的纹理资源
-	glm::vec2 getTextureSize(std::string_view filePath);				///< @brief 获取指定的纹理尺寸
-	void clearTextures();												///< @brief 清空所有的纹理资源
+	// -- Sound Effects (Chunks) --
+	Mix_Chunk* loadSound(entt::id_type id, std::string_view filePath);						///< @brief 载入音效资源(通过id + 文件路径)
+	Mix_Chunk* loadSound(entt::hashed_string str_hs);										///< @brief 载入音效资源(通过字符串哈希值)
+	Mix_Chunk* getSound(entt::id_type id, std::string_view filePath = "");					///< @brief 尝试获取已加载音效的指针，如果未加载则尝试加载(通过id + 文件路径)
+	Mix_Chunk* getSound(entt::hashed_string str_hs);										///< @brief 尝试获取已加载音效的指针，如果未加载则尝试加载(通过字符串哈希值)
+	void unloadSound(entt::id_type id);														///< @brief 卸载指定的音效资源
+	void clearSounds();																		///< @brief 清空所有音效资源
 
-	// Sound Effect (Chunks)
-	Mix_Chunk* loadSound(std::string_view filePath);					///< @brief 载入音效资源
-	Mix_Chunk* getSound(std::string_view filePath);						///< @brief 尝试获取已加载的音效的指针,如果未加载则尝试加载
-	void unloadSound(std::string_view filePath);						///< @brief 卸载指定的音效资源
-	void clearSounds();													///< @brief 清空所有的音效资源
+	// -- Music --
+	Mix_Music* loadMusic(entt::id_type id, std::string_view filePath);						///< @brief 载入音乐资源(通过id + 文件路径)
+	Mix_Music* loadMusic(entt::hashed_string str_hs);										///< @brief 载入音乐资源(通过字符串哈希值)
+	Mix_Music* getMusic(entt::id_type id, std::string_view filePath = "");					///< @brief 尝试获取已加载音乐的指针，如果未加载则尝试加载(通过id + 文件路径)
+	Mix_Music* getMusic(entt::hashed_string str_hs);										///< @brief 尝试获取已加载音乐的指针，如果未加载则尝试加载(通过字符串哈希值)
+	void unloadMusic(entt::id_type id);														///< @brief 卸载指定的音乐资源
+	void clearMusic();																		///< @brief 清空所有音乐资源
 
-	// Music
-	Mix_Music* loadMusic(std::string_view filePath);					///< @brief 载入音乐资源
-	Mix_Music* getMusic(std::string_view filePath);						///< @brief 尝试获取已加载的音乐的指针,如果未加载则尝试加载
-	void unloadMusic(std::string_view filePath);						///< @brief 卸载指定的音乐资源
-	void clearMusic();													///< @brief 清空所有的音乐资源
-
-	// Fonts
-	TTF_Font* loadFont(std::string_view filePath, int pointSize);		///< @brief 载入字体资源
-	TTF_Font* getFont(std::string_view filePath, int pointSize);		///< @brief 尝试获取已加载的字体的指针,如果未加载则尝试加载
-	void unloadFont(std::string_view filePath, int pointSize);			///< @brief 卸载指定的字体资源
-	void clearFonts();													///< @brief 清空所有的字体资源
+	// -- Fonts --
+	TTF_Font* loadFont(entt::id_type id, int pointSize, std::string_view filePath);			///< @brief 载入字体资源(通过id + 文件路径)
+	TTF_Font* loadFont(entt::hashed_string str_hs, int pointSize);							///< @brief 载入字体资源(通过字符串哈希值)
+	TTF_Font* getFont(entt::id_type id, int pointSize, std::string_view filePath = "");		///< @brief 尝试获取已加载字体的指针，如果未加载则尝试加载(通过id + 文件路径)
+	TTF_Font* getFont(entt::hashed_string str_hs, int pointSize);							///< @brief 尝试获取已加载字体的指针，如果未加载则尝试加载(通过字符串哈希值)
+	void unloadFont(entt::id_type id, int pointSize);										///< @brief 卸载指定的字体资源
+	void clearFonts();																		///< @brief 清空所有字体资源
 
 private:
 	static constexpr std::string_view mLogTag = "ResourceManager";

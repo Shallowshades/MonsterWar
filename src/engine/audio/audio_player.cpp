@@ -3,6 +3,7 @@
 #include <SDL3_mixer/SDL_mixer.h> 
 #include <spdlog/spdlog.h>
 #include <glm/common.hpp>
+#include <entt/core/hashed_string.hpp>
 
 namespace engine::audio {
 AudioPlayer::~AudioPlayer() = default;
@@ -14,30 +15,46 @@ AudioPlayer::AudioPlayer(engine::resource::ResourceManager* resourceManager)
 	}
 }
 
-int AudioPlayer::playSound(std::string_view soundpath, int channel) {
-
-	Mix_Chunk* chunk = mResourceManager->getSound(soundpath); // 通过 ResourceManager 获取资源
+int AudioPlayer::playSound(entt::id_type soundId, int channel) {
+	Mix_Chunk* chunk = mResourceManager->getSound(soundId); // 通过 ResourceManager 获取资源
 	if (!chunk) {
-		spdlog::error("AudioPlayer: 无法获取音效 '{}' 播放。", soundpath);
+		spdlog::error("AudioPlayer: 无法获取音效 '{}' 播放。", soundId);
 		return -1;
 	}
 
-	int played_channel = Mix_PlayChannel(channel, chunk, 0);    // 播放音效
-	if (played_channel == -1) {
-		spdlog::error("AudioPlayer: 无法播放音效 '{}': {}", soundpath, SDL_GetError());
+	int playedChannel = Mix_PlayChannel(channel, chunk, 0);    // 播放音效
+	if (playedChannel == -1) {
+		spdlog::error("AudioPlayer: 无法播放音效 id : '{}': {}", soundId, SDL_GetError());
 	}
 	else {
-		spdlog::trace("AudioPlayer: 播放音效 '{}' 在通道 {}。", soundpath, played_channel);
+		spdlog::trace("AudioPlayer: 播放音效 id : '{}' 在通道 {}。", soundId, playedChannel);
 	}
-	return played_channel;
+	return playedChannel;
 }
 
-bool AudioPlayer::playMusic(std::string_view musicPath, int loops, int fadeInMs) {
-	if (musicPath == mCurrentMusic) return true;      // 如果当前音乐已经在播放，则不重复播放
-	mCurrentMusic = musicPath;
-	Mix_Music* music = mResourceManager->getMusic(musicPath); // 通过 ResourceManager 获取资源
+int AudioPlayer::playSound(entt::hashed_string hashedPath, int channel) {
+	Mix_Chunk* chunk = mResourceManager->getSound(hashedPath, hashedPath.data());
+	if (!chunk) {
+		spdlog::error("{} : 无法获取音效 id : {}, path : {} 播放.", mLogTag.data(), hashedPath.value(), hashedPath.data());
+		return -1;
+	}
+
+	int playedChannel = Mix_PlayChannel(channel, chunk, 0);
+	if (playedChannel == -1) {
+		spdlog::error("{} : 无法播放音效 id : {}, path : {}: {}", mLogTag.data(), hashedPath.value(), hashedPath.data(), SDL_GetError());
+	}
+	else {
+		spdlog::trace("{} : 播放音效 id : {}, path : {} 在通道 {}.", mLogTag.data(), hashedPath.value(), hashedPath.data(), playedChannel);
+	}
+	return playedChannel;
+}
+
+bool AudioPlayer::playMusic(entt::id_type musicId, int loops, int fadeInMs) {
+	if (musicId == mCurrentMusicId) return true;			// 如果当前音乐已经在播放，则不重复播放
+	mCurrentMusicId = musicId;
+	Mix_Music* music = mResourceManager->getMusic(musicId); // 通过 ResourceManager 获取资源
 	if (!music) {
-		spdlog::error("AudioPlayer: 无法获取音乐 '{}' 播放。", musicPath);
+		spdlog::error("AudioPlayer: 无法获取音乐 '{}' 播放。", musicId);
 		return false;
 	}
 
@@ -52,10 +69,40 @@ bool AudioPlayer::playMusic(std::string_view musicPath, int loops, int fadeInMs)
 	}
 
 	if (!result) {
-		spdlog::error("AudioPlayer: 无法播放音乐 '{}': {}", musicPath, SDL_GetError());
+		spdlog::error("AudioPlayer: 无法播放音乐 '{}': {}", musicId, SDL_GetError());
 	}
 	else {
-		spdlog::trace("AudioPlayer: 播放音乐 '{}'。", musicPath);
+		spdlog::trace("AudioPlayer: 播放音乐 '{}'。", musicId);
+	}
+	return result;
+}
+
+bool AudioPlayer::playMusic(entt::hashed_string hashedPath, int loops, int fadeInMs) {
+	if (hashedPath.value() == mCurrentMusicId) {
+		return true;
+	}
+	mCurrentMusicId = hashedPath;
+	Mix_Music* music = mResourceManager->getMusic(hashedPath, hashedPath.data());
+	if (!music) {
+		spdlog::error("{} : 无法获取音乐 id: {}, path: {} 播放。", mLogTag.data(), hashedPath.value(), hashedPath.data());
+		return false;
+	}
+
+	Mix_HaltMusic();
+
+	bool result = false;
+	if (fadeInMs > 0) {
+		result = Mix_FadeInMusic(music, loops, fadeInMs);
+	}
+	else {
+		result = Mix_PlayMusic(music, loops);
+	}
+
+	if (!result) {
+		spdlog::error("{} : 无法播放音乐 id: {}, path: {} 播放。error: {}", mLogTag.data(), hashedPath.value(), hashedPath.data(), SDL_GetError());
+	}
+	else {
+		spdlog::trace("{} : 播放音乐 id: {}, path: {}。", mLogTag.data(), hashedPath.value(), hashedPath.data());
 	}
 	return result;
 }

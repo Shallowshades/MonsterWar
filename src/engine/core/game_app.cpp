@@ -134,7 +134,7 @@ bool engine::core::GameApp::initDispatcher() {
 		mDispatcher = std::make_unique<entt::dispatcher>();
 	}
 	catch (const std::exception& e) {
-		spdlog::error("{} : 初始化事件分发器成功.", mLogTag.data());
+		spdlog::error("{} : 初始化事件分发器失败, e : {}.", mLogTag.data(), e.what());
 		return false;
 	}
 	spdlog::trace("{} : 事件分发器初始化成功.", mLogTag.data());
@@ -314,67 +314,67 @@ void engine::core::GameApp::onQuitEvent() {
 //////////////////////////////////////////////////////////////////////////
 /// 测试用函数
 //////////////////////////////////////////////////////////////////////////
-void engine::core::GameApp::testResourceManager() {
-	mResourceManager->getTexture("assets/textures/Actors/eagle-attack.png");
-	mResourceManager->getFont("assets/fonts/VonwaonBitmap-16px.ttf", 16);
-	mResourceManager->getSound("assets/audio/button_click.wav");
-	mResourceManager->unloadTexture("assets/textures/Actors/eagle-attack.png");
-	mResourceManager->unloadFont("assets/fonts/VonwaonBitmap-16px.ttf", 16);
-	mResourceManager->unloadSound("assets/audio/button_click.wav");
-}
-
-void engine::core::GameApp::testRenderer() {
-	engine::render::Sprite spriteWorld("assets/textures/Actors/frog.png");
-	engine::render::Sprite spriteUi("assets/textures/UI/buttons/Start1.png");
-	engine::render::Sprite spriteParallax("assets/textures/Layers/back.png");
-
-	static float rotation = 0.0f;
-	rotation += 0.1f;
-
-	// 注意渲染顺序
-	mRenderer->drawParallax(*mCamera, spriteParallax, glm::vec2(100, 100), glm::vec2(0.5f, 0.5f), glm::bvec2(true, false));
-	mRenderer->drawSprite(*mCamera, spriteWorld, glm::vec2(200, 200), glm::vec2(1.0f, 1.0f), rotation);
-	mRenderer->drawUISprite(spriteUi, glm::vec2(100, 100));
-
-}
-
-void engine::core::GameApp::testCamera() {
-	auto key_state = SDL_GetKeyboardState(nullptr);
-	if (key_state[SDL_SCANCODE_UP]) mCamera->move(glm::vec2(0, -1));
-	if (key_state[SDL_SCANCODE_DOWN]) mCamera->move(glm::vec2(0, 1));
-	if (key_state[SDL_SCANCODE_LEFT]) mCamera->move(glm::vec2(-1, 0));
-	if (key_state[SDL_SCANCODE_RIGHT]) mCamera->move(glm::vec2(1, 0));
-}
-
-void engine::core::GameApp::testInputManager() {
-	std::vector<std::string> actions = {
-		"MoveUp",
-		"MoveDown",
-		"MoveLeft",
-		"MoveRight",
-		"Jump",
-		"Attack",
-		"Pause",
-		"MouseLeftClick",
-		"MouseRightClick"
-	};
-
-	for (const auto& action : actions) {
-		if (mInputManager->isActionPressed(action)) {
-			spdlog::info("{} 按下 {}", mLogTag.data(), action);
-		}
-		if (mInputManager->isActionReleased(action)) {
-			spdlog::info("{} 抬起 {}", mLogTag.data(), action);
-		}
-		if (mInputManager->isActionDown(action)) {
-			spdlog::info("{} 按下中 {}", mLogTag.data(), action);
-		}
-	}
-}
-
-void engine::core::GameApp::testGameObject() {
-	// gameObject.addComponent<engine::component::TransformComponent>(glm::vec2(100, 100));
-	// gameObject.addComponent<engine::component::SpriteComponent>("assets/textures/Props/big-crate.png", *mResourceManager, engine::utils::Alignment::CENTER);
-	// gameObject.getComponent<engine::component::TransformComponent>()->setScale(glm::vec2(2.f, 2.f));
-	// gameObject.getComponent<engine::component::TransformComponent>()->setRotation(30.f);*/
-}
+//void engine::core::GameApp::testResourceManager() {
+//	mResourceManager->getTexture("assets/textures/Actors/eagle-attack.png");
+//	mResourceManager->getFont("assets/fonts/VonwaonBitmap-16px.ttf", 16);
+//	mResourceManager->getSound("assets/audio/button_click.wav");
+//	mResourceManager->unloadTexture("assets/textures/Actors/eagle-attack.png");
+//	mResourceManager->unloadFont("assets/fonts/VonwaonBitmap-16px.ttf", 16);
+//	mResourceManager->unloadSound("assets/audio/button_click.wav");
+//}
+//
+//void engine::core::GameApp::testRenderer() {
+//	engine::render::Sprite spriteWorld("assets/textures/Actors/frog.png");
+//	engine::render::Sprite spriteUi("assets/textures/UI/buttons/Start1.png");
+//	engine::render::Sprite spriteParallax("assets/textures/Layers/back.png");
+//
+//	static float rotation = 0.0f;
+//	rotation += 0.1f;
+//
+//	// 注意渲染顺序
+//	mRenderer->drawParallax(*mCamera, spriteParallax, glm::vec2(100, 100), glm::vec2(0.5f, 0.5f), glm::bvec2(true, false));
+//	mRenderer->drawSprite(*mCamera, spriteWorld, glm::vec2(200, 200), glm::vec2(1.0f, 1.0f), rotation);
+//	mRenderer->drawUISprite(spriteUi, glm::vec2(100, 100));
+//
+//}
+//
+//void engine::core::GameApp::testCamera() {
+//	auto key_state = SDL_GetKeyboardState(nullptr);
+//	if (key_state[SDL_SCANCODE_UP]) mCamera->move(glm::vec2(0, -1));
+//	if (key_state[SDL_SCANCODE_DOWN]) mCamera->move(glm::vec2(0, 1));
+//	if (key_state[SDL_SCANCODE_LEFT]) mCamera->move(glm::vec2(-1, 0));
+//	if (key_state[SDL_SCANCODE_RIGHT]) mCamera->move(glm::vec2(1, 0));
+//}
+//
+//void engine::core::GameApp::testInputManager() {
+//	std::vector<std::string> actions = {
+//		"MoveUp",
+//		"MoveDown",
+//		"MoveLeft",
+//		"MoveRight",
+//		"Jump",
+//		"Attack",
+//		"Pause",
+//		"MouseLeftClick",
+//		"MouseRightClick"
+//	};
+//
+//	for (const auto& action : actions) {
+//		if (mInputManager->isActionPressed(action)) {
+//			spdlog::info("{} 按下 {}", mLogTag.data(), action);
+//		}
+//		if (mInputManager->isActionReleased(action)) {
+//			spdlog::info("{} 抬起 {}", mLogTag.data(), action);
+//		}
+//		if (mInputManager->isActionDown(action)) {
+//			spdlog::info("{} 按下中 {}", mLogTag.data(), action);
+//		}
+//	}
+//}
+//
+//void engine::core::GameApp::testGameObject() {
+//	// gameObject.addComponent<engine::component::TransformComponent>(glm::vec2(100, 100));
+//	// gameObject.addComponent<engine::component::SpriteComponent>("assets/textures/Props/big-crate.png", *mResourceManager, engine::utils::Alignment::CENTER);
+//	// gameObject.getComponent<engine::component::TransformComponent>()->setScale(glm::vec2(2.f, 2.f));
+//	// gameObject.getComponent<engine::component::TransformComponent>()->setRotation(30.f);*/
+//}

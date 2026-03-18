@@ -5,12 +5,15 @@
 #include "../../input/input_manager.h"
 #include "../../core/context.h"
 #include <spdlog/spdlog.h>
+#include <entt/core/hashed_string.hpp>
+
+using namespace entt::literals;
 
 namespace engine::ui::state {
 
 void UIPressedState::enter() {
-	mOwner->setSprite("pressed");
-	mOwner->playSound("pressed");
+	mOwner->setSprite("pressed"_hs);
+	mOwner->playSound("pressed"_hs);
 	spdlog::debug("切换到按下状态");
 }
 

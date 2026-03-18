@@ -6,18 +6,19 @@
 namespace engine::ui {
 UILabel::UILabel(engine::render::TextRenderer& text_renderer,
 	std::string_view text,
-	std::string_view font_id,
+	std::string_view fontPath,
 	int font_size,
 	const engine::utils::FColor& text_color,
 	const glm::vec2& position)
 	: UIElement(position),
 	mTextRenderer(text_renderer),
 	mText(text),
-	mFontId(font_id),
+	mFontPath(fontPath),
+	mFontId(entt::hashed_string(fontPath.data())),
 	mFontSize(font_size),
 	mTextFcolor(text_color) {
 	// 获取文本渲染尺寸
-	mSize = mTextRenderer.getTextSize(mText, mFontId, mFontSize);
+	mSize = mTextRenderer.getTextSize(mText, mFontId, mFontSize, fontPath);
 	spdlog::trace("UILabel 构造完成");
 }
 
@@ -32,17 +33,18 @@ void UILabel::render(engine::core::Context& context) {
 
 void UILabel::setText(std::string_view text) {
 	mText = text;
-	mSize = mTextRenderer.getTextSize(mText, mFontId, mFontSize);
+	mSize = mTextRenderer.getTextSize(mText, mFontId, mFontSize, mFontPath);
 }
 
-void UILabel::setFontId(std::string_view font_id) {
-	mFontId = font_id;
-	mSize = mTextRenderer.getTextSize(mText, mFontId, mFontSize);
+void UILabel::setFontPath(std::string_view fontPath) {
+	mFontPath = fontPath;
+	mFontId = entt::hashed_string(fontPath.data());
+	mSize = mTextRenderer.getTextSize(mText, mFontId, mFontSize, mFontPath);
 }
 
 void UILabel::setFontSize(int font_size) {
 	mFontSize = font_size;
-	mSize = mTextRenderer.getTextSize(mText, mFontId, mFontSize);
+	mSize = mTextRenderer.getTextSize(mText, mFontId, mFontSize, mFontPath);
 }
 
 void UILabel::setTextFColor(const engine::utils::FColor& text_fcolor) {

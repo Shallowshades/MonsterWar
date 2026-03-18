@@ -3,24 +3,43 @@
 #include "../render/sprite.h"
 #include "../core/context.h"
 #include <spdlog/spdlog.h>
+#include <entt/core/hashed_string.hpp>
 
 namespace engine::ui {
-UIImage::UIImage(std::string_view textureId,
-	const glm::vec2& position,
-	const glm::vec2& size,
-	const std::optional<SDL_FRect>& sourceRect,
+UIImage::UIImage(std::string_view texturePath,
+	glm::vec2 position,
+	glm::vec2 size,
+	std::optional<engine::utils::Rect> sourceRect,
 	bool isFlipped)
-	: UIElement(position, size),
-	mSprite(textureId, sourceRect, isFlipped)
+	: UIElement(std::move(position), std::move(size)),
+	mSprite(texturePath, std::move(sourceRect), isFlipped)
 {
-	if (textureId.empty()) {
+	if (mSprite.getTextureId() == entt::null) {
+		spdlog::warn("创建了一个空纹理ID的UIImage。");
+	}
+	spdlog::trace("UIImage 构造完成");
+}
+
+UIImage::UIImage(entt::id_type texture_id, glm::vec2 position, glm::vec2 size, std::optional<engine::utils::Rect> sourceRect, bool isFlipped)
+	: UIElement(std::move(position), std::move(size)), mSprite(texture_id, std::move(sourceRect), isFlipped)
+{
+	if (mSprite.getTextureId() == entt::null) {
+		spdlog::warn("创建了一个空纹理ID的UIImage。");
+	}
+	spdlog::trace("UIImage 构造完成");
+}
+
+UIImage::UIImage(engine::render::Sprite& sprite, glm::vec2 position, glm::vec2 size)
+	: UIElement(std::move(position), std::move(size)), mSprite(sprite)
+{
+	if (mSprite.getTextureId() == entt::null) {
 		spdlog::warn("创建了一个空纹理ID的UIImage。");
 	}
 	spdlog::trace("UIImage 构造完成");
 }
 
 void UIImage::render(engine::core::Context& context) {
-	if (!mVisible || mSprite.getTextureId().empty()) {
+	if (!mVisible || mSprite.getTextureId() == entt::null) {
 		return; // 如果不可见或没有分配纹理则不渲染
 	}
 
