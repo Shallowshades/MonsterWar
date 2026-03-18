@@ -11,7 +11,7 @@ using namespace entt::literals;
 
 namespace engine::ui::state {
 void UIHoverState::enter() {
-	mOwner->setSprite("hover"_hs);
+	mOwner->setImage("hover"_hs);
 	spdlog::debug("切换到悬停状态");
 }
 

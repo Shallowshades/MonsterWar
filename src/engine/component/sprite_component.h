@@ -62,7 +62,7 @@ public:
 	 * @param resourceManager 资源管理器引用
 	 * @param alignment 初始化对齐方式
 	 */
-	SpriteComponent(engine::render::Sprite&& sprite, engine::resource::ResourceManager& resourceManager, engine::utils::Alignment alignment = engine::utils::Alignment::NONE);
+	SpriteComponent(engine::render::Image&& sprite, engine::resource::ResourceManager& resourceManager, engine::utils::Alignment alignment = engine::utils::Alignment::NONE);
 	~SpriteComponent() override = default;
 
 	// 禁用拷贝和移动语义
@@ -73,7 +73,7 @@ public:
 
 	void updateOffset();														///< @brief 更新偏移量
 
-	const engine::render::Sprite& getSprite() const;							///< @brief 获取精灵对象
+	const engine::render::Image& getSprite() const;							///< @brief 获取精灵对象
 	std::string_view getTextureId() const;										///< @brief 获取纹理ID
 	bool isFlipped() const;														///< @brief 获取是否翻转
 	bool isHidden() const;														///< @brief 获取是否隐藏
@@ -103,7 +103,7 @@ private:
 	engine::resource::ResourceManager* mResourceManager = nullptr;				///< @brief 资源管理器指针
 	TransformComponent* mTransform = nullptr;									///< @brief 变换组件指针(非必须)
 
-	engine::render::Sprite mSprite;												///< @brief 精灵对象
+	engine::render::Image mSprite;												///< @brief 精灵对象
 	engine::utils::Alignment mAlignment = engine::utils::Alignment::NONE;		///< @brief 对齐方式
 	glm::vec2 mSpriteSize = { 0.f, 0.f };										///< @brief 精灵尺寸
 	glm::vec2 mOffset = { 0.f, 0.f };											///< @brief 偏移量

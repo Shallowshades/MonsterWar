@@ -12,7 +12,7 @@ using namespace entt::literals;
 namespace engine::ui::state {
 
 void UINormalState::enter() {
-	mOwner->setSprite("normal"_hs);
+	mOwner->setImage("normal"_hs);
 	spdlog::debug("切换到正常状态");
 }
 

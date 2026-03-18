@@ -13,7 +13,7 @@
 #define UI_IMAGE_H
 
 #include "ui_element.h"
-#include "../render/sprite.h"
+#include "../render/image.h"
 #include <string>
 #include <string_view>
 #include <optional>
@@ -61,13 +61,13 @@ public:
         bool isFlipped = false);
 
     /**
-     * @brief 构造一个UIImage对象。（通过Sprite对象构造）
+     * @brief 构造一个UIImage对象。（通过Image对象构造）
      *
-     * @param sprite 要显示的Sprite对象。
+     * @param image 要显示的Image对象。
      * @param position 图像的局部位置。
      * @param size 图像元素的大小。（如果为{0,0}，则使用纹理的原始尺寸）
      */
-    UIImage(engine::render::Sprite& sprite,
+    UIImage(engine::render::Image& image,
         glm::vec2 position = { 0.0f, 0.0f },
         glm::vec2 size = { 0.0f, 0.0f });
 
@@ -75,23 +75,23 @@ public:
     void render(engine::core::Context& context) override;
 
     // --- Setters & Getters ---
-    const engine::render::Sprite& getSprite() const { return mSprite; }
-    void setSprite(const engine::render::Sprite& sprite) { mSprite = sprite; }
+    const engine::render::Image& getImage() const { return mImage; }
+    void setImage(const engine::render::Image& image) { mImage = image; }
 
-    entt::id_type getTextureId() const { return mSprite.getTextureId(); }
-    void setTextureId(entt::id_type textureId) { mSprite.setTextureId(textureId); }
+    entt::id_type getTextureId() const { return mImage.getTextureId(); }
+    void setTextureId(entt::id_type textureId) { mImage.setTextureId(textureId); }
 
-	std::string_view getTexturePath() const { return mSprite.getTexturePath(); }
-	void setTexture(std::string_view texturePath) { mSprite.setTexture(texturePath); }
+	std::string_view getTexturePath() const { return mImage.getTexturePath(); }
+	void setTexture(std::string_view texturePath) { mImage.setTexture(texturePath); }
 
-    const std::optional<engine::utils::Rect>& getsourceRect() const { return mSprite.getSourceRect(); }
-    void setsourceRect(const std::optional<engine::utils::Rect>& sourceRect) { mSprite.setSourceRect(sourceRect); }
+    const std::optional<engine::utils::Rect>& getsourceRect() const { return mImage.getSourceRect(); }
+    void setsourceRect(const std::optional<engine::utils::Rect>& sourceRect) { mImage.setSourceRect(sourceRect); }
 
-    bool isFlipped() const { return mSprite.isFlipped(); }
-    void setFlipped(bool flipped) { mSprite.setFlipped(flipped); }
+    bool isFlipped() const { return mImage.isFlipped(); }
+    void setFlipped(bool flipped) { mImage.setFlipped(flipped); }
 
 protected:
-    engine::render::Sprite mSprite;
+    engine::render::Image mImage;
 };
 }
 

@@ -38,12 +38,12 @@ public:
 	 */
 	ParallaxComponent(std::string_view textureId, const glm::vec2& scrollFactor, const glm::bvec2& repeat);
 
-	void setSprite(const engine::render::Sprite& sprite);					///< @brief 设置精灵对象
+	void setSprite(const engine::render::Image& sprite);					///< @brief 设置精灵对象
 	void setScrollFactor(const glm::vec2& scrollFactor);					///< @brief 设置滚动速度因子
 	void setRepeat(const glm::bvec2& repeat);								///< @brief 设置是否重复
 	void setHidden(bool hidden);											///< @brief 设置是否隐藏
 
-	const engine::render::Sprite& getSprite() const;						///< @brief 获取精灵对象
+	const engine::render::Image& getSprite() const;						///< @brief 获取精灵对象
 	const glm::vec2& getScrollFactor() const;								///< @brief 获取滚动速度因子
 	const glm::bvec2& getRepeat() const;									///< @brief 获取是否重复
 	bool getIsHidden() const;												///< @brief 获取是否隐藏
@@ -57,7 +57,7 @@ private:
 	static constexpr std::string_view mLogTag = "ParallaxComponent";		///< @brief 日志标识
 
 	TransformComponent* mTransform = nullptr;								///< @brief 缓存变化组件
-	engine::render::Sprite mSprite;											///< @brief 精灵对象
+	engine::render::Image mImage;											///< @brief 精灵对象
 	glm::vec2 mScrollFactor;												///< @brief 滚动速度因子
 	glm::bvec2 mRepeat;														///< @brief 是否沿着X和Y轴周期性重复
 	bool mIsHidden = false;													///< @brief 是否隐藏

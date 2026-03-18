@@ -20,7 +20,7 @@ SpriteComponent::SpriteComponent(std::string_view textureId, engine::resource::R
 	}
 }
 
-SpriteComponent::SpriteComponent(engine::render::Sprite&& sprite, engine::resource::ResourceManager& resourceManager, engine::utils::Alignment alignment) 
+SpriteComponent::SpriteComponent(engine::render::Image&& sprite, engine::resource::ResourceManager& resourceManager, engine::utils::Alignment alignment) 
 	: mResourceManager(&resourceManager), mSprite(std::move(sprite)), mAlignment(alignment)
 {
 	if (!mResourceManager) {
@@ -72,7 +72,7 @@ void SpriteComponent::updateOffset() {
 	}
 }
 
-const engine::render::Sprite& SpriteComponent::getSprite() const {
+const engine::render::Image& SpriteComponent::getSprite() const {
 	return mSprite;
 }
 

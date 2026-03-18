@@ -7,17 +7,17 @@ using namespace entt::literals;
 
 namespace engine::ui {
 UIButton::UIButton(engine::core::Context& context,
-	std::string_view normalSpriteId,
-	std::string_view hoverSpriteId,
-	std::string_view pressedSpriteId,
+	std::string_view normalImageId,
+	std::string_view hoverImageId,
+	std::string_view pressedImageId,
 	const glm::vec2& position,
 	const glm::vec2& size,
 	std::function<void()> callback)
 	: UIInteractive(context, position, size), mCallback(std::move(callback))
 {
-	addSprite("normal"_hs, engine::render::Sprite(normalSpriteId));
-	addSprite("hover"_hs, engine::render::Sprite(hoverSpriteId));
-	addSprite("pressed"_hs, engine::render::Sprite(pressedSpriteId));
+	addImage("normal"_hs, engine::render::Image(normalImageId));
+	addImage("hover"_hs, engine::render::Image(hoverImageId));
+	addImage("pressed"_hs, engine::render::Image(pressedImageId));
 
 	// 设置默认状态为"normal"
 	setState(std::make_unique<engine::ui::state::UINormalState>(this));

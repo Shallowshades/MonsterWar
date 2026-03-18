@@ -466,7 +466,7 @@ engine::component::TileInfo LevelLoader::getTileInfoByGid(int gid) {
 			static_cast<float>(mTileSize.x),
 			static_cast<float>(mTileSize.y)
 		};
-		engine::render::Sprite sprite{ textureId, textureRect };
+		engine::render::Image sprite{ textureId, textureRect };
 		// 无具体的瓦片json, 需id查找
 		auto tileType = getTileTypeById(tileset, localId);
 		return engine::component::TileInfo(sprite, tileType);
@@ -499,7 +499,7 @@ engine::component::TileInfo LevelLoader::getTileInfoByGid(int gid) {
 					static_cast<float>(tileJson.value("width", imageWidth)),
 					static_cast<float>(tileJson.value("height", imageHeight))
 				};
-				engine::render::Sprite sprite{ textureId, textureRect };
+				engine::render::Image sprite{ textureId, textureRect };
 				// 有具体的json, 直接解析自定义属性
 				auto tileType = getTileType(tileJson);
 				return engine::component::TileInfo(sprite, tileType);
