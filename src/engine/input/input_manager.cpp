@@ -22,7 +22,7 @@ InputManager::InputManager(SDL_Renderer* renderer, const engine::core::Config* c
 	spdlog::trace("{} 初始鼠标位置: ({}, {})", mLogTag.data(), mMousePosition.x, mMousePosition.y);
 }
 
-entt::sink<entt::sigh<void()>> InputManager::onAction(std::string_view actionName, ActionState actionState) {
+entt::sink<entt::sigh<bool()>> InputManager::onAction(std::string_view actionName, ActionState actionState) {
 	// 如果actionName不存在, 自动创建一个std::array
 	// array.at() 会进行边界检查, 更安全
 	return mActionsToFunc[std::string(actionName)].at(static_cast<size_t>(actionState));
@@ -50,7 +50,12 @@ void InputManager::update() {
 		if (state != ActionState::INACTIVE) {
 			// 且有绑定函数
 			if (auto it = mActionsToFunc.find(actionNameId); it != mActionsToFunc.end()) {
-				it->second.at(static_cast<size_t>(state)).publish();
+				// collect 方法可以获取回调函数返回值, 放入lambda函数的参数中
+				// 而lambda函数的返回值为真, 停止分发信号
+				// 分发信号的顺序为后绑定先调用
+				it->second.at(static_cast<size_t>(state)).collect([](bool result) {
+					return result;
+				});
 			}
 		}
 	}

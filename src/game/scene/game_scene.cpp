@@ -42,24 +42,27 @@ void GameScene::clean() {
 	Scene::clean();
 }
 
-void GameScene::onReplace() {
+bool GameScene::onReplace() {
 	spdlog::info("{} : onReplace, 切换场景", mLogTag.data());
 	requestReplaceScene(std::make_unique<game::scene::GameScene>(mContext));
+	return true;
 }
 
-void GameScene::onPush() {
+bool GameScene::onPush() {
 	spdlog::info("{} : onPush, 压入场景", mLogTag.data());
 	requestPushScene(std::make_unique<game::scene::GameScene>(mContext));
-
+	return true;
 }
 
-void GameScene::onPop() {
+bool GameScene::onPop() {
 	spdlog::info("{} : onPop, 弹出编号 {} 场景", mLogTag.data(), mSceneNum);
 	requestPopScene();
+	return true;
 }
 
-void GameScene::onQuit() {
+bool GameScene::onQuit() {
 	spdlog::info("{} :onQuit", mLogTag.data());
 	quit();
+	return true;
 }
 } // namespace game::scene

@@ -25,9 +25,9 @@ public:
 private:
 	// 测试输入回调事件
 	int32_t mSceneNum{ 0 };
-	void onReplace();
-	void onPush();
-	void onPop();
-	void onQuit();
+	bool onReplace();
+	bool onPush();
+	bool onPop();
+	bool onQuit();
 };
 } // namespace game::scene

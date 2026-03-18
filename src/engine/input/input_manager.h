@@ -59,7 +59,7 @@ public:
 	 * @param actionState 动作状态, 默认为按下瞬间
 	 * @return 一个sink对象, 用于注册回调函数
 	 */
-	entt::sink<entt::sigh<void()>> onAction(std::string_view actionName, ActionState actionState = ActionState::PRESSED);
+	entt::sink<entt::sigh<bool()>> onAction(std::string_view actionName, ActionState actionState = ActionState::PRESSED);
 
 	/**
 	 * < @brief 更新输入状态, 每轮循环最先调用.
@@ -89,7 +89,7 @@ private:
 	static constexpr std::string_view mLogTag = "InputManager";
 
 	SDL_Renderer* mSDLRenderer;																					///< @brief 用于获取逻辑坐标的SDL_Renderer指针
-	std::unordered_map<std::string, std::array<entt::sigh<void()>, 3>> mActionsToFunc;							///< @brief 存储动作名称函数列表的映射
+	std::unordered_map<std::string, std::array<entt::sigh<bool()>, 3>> mActionsToFunc;							///< @brief 存储动作名称函数列表的映射
 	std::unordered_map<std::variant<SDL_Scancode, Uint32>, std::vector<std::string>> mInputToActions;	///< @brief 从键盘(Scancode)到关联的动作名称列表
 	std::unordered_map<std::string, ActionState> mActionStates;													///< @brief 存储每个动作的当前状态
 	bool mShouldQuit = false;																					///< @brief 推出标志
