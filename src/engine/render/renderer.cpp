@@ -183,16 +183,21 @@ std::optional<SDL_FRect> Renderer::getSpriteSourceRect(const Sprite& sprite) {
 
 	auto srcRect = sprite.getSourceRect();
 	if (srcRect.has_value()) {
-		if (srcRect.value().w <= 0 || srcRect.value().h <= 0) {
-			spdlog::error("{} 源矩阵尺寸无效, ID: {}", mLogTag.data(), sprite.getTextureId());
+		if (srcRect.value().size.x <= 0 || srcRect.value().size.y <= 0) {
+			spdlog::error("{} 源矩阵尺寸无效, ID: {}, path : {}", mLogTag.data(), sprite.getTextureId(), sprite.getTexturePath());
 			return std::nullopt;
 		}
-		return srcRect;
+		return SDL_FRect{
+			srcRect.value().position.x,
+			srcRect.value().position.y,
+			srcRect.value().size.x,
+			srcRect.value().size.y
+		};
 	}
 	else {
 		SDL_FRect result = { 0, 0, 0, 0 };
 		if (!SDL_GetTextureSize(texture, &result.w, &result.h)) {
-			spdlog::error("{} 无法获取纹理尺寸, ID: {}", mLogTag.data(), sprite.getTextureId());
+			spdlog::error("{} 无法获取纹理尺寸, ID: {}, Path: {}", mLogTag.data(), sprite.getTextureId(), sprite.getTexturePath());
 			return std::nullopt;
 		}
 		return result;

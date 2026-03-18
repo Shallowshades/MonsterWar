@@ -1,10 +1,10 @@
 /*****************************************************************//**
  * @file   text_renderer.h
  * @brief  管理字体加载和颜色设置
- * @version 1.0
+ * @version 2.0
  *
  * @author Shallowshades
- * @date   2025.12.24
+ * @date   2026.03.18
  *********************************************************************/
 
 #pragma once
@@ -12,9 +12,9 @@
 #define TEXT_RENDERER_H
 
 #include <SDL3/SDL_render.h>
-#include <string>
 #include <string_view>
 #include <glm/vec2.hpp>
+#include <entt/core/hashed_string.hpp>
 #include "../utils/math.h"
 
 struct TTF_TextEngine;
@@ -55,7 +55,7 @@ public:
 	* @param position 左上角屏幕位置。
 	* @param color 文本颜色。(默认为白色)
 	*/
-    void drawUIText(std::string_view text, std::string_view fontId, int fontSize, const glm::vec2& position, const engine::utils::FColor& color = { 1.0f, 1.0f, 1.0f, 1.0f });
+    void drawUIText(std::string_view text, entt::id_type fontId, int fontSize, const glm::vec2& position, const engine::utils::FColor& color = { 1.0f, 1.0f, 1.0f, 1.0f });
 
     /**
 	* @brief 绘制地图上的字符串。
@@ -67,7 +67,7 @@ public:
 	* @param position 左上角屏幕位置。
 	* @param color 文本颜色。
 	*/
-    void drawText(const Camera& camera, std::string_view text, std::string_view fontId, int fontSize, const glm::vec2& position, const engine::utils::FColor& color = { 1.0f, 1.0f, 1.0f, 1.0f });
+    void drawText(const Camera& camera, std::string_view text, entt::id_type fontId, int fontSize, const glm::vec2& position, const engine::utils::FColor& color = { 1.0f, 1.0f, 1.0f, 1.0f });
 
     /**
 	* @brief 获取文本的尺寸。
@@ -77,7 +77,7 @@ public:
 	* @param fontSize 字体大小。
 	* @return 文本的尺寸。
 	*/
-    glm::vec2 getTextSize(std::string_view text, std::string_view fontId, int fontSize);
+    glm::vec2 getTextSize(std::string_view text, entt::id_type fontId, int fontSize, std::string_view fontPath = "");
 
     // 禁用拷贝和移动语义
     TextRenderer(const TextRenderer&) = delete;

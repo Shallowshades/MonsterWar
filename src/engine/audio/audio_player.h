@@ -1,10 +1,10 @@
 /*****************************************************************//**
  * @file   audio_player.h
  * @brief  音频播放器
- * @version 1.0
+ * @version 2.0
  * 
  * @author Shallowshades
- * @date   2025.12.16
+ * @date   2026.03.18
  *********************************************************************/
 
 #pragma once
@@ -13,6 +13,7 @@
 
 #include <string>
 #include <string_view>
+#include <entt/entity/fwd.hpp>
 
 namespace engine::resource {
     class ResourceManager;
@@ -25,8 +26,8 @@ namespace engine::audio {
 /**
 * @brief 用于控制音频播放的单例类。
 *
-* 提供播放音效和音乐的方法，使用由 ResourceManager 管理的资源。
-* 必须使用有效的 ResourceManager 实例初始化。
+* @note 提供播放音效和音乐的方法，使用由 ResourceManager 管理的资源。
+* @note 必须使用有效的 ResourceManager 实例初始化。
 */
 class AudioPlayer final {
 public:
@@ -45,22 +46,41 @@ public:
     // --- 播放控制方法 --- 
     /**
 	* @brief 播放音效（chunk）。
-	* 如果尚未缓存，则通过 ResourceManager 加载音效。
-	* @param sound_path 音效文件的路径。
+	* @note 必须确保 ResourceManager 加载了音效。
+	* @param soundId 音效Id。
 	* @param channel 要播放的特定通道，或 -1 表示第一个可用通道。默认为 -1。
 	* @return 音效正在播放的通道，出错时返回 -1。
 	*/
-    int playSound(std::string_view soundPath, int channel = -1);
+    int playSound(entt::id_type soundId, int channel = -1);
+
+    /**
+     * @brief 播放音效（chunk）。
+     * @note 如果尚未缓存，则通过 ResourceManager 加载音效。
+     * @param hashedPath 音效文件路径。
+     * @param channel 要播放的特定通道，或 -1 表示第一个可用通道。默认为 -1。
+     * @return 音效正在播放的通道，出错时返回 -1。
+     */
+    int playSound(entt::hashed_string hashedPath, int channel = -1);
+
+    /**
+     * @brief 播放背景音乐。如果正在播放，则淡出之前的音乐。
+     * @note 必须确保 ResourceManager 加载了音乐。
+     * @param musicId 音乐ID。
+     * @param loops 循环次数（-1 无限循环，0 播放一次，1 播放两次，以此类推）。默认为 -1。
+     * @param fadeInMs 音乐淡入的时间（毫秒）（0 表示不淡入）。默认为 0。
+     * @return 成功返回 true ，出错返回 false 。
+     */
+    bool playMusic(entt::id_type musicId, int loops = -1, int fadeInMs = 0);
 
     /**
 	* @brief 播放背景音乐。如果正在播放，则淡出之前的音乐。
-	* 如果尚未缓存，则通过 ResourceManager 加载音乐。
-	* @param music_path 音乐文件的路径。
+	* @note 如果尚未缓存，则通过 ResourceManager 加载音乐。
+	* @param hashedPath 音乐文件的路径。
 	* @param loops 循环次数（-1 无限循环，0 播放一次，1 播放两次，以此类推）。默认为 -1。
-	* @param fade_in_ms 音乐淡入的时间（毫秒）（0 表示不淡入）。默认为 0。
+	* @param fadeInMs 音乐淡入的时间（毫秒）（0 表示不淡入）。默认为 0。
 	* @return 成功返回 true ，出错返回 false 。
 	*/
-    bool playMusic(std::string_view musicPath, int loops = -1, int fadeInMs = 0);
+    bool playMusic(entt::hashed_string hashedPath, int loops = -1, int fadeInMs = 0);
 
     /**
 	* @brief 停止当前正在播放的背景音乐。
@@ -105,8 +125,9 @@ public:
     float getSoundVolume(int channel = -1);
 
 private:
-	engine::resource::ResourceManager* mResourceManager;               ///< @brief 指向 ResourceManager 的非拥有指针，用于加载和管理音频资源。
-	std::string mCurrentMusic;                                         ///< @brief 当前正在播放的音乐路径，用于避免重复播放同一音乐。
+    static constexpr std::string_view mLogTag = "AudioPlayer";          ///< @brief 日志标识
+	engine::resource::ResourceManager* mResourceManager;                ///< @brief 指向 ResourceManager 的非拥有指针，用于加载和管理音频资源。
+    entt::id_type mCurrentMusicId{ 0 };                                 ///< @brief 当前正在播放的音乐路径，用于避免重复播放同一音乐。
 };
 
 } // namespace engine::audio

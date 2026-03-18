@@ -4,7 +4,7 @@
  * @version 1.0
  * 
  * @author Shallowshades
- * @date   2026.01.20
+ * @date   2026.03.18
  *********************************************************************/
 
 #pragma once
@@ -18,6 +18,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <entt/core/hashed_string.hpp>
 
 namespace engine::core {
     class Context;
@@ -39,10 +40,10 @@ public:
 
     virtual void clicked() {}                                                               ///< @brief 如果有点击事件，则重写该方法
 
-    void addSprite(std::string_view name, std::unique_ptr<engine::render::Sprite> sprite);  ///< @brief 添加精灵
-    void setSprite(std::string_view name);                                                  ///< @brief 设置当前显示的精灵
-    void addSound(std::string_view name, std::string_view path);                            ///< @brief 添加音效
-    void playSound(std::string_view name);                                                  ///< @brief 播放音效
+    void addSprite(entt::id_type nameId, engine::render::Sprite sprite);                    ///< @brief 添加精灵
+    void setSprite(entt::id_type nameId);                                                   ///< @brief 设置当前显示的精灵
+    void addSound(entt::id_type nameId, entt::hashed_string hashedPath);                    ///< @brief 添加音效
+    void playSound(entt::id_type nameId);                                                   ///< @brief 播放音效
     // --- Getters and Setters ---
     void setState(std::unique_ptr<engine::ui::state::UIState> state);                       ///< @brief 设置当前状态
     engine::ui::state::UIState* getState() const { return mState.get(); }                   ///< @brief 获取当前状态
@@ -57,9 +58,9 @@ public:
 protected:
 	engine::core::Context& mContext;                                                        ///< @brief 可交互元素很可能需要其他引擎组件
 	std::unique_ptr<engine::ui::state::UIState> mState;                                     ///< @brief 当前状态
-	std::unordered_map<std::string, std::unique_ptr<engine::render::Sprite>> mSprites;      ///< @brief 精灵集合
-	std::unordered_map<std::string, std::string> mSounds;                                   ///< @brief 音效集合，key为音效名称，value为音效文件路径
-	engine::render::Sprite* mCurrentSprite = nullptr;                                       ///< @brief 当前显示的精灵
+	std::unordered_map<entt::id_type, engine::render::Sprite> mSprites;                     ///< @brief 精灵集合
+	std::unordered_map<entt::id_type, entt::id_type> mSounds;                               ///< @brief 音效集合，key为音效名称ID，value为音效ID
+	entt::id_type mCurrentSpriteId;                                                         ///< @brief 当前显示的精灵ID
 	bool mInteractive = true;                                                               ///< @brief 是否可交互
 };
 

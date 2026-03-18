@@ -1,10 +1,10 @@
 /*****************************************************************//**
  * @file   audio_manager.h
  * @brief  音效管理类
- * @version 1.0
+ * @version 2.0
  *
  * @author Shallowshades
- * @date   2025.10.19
+ * @date   2026.03.18
  *********************************************************************/
 
 #pragma once
@@ -12,71 +12,163 @@
 #define AUDIO_MANAGER_H
 
 #include <memory>
-#include <stdexcept>
-#include <string>
-#include <string_view>
 #include <unordered_map>
-
+#include <string_view>
+#include <entt/core/fwd.hpp>
 #include <SDL3_mixer/SDL_mixer.h>
 
 namespace engine::resource {
-	/**
-	 * @class 音效管理类.
-	 * @brief 管理SDL_mixer音效(Mix_Chunk)和音乐(Mix_Music)
-	 *
-	 * 提供音频资源的加载和缓存功能, 构造失败会抛出异常
-	 * 仅供ResourceManager内部使用
-	 */
-	class AudioManager final {
-		friend class ResourceManager;
-	private:
-		// Mix_Chunk的自定义删除器
-		struct SDLMixChunkDeleter {
-			void operator()(Mix_Chunk* chunk) const {
-				if (chunk) {
-					Mix_FreeChunk(chunk);
-				}
-			}
-		};
+/**
+* @brief 管理 SDL_mixer 音效 (Mix_Chunk) 和音乐 (Mix_Music)。
+*
+* 提供音频资源的加载和缓存功能。构造失败时会抛出异常。
+* 仅供 ResourceManager 内部使用。
+*/
+class AudioManager final {
+    friend class ResourceManager;
 
-		// Mix_Music的自定义删除器
-		struct SDLMixMusicDeleter {
-			void operator()(Mix_Music* music) const {
-				if (music) {
-					Mix_FreeMusic(music);
-				}
-			}
-		};
-	public:
-		/**
-		 * @brief 构造函数, 初始化SDL_mixer并打开音频设备.
-		 * @throw 如果SDL_mixer初始化或打开音频设备失败抛出std::runtime_error
-		 */
-		AudioManager();
-		~AudioManager();																				///< @brief 清理资源并关闭 SDL_mixer
+private:
+    // Mix_Chunk 的自定义删除器
+    struct SDLMixChunkDeleter {
+        void operator()(Mix_Chunk* chunk) const {
+            if (chunk) {
+                Mix_FreeChunk(chunk);
+            }
+        }
+    };
 
-		AudioManager(const AudioManager&) = delete;														///< @brief 删除拷贝构造
-		AudioManager& operator=(const AudioManager&) = delete;											///< @brief 删除拷贝赋值构造
-		AudioManager(AudioManager&&) = delete;															///< @brief 删除移动构造
-		AudioManager& operator=(AudioManager&&) = delete;												///< @brief 删除移动赋值构造
+    // Mix_Music 的自定义删除器
+    struct SDLMixMusicDeleter {
+        void operator()(Mix_Music* music) const {
+            if (music) {
+                Mix_FreeMusic(music);
+            }
+        }
+    };
 
-	private:
-		Mix_Chunk* loadSound(std::string_view filePath);												///< @brief 载入音效资源
-		Mix_Chunk* getSound(std::string_view filePath);													///< @brief 尝试获取已加载的音效的指针,如果未加载则尝试加载
-		void unloadSound(std::string_view filePath);													///< @brief 卸载指定的音效资源
-		void clearSounds();																				///< @brief 清空所有的音效资源
+public:
+    /**
+    * @brief 构造函数。初始化 SDL_mixer 并打开音频设备。
+    * @throws std::runtime_error 如果 SDL_mixer 初始化或打开音频设备失败。
+    */
+    AudioManager();
 
-		Mix_Music* loadMusic(std::string_view filePath);												///< @brief 载入音乐资源
-		Mix_Music* getMusic(std::string_view filePath);													///< @brief 尝试获取已加载的音乐的指针,如果未加载则尝试加载
-		void unloadMusic(std::string_view filePath);													///< @brief 卸载指定的音乐资源
-		void clearMusic();																				///< @brief 清空所有的音乐资源
+    ~AudioManager();            ///< @brief 需要手动添加析构函数，清理资源并关闭 SDL_mixer。
 
-		void clearAudio();																				///< @brief 清空所有音频资源
-	private:
-		static constexpr std::string_view mLogTag = "AudioManager";
-		std::unordered_map<std::string, std::unique_ptr<Mix_Chunk, SDLMixChunkDeleter>> mSounds;		///< @brief 音效存储
-		std::unordered_map<std::string, std::unique_ptr<Mix_Music, SDLMixMusicDeleter>> mMusic;			///< @brief 音乐存储
-	};
+    // 当前设计中，我们只需要一个AudioManager，所有权不变，所以不需要拷贝、移动相关构造及赋值运算符
+    AudioManager(const AudioManager&) = delete;
+    AudioManager& operator=(const AudioManager&) = delete;
+    AudioManager(AudioManager&&) = delete;
+    AudioManager& operator=(AudioManager&&) = delete;
+
+private:  // 仅供 ResourceManager 访问的方法
+    /**
+	* @brief 从文件路径加载音效
+	* @param id 音效的唯一标识符, 通过entt::hashed_string生成
+	* @param filePath 音效文件的路径
+	* @return 加载的音效的指针
+	* @note 如果音效已经加载，则返回已加载音效的指针
+	* @note 如果音效未加载，则从文件路径加载音效，并返回加载的音效的指针
+	*/
+    Mix_Chunk* loadSound(entt::id_type id, std::string_view filePath);
+
+    /**
+	* @brief 从字符串哈希值加载音效
+	* @param strHash entt::hashed_string类型
+	* @return 加载的音效的指针
+	* @note 如果音效已经加载，则返回已加载音效的指针
+	* @note 如果音效未加载，则从哈希字符串对应的文件路径加载音效，并返回加载的音效的指针
+	*/
+    Mix_Chunk* loadSound(entt::hashed_string strHash);
+
+    /**
+    * @brief 从文件路径获取音效
+    * @param id 音效的唯一标识符, 通过entt::hashed_string生成
+    * @return 加载的音效的指针
+    * @note 如果音效已经加载，则返回已加载音效的指针
+    * @note 如果音效未加载，则从哈希字符串对应的文件路径加载音效，并返回加载的音效的指针
+    */
+    Mix_Chunk* getSound(entt::id_type id, std::string_view filePath = "");
+
+    /**
+    * @brief 从字符串哈希值获取音效
+    * @param strHash entt::hashed_string类型
+    * @return 加载的音效的指针
+    * @note 如果音效已经加载，则返回已加载音效的指针
+    * @note 如果音效未加载，则从哈希字符串对应的文件路径加载音效，并返回加载的音效的指针
+    */
+    Mix_Chunk* getSound(entt::hashed_string strHash);
+
+    /**
+	* @brief 卸载指定的音效资源
+	* @param id 音效的唯一标识符, 通过entt::hashed_string生成
+	*/
+    void unloadSound(entt::id_type id);
+
+    /**
+    * @brief 清空所有音效资源
+    */
+    void clearSounds();
+
+    /**
+	* @brief 从文件路径加载音乐
+	* @param id 音乐的唯一标识符, 通过entt::hashed_string生成
+	* @param filePath 音乐文件的路径
+	* @return 加载的音乐的指针
+	* @note 如果音乐已经加载，则返回已加载音乐的指针
+	* @note 如果音乐未加载，则从文件路径加载音乐，并返回加载的音乐的指针
+	*/
+    Mix_Music* loadMusic(entt::id_type id, std::string_view filePath);
+
+    /**
+    * @brief 从字符串哈希值加载音乐
+    * @param strHash entt::hashed_string类型
+    * @return 加载的音乐的指针
+    * @note 如果音乐已经加载，则返回已加载音乐的指针
+    * @note 如果音乐未加载，则从哈希字符串对应的文件路径加载音乐，并返回加载的音乐的指针
+    */
+    Mix_Music* loadMusic(entt::hashed_string strHash);
+
+    /**
+    * @brief 从文件路径获取音乐
+    * @param id 音乐的唯一标识符, 通过entt::hashed_string生成
+    * @return 加载的音乐的指针
+    * @note 如果音乐已经加载，则返回已加载音乐的指针
+    * @note 如果音乐未加载，则从哈希字符串对应的文件路径加载音乐，并返回加载的音乐的指针
+    */
+    Mix_Music* getMusic(entt::id_type id, std::string_view filePath = "");
+
+    /**
+	* @brief 从字符串哈希值获取音乐
+	* @param strHash entt::hashed_string类型
+	* @return 加载的音乐的指针
+	* @note 如果音乐已经加载，则返回已加载音乐的指针
+	* @note 如果音乐未加载，则从哈希字符串对应的文件路径加载音乐，并返回加载的音乐的指针
+	*/
+    Mix_Music* getMusic(entt::hashed_string strHash);
+
+    /**
+	* @brief 卸载指定的音乐资源
+	* @param id 音乐的唯一标识符, 通过entt::hashed_string生成
+	*/
+    void unloadMusic(entt::id_type id);
+
+    /**
+	* @brief 清空所有音乐资源
+	*/
+    void clearMusic();
+
+    /**
+	* @brief 清空所有音频资源
+	*/
+    void clearAudio();
+
+private:
+	// 音效存储 (文件路径 -> Mix_Chunk)
+	std::unordered_map<entt::id_type, std::unique_ptr<Mix_Chunk, SDLMixChunkDeleter>> mSounds;
+	// 音乐存储 (文件路径 -> Mix_Music)
+	std::unordered_map<entt::id_type, std::unique_ptr<Mix_Music, SDLMixMusicDeleter>> mMusic;
+};
 } // namespace engine::resource
 
 #endif // AUDIO_MANAGER_H

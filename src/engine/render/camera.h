@@ -16,7 +16,7 @@
 
 #include "../utils/math.h"
 
-namespace engine::component { class TransformComponent; }
+// namespace engine::component { class TransformComponent; }
 
 namespace engine::render {
 /**
@@ -38,13 +38,13 @@ public:
 	glm::vec2 worldToScreenWithParallax(const glm::vec2& worldPosition, const glm::vec2& scrollFactor) const;
 
 	void setPosition(const glm::vec2& position);						///< @brief 设置相机位置
-	void setLimitBounds(std::optional<engine::utils::Rect> bounds);				///< @brief 设置限制相机的移动范围
-	void setTarget(engine::component::TransformComponent* target);		///< @brief 设置跟随目标变换组件
+	void setLimitBounds(std::optional<engine::utils::Rect> bounds);		///< @brief 设置限制相机的移动范围
+	// void setTarget(engine::component::TransformComponent* target);		///< @brief 设置跟随目标变换组件
 
 	const glm::vec2& getPosition() const;								///< @brief 获取相机位置
 	std::optional<engine::utils::Rect> getLimitBounds() const;			///< @brief 获取限制相机的移动范围
 	glm::vec2 getViewPortSize() const;									///< @brief 获取视口大小
-	engine::component::TransformComponent* getTarget() const;			///< @brief 获取跟随目标变换组件
+	// engine::component::TransformComponent* getTarget() const;			///< @brief 获取跟随目标变换组件
 
 	// 禁用拷贝和移动语义
 	Camera(const Camera&) = delete;										///< @brief 删除拷贝构造
@@ -62,7 +62,7 @@ private:
 	glm::vec2 mPosition;												///< @brief 相机左上角的世界坐标
 	std::optional<engine::utils::Rect> mLimitBounds;					///< @brief 限制相机的移动范围, 空值表示不限制
 	float mSmoothSpeed = 5.f;											///< @brief 相机移动的平滑速度
-	engine::component::TransformComponent* mTarget = nullptr;			///< @brief 跟随目标变换组件, 空值表示不跟随
+	// engine::component::TransformComponent* mTarget = nullptr;			///< @brief 跟随目标变换组件, 空值表示不跟随
 };
 }
 

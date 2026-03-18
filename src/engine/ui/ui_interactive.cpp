@@ -26,34 +26,42 @@ void UIInteractive::setState(std::unique_ptr<engine::ui::state::UIState> state) 
 	mState->enter();
 }
 
-void UIInteractive::addSprite(std::string_view name, std::unique_ptr<engine::render::Sprite> sprite) {
+void UIInteractive::addSprite(entt::id_type nameId, engine::render::Sprite sprite) {
 	// 可交互UI元素必须有一个size用于交互检测，因此如果参数列表中没有指定，则用图片大小作为size
 	if (mSize.x == 0.0f && mSize.y == 0.0f) {
-		mSize = mContext.getResourceManager().getTextureSize(sprite->getTextureId());
+		mSize = mContext.getResourceManager().getTextureSize(sprite.getTextureId());
 	}
 	// 添加精灵
-	mSprites[std::string(name)] = std::move(sprite);
+	mSprites.emplace(nameId, std::move(sprite));
 }
 
-void UIInteractive::setSprite(std::string_view name) {
-	if (mSprites.find(std::string(name)) != mSprites.end()) {
-		mCurrentSprite = mSprites[std::string(name)].get();
+void UIInteractive::setSprite(entt::id_type nameId) {
+	if (mSprites.find(nameId) != mSprites.end()) {
+		mCurrentSpriteId = nameId;
 	}
 	else {
-		spdlog::warn("Sprite '{}' 未找到", name.data());
+		spdlog::warn("Sprite '{}' 未找到", nameId);
 	}
 }
 
-void UIInteractive::addSound(std::string_view name, std::string_view path) {
-	mSounds[std::string(name)] = path;
+void UIInteractive::addSound(entt::id_type nameId, entt::hashed_string hashedPath) {
+	// 插入容器
+	mSounds.emplace(nameId, hashedPath.value());
+
+	// 载入音效资源
+	mContext.getResourceManager().loadSound(hashedPath);
 }
 
-void UIInteractive::playSound(std::string_view name) {
-	if (mSounds.find(std::string(name)) != mSounds.end()) {
-		mContext.getAudioPlayer().playSound(mSounds[std::string(name)]);
+void UIInteractive::playSound(entt::id_type nameId) {
+	if (auto it = mSounds.find(nameId); it != mSounds.end()) {
+		if (mContext.getAudioPlayer().playSound(it->second) == -1) {
+			spdlog::warn("UIInteractive : sound {} 未找到或无法播放", nameId);
+		}
 	}
 	else {
-		spdlog::error("Sound '{}' 未找到", name);
+		if (mContext.getAudioPlayer().playSound(nameId) == -1) {
+			spdlog::error("Sound '{}' 未找到或无法播放", nameId);
+		}
 	}
 }
 
@@ -76,7 +84,7 @@ void UIInteractive::render(engine::core::Context& context) {
 	if (!mVisible) return;
 
 	// 先渲染自身
-	context.getRenderer().drawUISprite(*mCurrentSprite, getScreenPosition(), mSize);
+	context.getRenderer().drawUISprite(mSprites[mCurrentSpriteId], getScreenPosition(), mSize);
 
 	// 再渲染子元素（调用基类方法）
 	UIElement::render(context);

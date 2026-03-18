@@ -41,11 +41,11 @@ void TextRenderer::close() {
 	TTF_Quit();     // 一定要确保在ResourceManager销毁之后调用
 }
 
-void TextRenderer::drawUIText(std::string_view text, std::string_view font_id, int font_size, const glm::vec2& position, const engine::utils::FColor& color) {
+void TextRenderer::drawUIText(std::string_view text, entt::id_type fontId, int fontSize, const glm::vec2& position, const engine::utils::FColor& color) {
 	/* 构造函数已经保证了必要指针不会为空，这里不需要再检查 */
-	TTF_Font* font = mResourceManager->getFont(font_id, font_size);
+	TTF_Font* font = mResourceManager->getFont(fontId, fontSize);
 	if (!font) {
-		spdlog::warn("drawUIText 获取字体失败: {} 大小 {}", font_id.data(), font_size);
+		spdlog::warn("drawUIText 获取字体失败: {} 大小 {}", fontId, fontSize);
 		return;
 	}
 
@@ -72,19 +72,19 @@ void TextRenderer::drawUIText(std::string_view text, std::string_view font_id, i
 	TTF_DestroyText(temp_text_object);
 }
 
-void TextRenderer::drawText(const Camera& camera, std::string_view text, std::string_view font_id, int font_size, const glm::vec2& position, const engine::utils::FColor& color) {
+void TextRenderer::drawText(const Camera& camera, std::string_view text, entt::id_type fontId, int fontSize, const glm::vec2& position, const engine::utils::FColor& color) {
 	// 应用相机变换
 	glm::vec2 position_screen = camera.worldToScreen(position);
 
 	// 用新坐标调用drawUIText即可
-	drawUIText(text, font_id, font_size, position_screen, color);
+	drawUIText(text, fontId, fontSize, position_screen, color);
 }
 
-glm::vec2 TextRenderer::getTextSize(std::string_view text, std::string_view font_id, int font_size) {
+glm::vec2 TextRenderer::getTextSize(std::string_view text, entt::id_type fontId, int fontSize, std::string_view fontPath) {
 	/* 构造函数已经保证了必要指针不会为空，这里不需要再检查 */
-	TTF_Font* font = mResourceManager->getFont(font_id, font_size);
+	TTF_Font* font = mResourceManager->getFont(fontId, fontSize, fontPath );
 	if (!font) {
-		spdlog::warn("getTextSize 获取字体失败: {} 大小 {}", font_id.data(), font_size);
+		spdlog::warn("getTextSize 获取字体失败: {} 大小 {}", fontId, fontSize);
 		return glm::vec2(0.0f, 0.0f);
 	}
 

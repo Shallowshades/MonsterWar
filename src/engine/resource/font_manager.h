@@ -12,23 +12,21 @@
 #define FONT_MANAGER_H
 
 #include <memory>
-#include <stdexcept>
-#include <string>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
-#include <functional>
-
+#include <entt/core/fwd.hpp>
 #include <SDL3_ttf/SDL_ttf.h>
 
 namespace engine::resource {
-using FontKey = std::pair<std::string, int>;
+using FontKey = std::pair<entt::id_type, int>;
 struct FontKeyHash {
 	std::size_t operator()(const FontKey& key) const {
-		// 异或运算求取两个哈希值获取
-		std::hash<std::string> stringHasher;
-		std::hash<int> intHasher;
-		return stringHasher(key.first) ^ intHasher(key.second);
+		// 采用C++20标准库的hash_combine实现思路
+		std::size_t h1 = std::hash<entt::id_type>{}(key.first);
+		std::size_t h2 = std::hash<int>{}(key.second);
+		// 推荐的哈希合并方式，参考boost::hash_combine
+		return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
 	}
 };
 
@@ -55,9 +53,9 @@ private:
 	};
 public:
 	/**
-		* @brief 构造函数, 初始化SDL_ttf.
-		* @throw 如果SDL_ttf初始化失败抛出std::runtime_error
-		*/
+	* @brief 构造函数, 初始化SDL_ttf.
+	* @throw 如果SDL_ttf初始化失败抛出std::runtime_error
+	*/
 	FontManager();
 	~FontManager();																					///< @brief 需要手动添加析构函数, 清理资源并关闭.
 	FontManager(const FontManager&) = delete;														///< @brief 删除拷贝构造
@@ -65,10 +63,59 @@ public:
 	FontManager(FontManager&&) = delete;															///< @brief 删除移动构造
 	FontManager& operator=(FontManager&&) = delete;													///< @brief 删除移动赋值构造
 private:
-	TTF_Font* loadFont(std::string_view filePath, int pointSize);									///< @brief 载入字体资源
-	TTF_Font* getFont(std::string_view filePath, int pointSize);									///< @brief 尝试获取已加载的字体
-	void unloadFont(std::string_view filePath, int pointSize);										///< @brief 卸载指定的字体资源
-	void clearFonts();																				///< @brief 清空所有的字体资源
+    /**
+	* @brief 从文件路径加载指定点大小的字体
+	* @param id 字体的唯一标识符, 通过entt::hashed_string生成
+	* @param pointSize 字体的点大小
+	* @param filePath 字体文件的路径
+	* @return 加载的字体的指针
+	* @note 如果字体已经加载，则返回已加载字体的指针
+	* @note 如果字体未加载，则从文件路径加载字体，并返回加载的字体的指针
+	*/
+    TTF_Font* loadFont(entt::id_type id, int pointSize, std::string_view filePath);
+
+    /**
+     * @brief 从字符串哈希值加载指定点大小的字体
+     * @param strHash entt::hashed_string类型
+     * @param pointSize 字体的点大小
+     * @return 加载的字体的指针
+     * @note 如果字体已经加载，则返回已加载字体的指针
+     * @note 如果字体未加载，则从哈希字符串对应的文件路径加载字体，并返回加载的字体的指针
+     */
+    TTF_Font* loadFont(entt::hashed_string strHash, int pointSize);
+
+    /**
+     * @brief 尝试获取已加载字体的指针，如果未加载则尝试加载
+     * @param id 字体的唯一标识符, 通过entt::hashed_string生成
+     * @param pointSize 字体的点大小
+     * @param filePath 字体文件的路径
+     * @return 加载的字体的指针
+     * @note 如果字体已经加载，则返回已加载字体的指针
+     * @note 如果字体未加载，且提供了filePath，则尝试从文件路径加载字体，并返回加载的字体的指针
+     */
+    TTF_Font* getFont(entt::id_type id, int pointSize, std::string_view filePath = "");
+
+    /**
+     * @brief 从字符串哈希值获取字体
+     * @param strHash entt::hashed_string类型
+     * @param pointSize 字体的点大小
+     * @return 加载的字体的指针
+     * @note 如果字体已经加载，则返回已加载字体的指针
+     * @note 如果字体未加载，则从哈希字符串对应的文件路径加载字体，并返回加载的字体的指针
+     */
+    TTF_Font* getFont(entt::hashed_string strHash, int pointSize);
+
+    /**
+     * @brief 卸载特定字体（通过路径哈希值和大小标识）
+     * @param id 字体的唯一标识符, 通过entt::hashed_string生成
+     * @param pointSize 字体的点大小
+     */
+    void unloadFont(entt::id_type id, int pointSize);
+
+    /**
+     * @brief 清空所有缓存的字体
+     */
+    void clearFonts();
 private:
 	static constexpr std::string_view mLogTag = "FontManager";
 	// 字体存储（FontKey -> TTF_Font）。  

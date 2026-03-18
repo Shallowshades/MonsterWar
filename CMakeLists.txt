@@ -324,14 +324,14 @@ set(SOURCES
     src/engine/core/config.cpp
     src/engine/core/context.cpp
     src/engine/core/game_state.cpp
-    src/engine/component/component.cpp
-    src/engine/component/sprite_component.cpp
-    src/engine/component/transform_component.cpp
-    src/engine/component/parallax_component.cpp
-    src/engine/component/tilelayer_component.cpp
-    src/engine/component/animation_component.cpp
-    src/engine/component/health_component.cpp
-    src/engine/component/audio_component.cpp
+    # src/engine/component/component.cpp
+    # src/engine/component/sprite_component.cpp
+    # src/engine/component/transform_component.cpp
+    # src/engine/component/parallax_component.cpp
+    # src/engine/component/tilelayer_component.cpp
+    # src/engine/component/animation_component.cpp
+    # src/engine/component/health_component.cpp
+    # src/engine/component/audio_component.cpp
     src/engine/input/input_manager.cpp
     src/engine/object/game_object.cpp
     src/engine/resource/resource_manager.cpp
@@ -340,7 +340,6 @@ set(SOURCES
     src/engine/resource/font_manager.cpp
     src/engine/render/camera.cpp
     src/engine/render/renderer.cpp
-    src/engine/render/sprite.cpp
     src/engine/render/animation.cpp
     src/engine/render/text_renderer.cpp
     src/engine/scene/scene.cpp

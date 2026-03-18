@@ -90,11 +90,11 @@ private:
 	void onQuitEvent();
 
 	// 测试函数
-	void testResourceManager();
-	void testRenderer();
-	void testCamera();
-	void testInputManager();
-	void testGameObject();
+	// void testResourceManager();
+	// void testRenderer();
+	// void testCamera();
+	// void testInputManager();
+	// void testGameObject();
 
 private:
 	static constexpr std::string_view mLogTag = "GameApp";
