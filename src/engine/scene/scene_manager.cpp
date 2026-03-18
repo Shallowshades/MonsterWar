@@ -2,31 +2,21 @@
 #include "scene.h"
 #include "../core/context.h"
 #include <spdlog/spdlog.h>
+#include <entt/signal/dispatcher.hpp>
 
 namespace engine::scene {
 engine::scene::SceneManager::SceneManager(engine::core::Context& context) 
 	: mContext(context)
 {
+	mContext.getDispatcher().sink<engine::utils::PopSceneEvent>().connect<&SceneManager::onPopScene>(this);
+	mContext.getDispatcher().sink<engine::utils::PushSceneEvent>().connect<&SceneManager::onPushScene>(this);
+	mContext.getDispatcher().sink<engine::utils::ReplaceSceneEvent>().connect<&SceneManager::onReplaceScene>(this);
 	spdlog::trace("{} 构造完成", mLogTag.data());
 }
 
 SceneManager::~SceneManager() {
 	clean();
 	spdlog::trace("{} 析构完成", mLogTag.data());
-}
-
-void SceneManager::requestPushScene(std::unique_ptr<Scene>&& scene) {
-	mPendingAction = PendingAction::Push;
-	mPendingScene = std::move(scene);
-}
-
-void SceneManager::requestPopScene() {
-	mPendingAction = PendingAction::Pop;
-}
-
-void SceneManager::requestReplaceScene(std::unique_ptr<Scene>&& scene) {
-	mPendingAction = PendingAction::Replace;
-	mPendingScene = std::move(scene);
 }
 
 Scene* SceneManager::getCurrentScene() const {
@@ -75,6 +65,23 @@ void SceneManager::clean() {
 		}
 		mSceneStack.pop_back();
 	}
+
+	// 断开事件处理函数 (一次断开所有和当前实例绑定的回调函数)
+	mContext.getDispatcher().disconnect(this);
+}
+
+void SceneManager::onPopScene() {
+	mPendingAction = PendingAction::Pop;
+}
+
+void SceneManager::onPushScene(engine::utils::PushSceneEvent& event) {
+	mPendingAction = PendingAction::Push;
+	mPendingScene = std::move(event.scene);
+}
+
+void SceneManager::onReplaceScene(engine::utils::ReplaceSceneEvent& event) {
+	mPendingAction = PendingAction::Replace;
+	mPendingScene = std::move(event.scene);
 }
 
 void SceneManager::processPendingActions() {
@@ -125,6 +132,11 @@ void SceneManager::popScene() {
 		mSceneStack.back()->clean();
 	}
 	mSceneStack.pop_back();
+
+	if (mSceneStack.empty()) {
+		spdlog::warn("{} : 弹出最后一个场景, 退出游戏", mLogTag.data());
+		mContext.getDispatcher().enqueue<engine::utils::QuitEvent>();
+	}
 }
 
 void SceneManager::replaceScene(std::unique_ptr<Scene>&& scene) {

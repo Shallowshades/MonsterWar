@@ -45,7 +45,7 @@ void engine::core::GameApp::run() {
 	close();
 }
 
-void engine::core::GameApp::registerSceneSetup(std::function<void(engine::scene::SceneManager&)> func) {
+void engine::core::GameApp::registerSceneSetup(std::function<void(engine::core::Context&)> func) {
 	mSceneSetupFunc = std::move(func);
 	spdlog::trace("GameApp 已注册场景设置函数");
 }
@@ -73,7 +73,7 @@ bool engine::core::GameApp::init() {
 	if (!initSceneManager()) return false;
 
 	// (调用场景设置函数) 创建第一个场景并压入栈
-	mSceneSetupFunc(*mSceneManager);
+	mSceneSetupFunc(*mContext);
 
 	// 注册退出事件 (回调函数可以无参数, 代表不使用事件结构体中的数据)
 	mDispatcher->sink<utils::QuitEvent>().connect<&GameApp::onQuitEvent>(this);

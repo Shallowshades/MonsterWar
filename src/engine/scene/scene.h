@@ -36,7 +36,7 @@ public:
 	 * @param context 场景上下文
 	 * @param sceneManager 场景管理器
 	 */
-	Scene(std::string_view name, engine::core::Context& context, engine::scene::SceneManager& sceneManager);
+	Scene(std::string_view name, engine::core::Context& context);
 	virtual ~Scene();
 
 	// 禁用拷贝和移动语义
@@ -83,13 +83,21 @@ public:
 	 */
 	engine::object::GameObject* findGameObjectByName(std::string_view name) const;
 
+	// 请求弹出当前场景
+	void requestPopScene();
+	// 请求压入一个新场景
+	void requestPushScene(std::unique_ptr<engine::scene::Scene>&& scene);
+	// 请求替换当前场景
+	void requestReplaceScene(std::unique_ptr<engine::scene::Scene>&& scene);
+	// 退出游戏
+	void quit();
+
 	void setName(std::string_view name);												///< @brief 设置场景名称
 	std::string_view getName() const;													///< @brief 获取场景名称
 	void setIsInitialized(bool initialized);											///< @brief 设置场景是否已初始化
 	bool getIsInitialized() const;														///< @brief 获取场景是否已初始化
 
-	engine::core::Context& getContext() const;											///< @brief 获取上下文引用
-	engine::scene::SceneManager& getSceneManager() const;								///< @brief 获取场景管理器
+	engine::core::Context& getContext() const;											///< @brief 获取上下文引用	
 	std::vector<std::unique_ptr<engine::object::GameObject>>& getGameObjects();			///< @brief 获取场景中的游戏对象
 
 protected:
@@ -100,7 +108,6 @@ protected:
 
 	std::string mSceneName;																///< @brief 场景名称
 	engine::core::Context& mContext;													///< @brief 上下文引用
-	engine::scene::SceneManager& mSceneManager;											///< @brief 场景管理器引用
 	std::unique_ptr<engine::ui::UIManager> mUIManager;									///< @brief UI管理器(初始化时自动创建)
 	bool mIsInitialized;																///< @brief 场景是否已被初始化
 	std::vector<std::unique_ptr<engine::object::GameObject>> mGameObjects;				///< @brief 场景中的游戏对象

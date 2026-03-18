@@ -56,7 +56,7 @@ public:
 	 * 
 	 * @param func 用于接收SceneManager引用的函数对象
 	 */
-	void registerSceneSetup(std::function<void(engine::scene::SceneManager&)> func);
+	void registerSceneSetup(std::function<void(engine::core::Context&)> func);
 
 	// 禁止拷贝和移动构造
 	GameApp(const GameApp&) = delete;
@@ -105,7 +105,7 @@ private:
 
 	// 游戏场景设置函数, 用于在运行游戏前设置初始化场景(GameApp不再决定初始场景)
 	// engine 模块作为底层不应该引用game中的文件, 应遵循上层引用下层的原则
-	std::function<void(engine::scene::SceneManager&)> mSceneSetupFunc;
+	std::function<void(engine::core::Context&)> mSceneSetupFunc;
 
 	// 引擎组件
 	std::unique_ptr<entt::dispatcher> mDispatcher;

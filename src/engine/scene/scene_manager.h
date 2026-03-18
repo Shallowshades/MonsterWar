@@ -15,6 +15,8 @@
 #include <string>
 #include <vector>
 
+#include "../utils/events.h"
+
 namespace engine::core { class Context; }
 namespace engine::scene { class Scene; }
 
@@ -33,12 +35,7 @@ public:
 	SceneManager(const SceneManager&) = delete;							///< @brief 删除拷贝构造
 	SceneManager& operator=(const SceneManager&) = delete;				///< @brief 删除拷贝赋值构造
 	SceneManager(SceneManager&&) = delete;								///< @brief 删除移动构造
-	SceneManager& operator=(SceneManager&&) = delete;					///< @brief 删除移动赋值构造
-
-	// 延时切换场景
-	void requestPushScene(std::unique_ptr<Scene>&& scene);				///< @brief 请求压入一个新场景
-	void requestPopScene();												///< @brief 请求弹出当前场景
-	void requestReplaceScene(std::unique_ptr<Scene>&& scene);			///< @brief 请求替换当前场景
+	SceneManager& operator=(SceneManager&&) = delete;					///< @brief 删除移动赋值构造		
 
 	Scene* getCurrentScene() const;										///< @brief 获取当前活动场景
 	engine::core::Context& getContext() const;							///< @brief 获取引擎上下文引用
@@ -50,6 +47,11 @@ public:
 	void clean();														///< @brief 清理
 
 private:
+	// 事件回调函数
+	void onPopScene();													///< @brief 请求压入一个新场景
+	void onPushScene(engine::utils::PushSceneEvent& event);				///< @brief 请求弹出当前场景
+	void onReplaceScene(engine::utils::ReplaceSceneEvent& event);		///< @brief 请求替换当前场景
+
 	void processPendingActions();										///< @brief 处理挂起的场景操作
 	void pushScene(std::unique_ptr<Scene>&& scene);						///< @brief 将一个新场景压入栈顶, 使其成为活动场景
 	void popScene();													///< @brief 移除栈顶场景
