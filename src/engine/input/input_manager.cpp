@@ -1,13 +1,15 @@
 #include "input_manager.h"
 #include "../core/config.h"
+#include "../utils/events.h"
 #include <stdexcept>
 #include <SDL3/SDL.h>
 #include <spdlog/spdlog.h>
 #include <glm/vec2.hpp>
+#include <entt/signal/dispatcher.hpp>
 
 namespace engine::input {
-InputManager::InputManager(SDL_Renderer* renderer, const engine::core::Config* config)
-	: mSDLRenderer(renderer)
+InputManager::InputManager(SDL_Renderer* renderer, const engine::core::Config* config, entt::dispatcher* dispatcher)
+	: mSDLRenderer(renderer), mDispatcher(dispatcher)
 {
 	if (!mSDLRenderer) {
 		spdlog::error("{} 输入管理器: SDL_Renderer为空指针.", mLogTag.data());
@@ -22,7 +24,7 @@ InputManager::InputManager(SDL_Renderer* renderer, const engine::core::Config* c
 	spdlog::trace("{} 初始鼠标位置: ({}, {})", mLogTag.data(), mMousePosition.x, mMousePosition.y);
 }
 
-entt::sink<entt::sigh<void()>> InputManager::onAction(std::string_view actionName, ActionState actionState) {
+entt::sink<entt::sigh<bool()>> InputManager::onAction(std::string_view actionName, ActionState actionState) {
 	// 如果actionName不存在, 自动创建一个std::array
 	// array.at() 会进行边界检查, 更安全
 	return mActionsToFunc[std::string(actionName)].at(static_cast<size_t>(actionState));
@@ -50,10 +52,19 @@ void InputManager::update() {
 		if (state != ActionState::INACTIVE) {
 			// 且有绑定函数
 			if (auto it = mActionsToFunc.find(actionNameId); it != mActionsToFunc.end()) {
-				it->second.at(static_cast<size_t>(state)).publish();
+				// collect 方法可以获取回调函数返回值, 放入lambda函数的参数中
+				// 而lambda函数的返回值为真, 停止分发信号
+				// 分发信号的顺序为后绑定先调用
+				it->second.at(static_cast<size_t>(state)).collect([](bool result) {
+					return result;
+				});
 			}
 		}
 	}
+}
+
+void InputManager::quit() {
+	mDispatcher->trigger<engine::utils::QuitEvent>();
 }
 
 bool InputManager::isActionDown(std::string_view actionName) const {
@@ -78,22 +89,12 @@ bool InputManager::isActionReleased(std::string_view actionName) const {
 	return false;
 }
 
-bool InputManager::shouldQuit() const {
-	return mShouldQuit;
-}
-
-void InputManager::setShouldQuit(bool shouldQuit) {
-	mShouldQuit = shouldQuit;
-}
-
 glm::vec2 InputManager::getMousePosition() const {
 	return mMousePosition;
 }
 
 glm::vec2 InputManager::getLogicalMousePosition() const {
-	glm::vec2 logicPosition;
-	SDL_RenderCoordinatesFromWindow(mSDLRenderer, mMousePosition.x, mMousePosition.y, &logicPosition.x, &logicPosition.y);
-	return logicPosition;
+	return mLogicalMousePosition;
 }
 
 void InputManager::processEvent(const SDL_Event& event) {
@@ -126,15 +127,20 @@ void InputManager::processEvent(const SDL_Event& event) {
 				updateActionState(actionName, isDown, false);
 			}
 		}
-		// 在点击时更新鼠标位置
+		// 在点击时更新鼠标位置, 同时更新逻辑位置, 避免多次一帧内多次调用的性能损耗
 		mMousePosition = { event.button.x, event.button.y };
+		SDL_RenderCoordinatesFromWindow(mSDLRenderer, mMousePosition.x, mMousePosition.y, &mLogicalMousePosition.x, &mLogicalMousePosition.y);
 		break;
 	}
 	case SDL_EVENT_MOUSE_MOTION:
 		mMousePosition = { event.motion.x, event.motion.y };
+		SDL_RenderCoordinatesFromWindow(mSDLRenderer, mMousePosition.x, mMousePosition.y, &mLogicalMousePosition.x, &mLogicalMousePosition.y);
 		break;
 	case SDL_EVENT_QUIT:
 		mShouldQuit = true;
+		quit();
+		break;
+	default:
 		break;
 	}
 }

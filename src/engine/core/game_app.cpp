@@ -1,6 +1,6 @@
 #include <SDL3/SDL.h>
 #include <spdlog/spdlog.h>
-
+#include <entt/signal/dispatcher.hpp>
 #include "game_app.h"
 #include "time.h"
 #include "config.h"
@@ -13,6 +13,7 @@
 #include "../render/text_renderer.h"
 #include "../input/input_manager.h"
 #include "../scene/scene_manager.h"
+#include "../utils/events.h"
 
 engine::core::GameApp::GameApp() = default;
 
@@ -33,7 +34,6 @@ void engine::core::GameApp::run() {
 	while (mIsRunning) {
 		mTime->update();
 		float delta = mTime->getDeltaTime(); // 每帧的时间间隔
-		mInputManager->update();
 		handleEvents();
 		update(delta);
 		render();
@@ -44,7 +44,7 @@ void engine::core::GameApp::run() {
 	close();
 }
 
-void engine::core::GameApp::registerSceneSetup(std::function<void(engine::scene::SceneManager&)> func) {
+void engine::core::GameApp::registerSceneSetup(std::function<void(engine::core::Context&)> func) {
 	mSceneSetupFunc = std::move(func);
 	spdlog::trace("GameApp 已注册场景设置函数");
 }
@@ -57,6 +57,7 @@ bool engine::core::GameApp::init() {
 		return false;
 	}
 
+	if (!initDispatcher()) return false;
 	if (!initConfig()) return false;
 	if (!initSDL()) return false;
 	if (!initTime()) return false;
@@ -71,7 +72,10 @@ bool engine::core::GameApp::init() {
 	if (!initSceneManager()) return false;
 
 	// (调用场景设置函数) 创建第一个场景并压入栈
-	mSceneSetupFunc(*mSceneManager);
+	mSceneSetupFunc(*mContext);
+
+	// 注册退出事件 (回调函数可以无参数, 代表不使用事件结构体中的数据)
+	mDispatcher->sink<utils::QuitEvent>().connect<&GameApp::onQuitEvent>(this);
 
 	mIsRunning = true;
 	spdlog::trace("{} 初始化成功", mLogTag.data());
@@ -79,11 +83,8 @@ bool engine::core::GameApp::init() {
 }
 
 void engine::core::GameApp::handleEvents() {
-	if (mInputManager->shouldQuit()) {
-		spdlog::trace("{} 收到来自 InputManager 的退出请求.", mLogTag.data());
-		mIsRunning = false;
-		return;
-	}
+	// 处理并分发输入事件
+	mInputManager->update();
 
 	mSceneManager->handleInput();
 }
@@ -91,6 +92,9 @@ void engine::core::GameApp::handleEvents() {
 void engine::core::GameApp::update(float delta) {
 	// 游戏逻辑更新
 	mSceneManager->update(delta);
+
+	// 分发事件
+	mDispatcher->update();
 }
 
 void engine::core::GameApp::render() {
@@ -104,6 +108,8 @@ void engine::core::GameApp::render() {
 
 void engine::core::GameApp::close() {
 	spdlog::trace("{} 关闭...", mLogTag.data());
+
+	mDispatcher->sink<utils::QuitEvent>().disconnect<&GameApp::onQuitEvent>(this);
 
 	// 先关闭场景管理器, 确保所有场景都被清理
 	mSceneManager->clean();
@@ -121,6 +127,18 @@ void engine::core::GameApp::close() {
 	}
 	SDL_Quit();
 	mIsRunning = false;
+}
+
+bool engine::core::GameApp::initDispatcher() {
+	try {
+		mDispatcher = std::make_unique<entt::dispatcher>();
+	}
+	catch (const std::exception& e) {
+		spdlog::error("{} : 初始化事件分发器成功.", mLogTag.data());
+		return false;
+	}
+	spdlog::trace("{} : 事件分发器初始化成功.", mLogTag.data());
+	return true;
 }
 
 bool engine::core::GameApp::initConfig() {
@@ -244,7 +262,7 @@ bool engine::core::GameApp::initCamera() {
 
 bool engine::core::GameApp::initInputManager() {
 	try {
-		mInputManager = std::make_unique<engine::input::InputManager>(mSDLRenderer, mConfig.get());
+		mInputManager = std::make_unique<engine::input::InputManager>(mSDLRenderer, mConfig.get(), mDispatcher.get());
 	}
 	catch (const std::exception& e) {
 		spdlog::error("{} 初始化输入管理器失败: {}", mLogTag.data(), e.what());
@@ -267,7 +285,7 @@ bool engine::core::GameApp::initGameState() {
 
 bool engine::core::GameApp::initContext() {
 	try {
-		mContext = std::make_unique<engine::core::Context>(*mInputManager, *mRenderer, *mCamera, *mTextRenderer, *mResourceManager, *mAudioPlayer, *mGameState);
+		mContext = std::make_unique<engine::core::Context>(*mDispatcher, *mInputManager, *mRenderer, *mCamera, *mTextRenderer, *mResourceManager, *mAudioPlayer, *mGameState);
 	}
 	catch (const std::exception& e) {
 		spdlog::error("{} 初始化上下文失败: {}", mLogTag.data(), e.what());
@@ -286,6 +304,11 @@ bool engine::core::GameApp::initSceneManager() {
 	}
 	spdlog::trace("{} 场景管理器初始化成功.", mLogTag.data());
 	return true;
+}
+
+void engine::core::GameApp::onQuitEvent() {
+	spdlog::trace("{} : GameApp 收到来自事件分发器的退出请求.");
+	mIsRunning = false;
 }
 
 //////////////////////////////////////////////////////////////////////////

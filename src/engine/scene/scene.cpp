@@ -5,14 +5,15 @@
 #include "../core/game_state.h"
 #include "../render/camera.h"
 #include "../ui/ui_manager.h"
+#include "../utils/events.h"
 #include <algorithm>
 #include <spdlog/spdlog.h>
+#include <entt/signal/dispatcher.hpp>
 
 namespace engine::scene {
-engine::scene::Scene::Scene(std::string_view name, engine::core::Context& context, engine::scene::SceneManager& sceneManager)
+engine::scene::Scene::Scene(std::string_view name, engine::core::Context& context)
 	: mSceneName(name)
 	, mContext(context)
-	, mSceneManager(sceneManager)
 	, mUIManager(std::make_unique<engine::ui::UIManager>())
 	, mIsInitialized(false)
 {
@@ -179,6 +180,22 @@ engine::object::GameObject* Scene::findGameObjectByName(std::string_view name) c
 	return nullptr;
 }
 
+void Scene::requestPopScene() {
+	mContext.getDispatcher().trigger<engine::utils::PopSceneEvent>();
+}
+
+void Scene::requestPushScene(std::unique_ptr<engine::scene::Scene>&& scene) {
+	mContext.getDispatcher().trigger<engine::utils::PushSceneEvent>(engine::utils::PushSceneEvent{ std::move(scene) });
+}
+
+void Scene::requestReplaceScene(std::unique_ptr<engine::scene::Scene>&& scene) {
+	mContext.getDispatcher().trigger<engine::utils::ReplaceSceneEvent>(engine::utils::ReplaceSceneEvent{ std::move(scene) });
+}
+
+void Scene::quit() {
+	mContext.getDispatcher().trigger<engine::utils::QuitEvent>();
+}
+
 void Scene::setName(std::string_view name) {
 	mSceneName = name;
 }
@@ -197,10 +214,6 @@ bool Scene::getIsInitialized() const {
 
 engine::core::Context& Scene::getContext() const {
 	return mContext;
-}
-
-engine::scene::SceneManager& Scene::getSceneManager() const {
-	return mSceneManager;
 }
 
 std::vector<std::unique_ptr<engine::object::GameObject>>& Scene::getGameObjects() {

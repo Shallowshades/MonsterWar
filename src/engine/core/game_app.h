@@ -5,6 +5,7 @@
 
 #include <memory>
 #include <functional>
+#include <entt/signal/fwd.hpp>
 
 // 前向声明, 减少头文件依赖, 增加编译速度
 struct SDL_Window;
@@ -55,7 +56,7 @@ public:
 	 * 
 	 * @param func 用于接收SceneManager引用的函数对象
 	 */
-	void registerSceneSetup(std::function<void(engine::scene::SceneManager&)> func);
+	void registerSceneSetup(std::function<void(engine::core::Context&)> func);
 
 	// 禁止拷贝和移动构造
 	GameApp(const GameApp&) = delete;
@@ -71,6 +72,7 @@ private:
 	void close();
 
 	// 各模块的初始化/创建函数, 在init()中调用
+	[[nodiscard]] bool initDispatcher();
 	[[nodiscard]] bool initConfig();
 	[[nodiscard]] bool initSDL();
 	[[nodiscard]] bool initTime();
@@ -83,6 +85,9 @@ private:
 	[[nodiscard]] bool initGameState();
 	[[nodiscard]] bool initContext();
 	[[nodiscard]] bool initSceneManager();
+
+	// 事件处理函数
+	void onQuitEvent();
 
 	// 测试函数
 	void testResourceManager();
@@ -100,9 +105,10 @@ private:
 
 	// 游戏场景设置函数, 用于在运行游戏前设置初始化场景(GameApp不再决定初始场景)
 	// engine 模块作为底层不应该引用game中的文件, 应遵循上层引用下层的原则
-	std::function<void(engine::scene::SceneManager&)> mSceneSetupFunc;
+	std::function<void(engine::core::Context&)> mSceneSetupFunc;
 
 	// 引擎组件
+	std::unique_ptr<entt::dispatcher> mDispatcher;
 	std::unique_ptr<engine::core::Time> mTime;
 	std::unique_ptr<engine::core::Config> mConfig;
 	std::unique_ptr<engine::resource::ResourceManager> mResourceManager;

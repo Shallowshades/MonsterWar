@@ -11,6 +11,8 @@
 #ifndef CONTEXT_H
 #define CONTEXT_H
 
+#include <entt/signal/fwd.hpp>
+
 namespace engine::input {
 	class InputManager;
 }
@@ -41,12 +43,17 @@ public:
 	/**
 	 * @brief 构造函数.
 	 * 
+	 * @param dispatcher 对 dispatcher 实例的引用
 	 * @param inputManager 对 InputManager 实例的引用
 	 * @param renderer 对 Renderer 实例的引用
 	 * @param camera 对 Camera 实例的引用
+	 * @param textRenderer 对 TextRenderer 实例的引用
 	 * @param resourceManager 对 ResourceManager 实例的引用
+	 * @param audioPlayer 对 AudioPlayer 实例的引用
+	 * @param gameState 对 GameState 实例的引用
 	 */
-	Context(engine::input::InputManager& inputManager,
+	Context(entt::dispatcher& dispatcher,
+		engine::input::InputManager& inputManager,
 		engine::render::Renderer& renderer,
 		engine::render::Camera& camera,
 		engine::render::TextRenderer& textRenderer,
@@ -60,6 +67,7 @@ public:
 	Context(Context&&) = delete;											///< @brief 删除移动构造
 	Context& operator=(Context&&) = delete;									///< @brief 删除移动赋值构造
 
+	entt::dispatcher& getDispatcher() const;
 	engine::input::InputManager& getInputManager() const;					///< @brief 获取输入管理器	
 	engine::render::Renderer& getRenderer() const;							///< @brief 获取渲染器
 	engine::render::Camera& getCamera() const;								///< @brief 获取相机
@@ -69,6 +77,7 @@ public:
 	engine::core::GameState& getGameState() const;							///< @brief 获取游戏状态
 private:
 	// 引用, 确保每个模块都有效, 使用时不需要检查指针是否为空
+	entt::dispatcher& mDispatcher;
 	engine::input::InputManager& mInputManager;								///< @brief 输入管理器			
 	engine::render::Renderer& mRenderer;									///< @brief 渲染器
 	engine::render::Camera& mCamera;										///< @brief 相机
