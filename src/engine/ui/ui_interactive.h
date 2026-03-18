@@ -13,7 +13,7 @@
 
 #include "ui_element.h"
 #include "state/ui_state.h"
-#include "../render/sprite.h"   // 需要引入头文件而不是前置声明（map容器创建时可能会检查内部元素是否有析构定义）
+#include "../render/image.h"   // 需要引入头文件而不是前置声明（map容器创建时可能会检查内部元素是否有析构定义）
 #include <memory>
 #include <string>
 #include <string_view>
@@ -40,8 +40,8 @@ public:
 
     virtual void clicked() {}                                                               ///< @brief 如果有点击事件，则重写该方法
 
-    void addSprite(entt::id_type nameId, engine::render::Sprite sprite);                    ///< @brief 添加精灵
-    void setSprite(entt::id_type nameId);                                                   ///< @brief 设置当前显示的精灵
+    void addImage(entt::id_type nameId, engine::render::Image image);                       ///< @brief 添加图片
+    void setImage(entt::id_type nameId);                                                    ///< @brief 设置当前显示的精灵
     void addSound(entt::id_type nameId, entt::hashed_string hashedPath);                    ///< @brief 添加音效
     void playSound(entt::id_type nameId);                                                   ///< @brief 播放音效
     // --- Getters and Setters ---
@@ -58,9 +58,9 @@ public:
 protected:
 	engine::core::Context& mContext;                                                        ///< @brief 可交互元素很可能需要其他引擎组件
 	std::unique_ptr<engine::ui::state::UIState> mState;                                     ///< @brief 当前状态
-	std::unordered_map<entt::id_type, engine::render::Sprite> mSprites;                     ///< @brief 精灵集合
+	std::unordered_map<entt::id_type, engine::render::Image> mImages;                       ///< @brief 精灵集合
 	std::unordered_map<entt::id_type, entt::id_type> mSounds;                               ///< @brief 音效集合，key为音效名称ID，value为音效ID
-	entt::id_type mCurrentSpriteId;                                                         ///< @brief 当前显示的精灵ID
+	entt::id_type mCurrentImageId;                                                          ///< @brief 当前显示的精灵ID
 	bool mInteractive = true;                                                               ///< @brief 是否可交互
 };
 

@@ -16,7 +16,7 @@
 #include <vector>
 #include <glm/vec2.hpp>
 
-namespace engine::render { class Sprite; }
+namespace engine::render { class Image; }
 namespace engine::core { class Context; }
 namespace engine::component {
 /**
@@ -42,9 +42,9 @@ enum class TileType {
  * @brief 包含单个瓦片的渲染和逻辑信息.
  */
 struct TileInfo {
-	render::Sprite mSprite;				///@brief 瓦片的视觉表示
+	render::Image mSprite;				///@brief 瓦片的视觉表示
 	TileType mType;						///@brief 瓦片的逻辑类型
-	TileInfo(engine::render::Sprite sprite = render::Sprite(), TileType type = TileType::EMPTY) 
+	TileInfo(engine::render::Image sprite = render::Image(), TileType type = TileType::EMPTY) 
 		: mSprite(sprite), mType(type) { }
 };
 

@@ -26,21 +26,21 @@ void UIInteractive::setState(std::unique_ptr<engine::ui::state::UIState> state) 
 	mState->enter();
 }
 
-void UIInteractive::addSprite(entt::id_type nameId, engine::render::Sprite sprite) {
+void UIInteractive::addImage(entt::id_type nameId, engine::render::Image image) {
 	// 可交互UI元素必须有一个size用于交互检测，因此如果参数列表中没有指定，则用图片大小作为size
 	if (mSize.x == 0.0f && mSize.y == 0.0f) {
-		mSize = mContext.getResourceManager().getTextureSize(sprite.getTextureId());
+		mSize = mContext.getResourceManager().getTextureSize(image.getTextureId());
 	}
 	// 添加精灵
-	mSprites.emplace(nameId, std::move(sprite));
+	mImages.emplace(nameId, std::move(image));
 }
 
-void UIInteractive::setSprite(entt::id_type nameId) {
-	if (mSprites.find(nameId) != mSprites.end()) {
-		mCurrentSpriteId = nameId;
+void UIInteractive::setImage(entt::id_type nameId) {
+	if (mImages.find(nameId) != mImages.end()) {
+		mCurrentImageId = nameId;
 	}
 	else {
-		spdlog::warn("Sprite '{}' 未找到", nameId);
+		spdlog::warn("Image '{}' 未找到", nameId);
 	}
 }
 
@@ -84,7 +84,7 @@ void UIInteractive::render(engine::core::Context& context) {
 	if (!mVisible) return;
 
 	// 先渲染自身
-	context.getRenderer().drawUISprite(mSprites[mCurrentSpriteId], getScreenPosition(), mSize);
+	context.getRenderer().drawUIImage(mImages[mCurrentImageId], getScreenPosition(), mSize);
 
 	// 再渲染子元素（调用基类方法）
 	UIElement::render(context);

@@ -10,14 +10,14 @@
 
 namespace engine::component {
 ParallaxComponent::ParallaxComponent(std::string_view textureId, const glm::vec2& scrollFactor, const glm::bvec2& repeat)
-	: mSprite(textureId)
+	: mImage(textureId)
 	, mScrollFactor(scrollFactor)
 	, mRepeat(repeat)
 {
 	spdlog::trace("{} 初始化完成, 纹理ID : {}", mLogTag.data(), textureId);
 }
-void ParallaxComponent::setSprite(const engine::render::Sprite& sprite) {
-	mSprite = sprite;
+void ParallaxComponent::setSprite(const engine::render::Image& sprite) {
+	mImage = sprite;
 }
 
 void ParallaxComponent::setScrollFactor(const glm::vec2& scrollFactor) {
@@ -32,8 +32,8 @@ void ParallaxComponent::setHidden(bool hidden) {
 	mIsHidden = hidden;
 }
 
-const engine::render::Sprite& ParallaxComponent::getSprite() const {
-	return mSprite;
+const engine::render::Image& ParallaxComponent::getSprite() const {
+	return mImage;
 }
 
 const glm::vec2& ParallaxComponent::getScrollFactor() const {
@@ -69,6 +69,6 @@ void ParallaxComponent::render(engine::core::Context& context) {
 	}
 
 	// 直接调用视差滚动绘制函数
-	context.getRenderer().drawParallax(context.getCamera(), mSprite, mTransform->getPosition(), mScrollFactor, mRepeat, mTransform->getScale());
+	context.getRenderer().drawParallax(context.getCamera(), mImage, mTransform->getPosition(), mScrollFactor, mRepeat, mTransform->getScale());
 }
 } // engine::component

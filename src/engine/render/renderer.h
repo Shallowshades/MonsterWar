@@ -15,12 +15,11 @@
 #include <optional>
 #include <glm/glm.hpp>
 
-#include "sprite.h"
+#include "image.h"
 #include "../utils/math.h"
 
 struct SDL_Renderer;
 struct SDL_FRect;
-struct SDL_FColor;
 
 namespace engine::resource {
 	class ResourceManager;
@@ -41,35 +40,15 @@ public:
 	 * @throws 如果任一指针为nullptr则抛出std::runtime_error
 	 */
 	Renderer(SDL_Renderer* renderer, engine::resource::ResourceManager* resourceManager);
-
-	/**
-	 * @brief 绘制精灵.
-	 *
-	 * @param sprite 包含纹理ID, 源矩阵和翻转状态的Sprite对象
-	 * @param positioin 世界坐标中的坐上角位置
-	 * @param scale 缩放因子
-	 * @param angle 旋转角度(度)
-	 */
-	void drawSprite(const Camera& camera, const Sprite& sprite, const glm::vec2& positioin, const glm::vec2& scale = glm::vec2(1.f), double angle = 0.f);
 	
 	/**
-	 * @brief 绘制视差滚动背景.
+	 * @brief 在屏幕坐标中直接渲染一个用于UI的image对象.
 	 *
-	 * @param sprite 包含纹理ID, 源矩阵和翻转状态的Sprite对象
-	 * @param positioin 世界坐标中的坐上角位置
-	 * @param scrollFactor 滚动因子
-	 * @param scale 缩放因子
+	 * @param image 包含纹理ID, 源矩阵和翻转状态的image对象
+	 * @param position 世界坐标中的坐上角位置
+	 * @param size 可选: 目标矩阵的大小. 如果为std::nullopt, 则使用image的原始大小
 	 */
-	void drawParallax(const Camera& camera, const Sprite& sprite, const glm::vec2& position, const glm::vec2& scrollFactor, const glm::bvec2& repeat = glm::bvec2(true), const glm::vec2& scale = glm::vec2(1.f));
-	
-	/**
-	 * @brief 在屏幕坐标中直接渲染一个用于UI的Sprite对象.
-	 *
-	 * @param sprite 包含纹理ID, 源矩阵和翻转状态的Sprite对象
-	 * @param positioin 世界坐标中的坐上角位置
-	 * @param size 可选: 目标矩阵的大小. 如果为std::nullopt, 则使用Sprite的原始大小
-	 */
-	void drawUISprite(const Sprite& sprite, const glm::vec2& position, const std::optional<glm::vec2>& size = std::nullopt);
+	void drawUIImage(const Image& image, const glm::vec2& position, const std::optional<glm::vec2>& size = std::nullopt);
 	
 	/**
 	 * @brief 绘制填充矩形.
@@ -94,7 +73,7 @@ public:
 	Renderer& operator=(Renderer&&) = delete;								///< @brief 删除移动赋值构造
 
 private:
-	std::optional<SDL_FRect> getSpriteSourceRect(const Sprite& sprite);		///< @brief 获取精灵的源矩阵, 用于具体绘制. 出现错误则返回std::nullopt并跳过绘制
+	std::optional<SDL_FRect> getImageSourceRect(const Image& image);		///< @brief 获取精灵的源矩阵, 用于具体绘制. 出现错误则返回std::nullopt并跳过绘制
 	bool isRectInViewPort(const Camera& camera, const SDL_FRect& rect);		///< @brief 判断矩形是否在视口中, 用于视口裁剪
 private:
 	static constexpr std::string_view mLogTag = "Renderer";

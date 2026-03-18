@@ -28,17 +28,17 @@ class UIButton final : public UIInteractive {
 public:
     /**
         * @brief 构造函数
-        * @param normalSpriteId 正常状态的精灵ID
-        * @param hoverSpriteId 悬停状态的精灵ID
-        * @param pressedSpriteId 按下状态的精灵ID
+        * @param normalImageId 正常状态的精灵ID
+        * @param hoverImageId 悬停状态的精灵ID
+        * @param pressedImageId 按下状态的精灵ID
         * @param position 位置
         * @param size 大小
         * @param callback 回调函数
         */
     UIButton(engine::core::Context& context,
-        std::string_view normalSpriteId,
-        std::string_view hoverSpriteId,
-        std::string_view pressedSpriteId,
+        std::string_view normalImageId,
+        std::string_view hoverImageId,
+        std::string_view pressedImageId,
         const glm::vec2& position = { 0.0f, 0.0f },
         const glm::vec2& size = { 0.0f, 0.0f },
         std::function<void()> callback = nullptr);
