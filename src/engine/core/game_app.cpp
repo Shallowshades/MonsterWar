@@ -34,7 +34,6 @@ void engine::core::GameApp::run() {
 	while (mIsRunning) {
 		mTime->update();
 		float delta = mTime->getDeltaTime(); // 每帧的时间间隔
-		mInputManager->update();
 		handleEvents();
 		update(delta);
 		render();
@@ -84,11 +83,8 @@ bool engine::core::GameApp::init() {
 }
 
 void engine::core::GameApp::handleEvents() {
-	if (mInputManager->shouldQuit()) {
-		spdlog::trace("{} 收到来自 InputManager 的退出请求.", mLogTag.data());
-		mIsRunning = false;
-		return;
-	}
+	// 处理并分发输入事件
+	mInputManager->update();
 
 	mSceneManager->handleInput();
 }
@@ -266,7 +262,7 @@ bool engine::core::GameApp::initCamera() {
 
 bool engine::core::GameApp::initInputManager() {
 	try {
-		mInputManager = std::make_unique<engine::input::InputManager>(mSDLRenderer, mConfig.get());
+		mInputManager = std::make_unique<engine::input::InputManager>(mSDLRenderer, mConfig.get(), mDispatcher.get());
 	}
 	catch (const std::exception& e) {
 		spdlog::error("{} 初始化输入管理器失败: {}", mLogTag.data(), e.what());

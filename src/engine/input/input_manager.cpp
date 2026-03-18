@@ -1,13 +1,15 @@
 #include "input_manager.h"
 #include "../core/config.h"
+#include "../utils/events.h"
 #include <stdexcept>
 #include <SDL3/SDL.h>
 #include <spdlog/spdlog.h>
 #include <glm/vec2.hpp>
+#include <entt/signal/dispatcher.hpp>
 
 namespace engine::input {
-InputManager::InputManager(SDL_Renderer* renderer, const engine::core::Config* config)
-	: mSDLRenderer(renderer)
+InputManager::InputManager(SDL_Renderer* renderer, const engine::core::Config* config, entt::dispatcher* dispatcher)
+	: mSDLRenderer(renderer), mDispatcher(dispatcher)
 {
 	if (!mSDLRenderer) {
 		spdlog::error("{} 输入管理器: SDL_Renderer为空指针.", mLogTag.data());
@@ -61,6 +63,10 @@ void InputManager::update() {
 	}
 }
 
+void InputManager::quit() {
+	mDispatcher->trigger<engine::utils::QuitEvent>();
+}
+
 bool InputManager::isActionDown(std::string_view actionName) const {
 	if (auto iter = mActionStates.find(std::string(actionName)); iter != mActionStates.end()) {
 		return iter->second == ActionState::PRESSED ||
@@ -83,22 +89,12 @@ bool InputManager::isActionReleased(std::string_view actionName) const {
 	return false;
 }
 
-bool InputManager::shouldQuit() const {
-	return mShouldQuit;
-}
-
-void InputManager::setShouldQuit(bool shouldQuit) {
-	mShouldQuit = shouldQuit;
-}
-
 glm::vec2 InputManager::getMousePosition() const {
 	return mMousePosition;
 }
 
 glm::vec2 InputManager::getLogicalMousePosition() const {
-	glm::vec2 logicPosition;
-	SDL_RenderCoordinatesFromWindow(mSDLRenderer, mMousePosition.x, mMousePosition.y, &logicPosition.x, &logicPosition.y);
-	return logicPosition;
+	return mLogicalMousePosition;
 }
 
 void InputManager::processEvent(const SDL_Event& event) {
@@ -131,15 +127,20 @@ void InputManager::processEvent(const SDL_Event& event) {
 				updateActionState(actionName, isDown, false);
 			}
 		}
-		// 在点击时更新鼠标位置
+		// 在点击时更新鼠标位置, 同时更新逻辑位置, 避免多次一帧内多次调用的性能损耗
 		mMousePosition = { event.button.x, event.button.y };
+		SDL_RenderCoordinatesFromWindow(mSDLRenderer, mMousePosition.x, mMousePosition.y, &mLogicalMousePosition.x, &mLogicalMousePosition.y);
 		break;
 	}
 	case SDL_EVENT_MOUSE_MOTION:
 		mMousePosition = { event.motion.x, event.motion.y };
+		SDL_RenderCoordinatesFromWindow(mSDLRenderer, mMousePosition.x, mMousePosition.y, &mLogicalMousePosition.x, &mLogicalMousePosition.y);
 		break;
 	case SDL_EVENT_QUIT:
 		mShouldQuit = true;
+		quit();
+		break;
+	default:
 		break;
 	}
 }
