@@ -12,7 +12,6 @@
 
 #pragma once
 #include "../utils/math.h"
-#include <SDL3/SDL_rect.h>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -94,7 +93,7 @@ public:
 
 private:
 	std::string mTexturePath;                                       ///< @brief 纹理资源的文件路径
-	entt::id_type mTextureId{ entt::null };                         ///< @brief 纹理资源的标识符 (entt::null是推荐的初始化方式，表示无效的ID)
+	entt::id_type mTextureId{ entt::null };                      ///< @brief 纹理资源的标识符 (entt::null是推荐的初始化方式，表示无效的ID)
 	std::optional<engine::utils::Rect> mSourceRect;                 ///< @brief 可选：要绘制的纹理部分
 	bool mIsFlipped = false;                                        ///< @brief 是否水平翻转
 };

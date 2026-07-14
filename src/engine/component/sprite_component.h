@@ -4,110 +4,83 @@
  * @version 1.0
  * 
  * @author Shallowshades
- * @date   2025.10.23
+ * @date   2026.07.14
  *********************************************************************/
 
 #pragma once
 #ifndef SPRITE_COMPONENT_H
 #define SPRITE_COMPONENT_H
 
-#include <string>
-#include <string_view>
-#include <optional>
-
+#include "../utils/math.h"
 #include <SDL3/SDL_rect.h>
+#include <entt/core/hashed_string.hpp>
+#include <entt/entity/entity.hpp>
 #include <glm/vec2.hpp>
-
-#include "../render/sprite.h"
-#include "component.h"
-#include "../utils/alignment.h"
-
-namespace engine::core {
-	class Context;
-}
-
-namespace engine::resource {
-	class ResourceManager;
-}
+#include <glm/common.hpp>
+#include <utility>
+#include <string>
 
 namespace engine::component {
-class TransformComponent;
-/**
-* @brief 管理GameObject的视觉表示, 通过持有一个Sprite对象.
-*
-* 协调Sprite数据和渲染逻辑, 并于TransformComponent
-*/
-class SpriteComponent final : public Component {
-	friend class engine::object::GameObject;
-public:
-	/**
-	* @brief 构造函数
-	* 
-	* @param textureId 纹理资源的标识符。
-	* @param resourceManager 资源管理器指针。
-	* @param alignment 初始对齐方式。
-	* @param sourceRectOptional 可选的源矩形。
-	* @param isFlipped 初始翻转状态。
-	*/
-	SpriteComponent(std::string_view textureId,
-		engine::resource::ResourceManager& resourceManager,
-		engine::utils::Alignment alignment = engine::utils::Alignment::NONE,
-		std::optional<SDL_FRect> sourceRectOptional = std::nullopt,
-		bool isFlipped = false);
+    /**
+     * @brief 精灵数据结构
+     *
+     * 包含纹理名称、源矩形和是否翻转。
+     */
+    struct Sprite {
+        entt::id_type mTextureId{ entt::null };                         ///< @brief 纹理ID
+        std::string mTexturePath;                                       ///< @brief 纹理路径
+        engine::utils::Rect mSourceRect{};                              ///< @brief 源矩形(为了保证效率，不再使用std::optional，构造时必须提供)
+        bool is_flipped_{ false };                                      ///< @brief 是否翻转
 
-	/**
-	 * @brief 构造函数.
-	 * 
-	 * @param sprite 精灵对象
-	 * @param resourceManager 资源管理器引用
-	 * @param alignment 初始化对齐方式
-	 */
-	SpriteComponent(engine::render::Image&& sprite, engine::resource::ResourceManager& resourceManager, engine::utils::Alignment alignment = engine::utils::Alignment::NONE);
-	~SpriteComponent() override = default;
+        Sprite() = default;                                             ///< @brief 空的构造函数
 
-	// 禁用拷贝和移动语义
-	SpriteComponent(const SpriteComponent&) = delete;							///< @brief 删除拷贝构造
-	SpriteComponent& operator=(const SpriteComponent&) = delete;				///< @brief 删除拷贝赋值构造
-	SpriteComponent(SpriteComponent&&) = delete;								///< @brief 删除移动构造
-	SpriteComponent& operator=(SpriteComponent&&) = delete;						///< @brief 删除移动赋值构造
+        /**
+         * @brief 构造函数 (通过纹理路径构造)
+         * @param texture_path 纹理路径
+         * @param source_rect 源矩形
+         * @param is_flipped 是否翻转，默认false
+         */
+        Sprite(std::string texture_path, engine::utils::Rect source_rect, bool is_flipped = false)
+            : mTexturePath(std::move(texture_path)), mSourceRect(std::move(source_rect)), is_flipped_(is_flipped) {
+            mTextureId = entt::hashed_string(mTexturePath.c_str());
+        }
 
-	void updateOffset();														///< @brief 更新偏移量
+        /**
+         * @brief 构造函数 (通过纹理ID构造)
+         * @param texture_id 纹理ID
+         * @param source_rect 源矩形
+         * @param is_flipped 是否翻转，默认false
+         * @note 用此方法，需确保对应ID的纹理已经加载到ResourceManager中，因此不需要再提供纹理路径。
+         */
+        Sprite(entt::id_type texture_id, engine::utils::Rect source_rect, bool is_flipped = false)
+            : mTextureId(texture_id), mSourceRect(std::move(source_rect)), is_flipped_(is_flipped) {}
+    };
 
-	const engine::render::Image& getSprite() const;							///< @brief 获取精灵对象
-	std::string_view getTextureId() const;										///< @brief 获取纹理ID
-	bool isFlipped() const;														///< @brief 获取是否翻转
-	bool isHidden() const;														///< @brief 获取是否隐藏
-	const glm::vec2& getSpriteSize() const;										///< @brief 获取精灵尺寸
-	const glm::vec2& getOffset() const;											///< @brief 获取偏移量
-	engine::utils::Alignment getAlignment() const;								///< @brief 获取对齐方式
+    /**
+     * @brief 精灵组件
+     *
+     * 包含精灵、大小、偏移和是否可见。
+     */
+    struct SpriteComponent {
+		Sprite mSprite;                                             ///< @brief 精灵
+		glm::vec2 mSize{ 0.0f };                                    ///< @brief 大小
+		glm::vec2 mOffset{ 0.0f };                                  ///< @brief 偏移
+		bool mIsVisible{ true };                                    ///< @brief 是否可见
 
-	/**
-	 * @brief 通过纹理ID设置精灵对象.
-	 */
-	void setSpriteById(std::string_view textureId, const std::optional<SDL_FRect>& sourceRectOptional = std::nullopt);
-	void setFlipped(bool flipped);												///< @brief 设置是否翻转
-	void setHidden(bool hidden);												///< @brief 设置是否隐藏
-	void setSourceRect(const std::optional<SDL_FRect>& sourceRectOptional);		///< @brief 设置源矩阵
-	void setAlignment(engine::utils::Alignment anchor);							///< @brief 设置对齐方式
-
-private:
-	void updateSpriteSize();													///< @brief 辅助函数, 根据mSprite的sourceRect更新spriteSize
-
-	// Component 虚函数覆盖
-	void init() override;														///< @brief 初始化函数需要覆盖
-	void update(float, engine::core::Context&) override {}						///< @brief 更新函数留空
-	void render(engine::core::Context& context) override;						///< @brief 渲染函数需要覆盖
-private:
-	static constexpr std::string_view mLogTag = "SpriteComponent";
-
-	engine::resource::ResourceManager* mResourceManager = nullptr;				///< @brief 资源管理器指针
-	TransformComponent* mTransform = nullptr;									///< @brief 变换组件指针(非必须)
-
-	engine::render::Image mSprite;												///< @brief 精灵对象
-	engine::utils::Alignment mAlignment = engine::utils::Alignment::NONE;		///< @brief 对齐方式
-	glm::vec2 mSpriteSize = { 0.f, 0.f };										///< @brief 精灵尺寸
-	glm::vec2 mOffset = { 0.f, 0.f };											///< @brief 偏移量
-	bool mIsHidden = false;														///< @brief 是否隐藏(不渲染)
-};
-} // engine::component
+        /**
+         * @brief 构造函数
+         * @param sprite 精灵
+         * @param size 大小
+         * @param offset 偏移
+         * @param is_visible 是否可见，默认true
+         */
+        SpriteComponent(Sprite sprite, glm::vec2 size = glm::vec2(0.0f, 0.0f), glm::vec2 offset = glm::vec2(0.0f, 0.0f), bool is_visible = true)
+            : mSprite(std::move(sprite)), mSize(std::move(size)), mOffset(std::move(offset)), mIsVisible(is_visible) {
+            // 如果size为0（未提供），则使用精灵的源矩形大小
+            if (glm::all(glm::equal(size, glm::vec2(0.0f)))) {
+                mSize = glm::vec2(mSprite.mSourceRect.mSize.x, mSprite.mSourceRect.mSize.y);
+            }
+        }
+    };
+}
 #endif

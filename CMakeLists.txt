@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.10.0)
 project(MonsterWar VERSION 0.1.0 LANGUAGES C CXX)
 
 # 设置C++标准
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -324,27 +324,20 @@ set(SOURCES
     src/engine/core/config.cpp
     src/engine/core/context.cpp
     src/engine/core/game_state.cpp
-    # src/engine/component/component.cpp
-    # src/engine/component/sprite_component.cpp
-    # src/engine/component/transform_component.cpp
-    # src/engine/component/parallax_component.cpp
-    # src/engine/component/tilelayer_component.cpp
-    # src/engine/component/animation_component.cpp
-    # src/engine/component/health_component.cpp
-    # src/engine/component/audio_component.cpp
     src/engine/input/input_manager.cpp
-    src/engine/object/game_object.cpp
     src/engine/resource/resource_manager.cpp
     src/engine/resource/texture_manager.cpp
     src/engine/resource/audio_manager.cpp
     src/engine/resource/font_manager.cpp
     src/engine/render/camera.cpp
     src/engine/render/renderer.cpp
-    src/engine/render/animation.cpp
     src/engine/render/text_renderer.cpp
     src/engine/scene/scene.cpp
     src/engine/scene/scene_manager.cpp
     # src/engine/scene/level_loader.cpp
+    src/engine/system/animation_system.cpp
+    src/engine/system/render_system.cpp
+    src/engine/system/movement_system.cpp
     src/engine/ui/ui_manager.cpp
     src/engine/ui/ui_element.cpp
     src/engine/ui/ui_interactive.cpp

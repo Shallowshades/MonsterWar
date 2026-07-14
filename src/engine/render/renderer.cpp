@@ -3,121 +3,164 @@
 #include "camera.h"
 #include "image.h"
 #include <SDL3/SDL.h>
-#include <stdexcept>
+#include <stdexcept> // For std::runtime_error
 #include <spdlog/spdlog.h>
 
 namespace engine::render {
-Renderer::Renderer(SDL_Renderer* renderer, engine::resource::ResourceManager* resourceManager)
-	: mRenderer(renderer), mResourceManager(resourceManager)
-{
-	spdlog::trace("{} 构造Renderer...", mLogTag.data());
-	if (!mRenderer) {
-		throw std::runtime_error(mLogTag.data() + std::string(" 构造失败: 提供的SDL_Renderer指针为空"));
-	}
-	if (!mResourceManager) {
-		throw std::runtime_error(mLogTag.data() + std::string(" 构造失败: 提供mResourceManager指针为空"));
-	}
-	setDrawColor(0, 0, 0, 255);
-	spdlog::trace("{} 构造成功", mLogTag.data());
-}
 
-void Renderer::drawUIImage(const Image& image, const glm::vec2& position, const std::optional<glm::vec2>& size) {
-	auto texture = mResourceManager->getTexture(image.getTextureId());
-	if (!texture) {
-		spdlog::error("{} 无法为ID: {} 获取纹理", mLogTag.data(), image.getTextureId());
-		return;
-	}
-
-	auto srcRect = getImageSourceRect(image);
-	if (!srcRect.has_value()) {
-		spdlog::error("{} 无法获取精灵图的源矩阵, ID: {}", mLogTag.data(), image.getTextureId());
-		return;
-	}
-
-	SDL_FRect dstRect = { position.x, position.y, 0, 0 };
-	if (size.has_value()) {
-		dstRect.w = size.value().x;
-		dstRect.h = size.value().y;
-	}
-	else {
-		dstRect.w = srcRect.value().w;
-		dstRect.h = srcRect.value().h;
-	}
-
-	// 执行绘制(未考虑UI旋转)
-	if (!SDL_RenderTextureRotated(mRenderer, texture, &srcRect.value(), &dstRect, 0.0, nullptr, image.isFlipped() ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE)) {
-		spdlog::error("{} 渲染 UI Image 失败 (ID: {}): {}", mLogTag.data(), image.getTextureId(), SDL_GetError());
-	}
-}
-
-void Renderer::drawUIFilledRect(const engine::utils::Rect& rect, const engine::utils::FColor& color) {
-	setDrawColorFloat(color.r, color.g, color.b, color.a);
-	SDL_FRect sdlRect = { rect.position.x, rect.position.y, rect.size.x, rect.size.y };
-	if (!SDL_RenderFillRect(mRenderer, &sdlRect)) {
-		spdlog::error("{} 绘制填充矩形失败: {}", mLogTag.data(), SDL_GetError());
-	}
-	setDrawColorFloat(0.f, 0.f, 0.f, 1.f);
-}
-
-void Renderer::present() {
-	SDL_RenderPresent(mRenderer);
-}
-
-void Renderer::clearScreen() {
-	if (!SDL_RenderClear(mRenderer)) {
-		spdlog::error("{} 清除渲染器失败: {}", mLogTag.data(), SDL_GetError());
-	}
-}
-
-void Renderer::setDrawColor(Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
-	if (!SDL_SetRenderDrawColor(mRenderer, r, g, b, a)) {
-		spdlog::error("{} 设置渲染器绘制颜色失败: {}", mLogTag.data(), SDL_GetError());
-	}
-}
-
-void Renderer::setDrawColorFloat(float r, float g, float b, float a) {
-	if (!SDL_SetRenderDrawColorFloat(mRenderer, r, g, b, a)) {
-		spdlog::error("{} 设置渲染器绘制颜色失败: {}", mLogTag.data(), SDL_GetError());
-	}
-}
-
-SDL_Renderer* Renderer::getSDLRenderer() const {
-	return mRenderer;
-}
-
-std::optional<SDL_FRect> Renderer::getImageSourceRect(const Image& image) {
-	SDL_Texture* texture = mResourceManager->getTexture(image.getTextureId());
-	if (!texture) {
-		spdlog::error("{} 无法为 ID {} 获取纹理", mLogTag.data(), image.getTextureId());
-		return std::nullopt;
-	}
-
-	auto srcRect = image.getSourceRect();
-	if (srcRect.has_value()) {
-		if (srcRect.value().size.x <= 0 || srcRect.value().size.y <= 0) {
-			spdlog::error("{} 源矩阵尺寸无效, ID: {}, path : {}", mLogTag.data(), image.getTextureId(), image.getTexturePath());
-			return std::nullopt;
+	// 构造函数: 执行初始化，增加 ResourceManager
+	Renderer::Renderer(SDL_Renderer* sdl_renderer, engine::resource::ResourceManager* resource_manager)
+		: mRenderer(sdl_renderer), mResourceManager(resource_manager)
+	{
+		spdlog::trace("构造 Renderer...");
+		if (!mRenderer) {
+			throw std::runtime_error("Renderer 构造失败: 提供的 SDL_Renderer 指针为空。");
 		}
-		return SDL_FRect{
-			srcRect.value().position.x,
-			srcRect.value().position.y,
-			srcRect.value().size.x,
-			srcRect.value().size.y
+		if (!mResourceManager) {
+			// ResourceManager 是 drawSprite 所必需的
+			throw std::runtime_error("Renderer 构造失败: 提供的 ResourceManager 指针为空。");
+		}
+		setDrawColor(0, 0, 0, 255);
+		spdlog::trace("Renderer 构造成功。");
+	}
+
+	void Renderer::drawSprite(const Camera& camera, const component::Sprite& sprite, const glm::vec2& position, const glm::vec2& size, const float rotation) {
+		auto texture = mResourceManager->getTexture(sprite.mTextureId, sprite.mTexturePath);
+		if (!texture) {
+			spdlog::error("无法为 ID {} 获取纹理。", sprite.mTextureId);
+			return;
+		}
+
+		// 应用相机变换
+		glm::vec2 screen_position = camera.worldToScreen(position);
+
+		// 计算目标矩形
+
+
+		SDL_FRect dest_rect = {
+			screen_position.x,
+			screen_position.y,
+			size.x,
+			size.y
 		};
+
+		if (!isRectInViewport(camera, dest_rect)) { // 视口裁剪：如果精灵超出视口，则不绘制
+			// spdlog::info("精灵超出视口范围，ID: {}", sprite.getTextureId());
+			return;
+		}
+
+		SDL_FRect src_rect = {
+			sprite.mSourceRect.mPosition.x,
+			sprite.mSourceRect.mPosition.y,
+			sprite.mSourceRect.mSize.x,
+			sprite.mSourceRect.mSize.y
+		};
+
+		// 执行绘制(默认旋转中心为精灵的中心点)
+		if (!SDL_RenderTextureRotated(mRenderer, texture, &src_rect, &dest_rect, rotation, NULL, sprite.is_flipped_ ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE)) {
+			spdlog::error("渲染旋转纹理失败（ID: {}）：{}", sprite.mTextureId, SDL_GetError());
+		}
 	}
-	else {
-		SDL_FRect result = { 0, 0, 0, 0 };
-		if (!SDL_GetTextureSize(texture, &result.w, &result.h)) {
-			spdlog::error("{} 无法获取纹理尺寸, ID: {}, Path: {}", mLogTag.data(), image.getTextureId(), image.getTexturePath());
+
+	void Renderer::drawUIImage(const Image& image, const glm::vec2& position, const std::optional<glm::vec2>& size) {
+		auto texture = mResourceManager->getTexture(image.getTextureId());
+		if (!texture) {
+			spdlog::error("无法为 ID {} 获取纹理。", image.getTextureId());
+			return;
+		}
+
+		auto src_rect = getImageSrcRect(image);
+		if (!src_rect.has_value()) {
+			spdlog::error("无法获取精灵的源矩形，ID: {}", image.getTextureId());
+			return;
+		}
+
+		SDL_FRect dest_rect = { position.x, position.y, 0, 0 };   // 首先确定目标矩形的左上角坐标
+		if (size.has_value()) {                                 // 如果提供了尺寸，则使用提供的尺寸
+			dest_rect.w = size.value().x;
+			dest_rect.h = size.value().y;
+		}
+		else {                                                // 如果未提供尺寸，则使用纹理的原始尺寸
+			dest_rect.w = src_rect.value().w;
+			dest_rect.h = src_rect.value().h;
+		}
+
+		// 执行绘制(未考虑UI旋转)
+		if (!SDL_RenderTextureRotated(mRenderer, texture, &src_rect.value(), &dest_rect, 0.0, nullptr, image.isFlipped() ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE)) {
+			spdlog::error("渲染 UI Sprite 失败 (ID: {}): {}", image.getTextureId(), SDL_GetError());
+		}
+	}
+
+	void Renderer::setDrawColor(Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
+		if (!SDL_SetRenderDrawColor(mRenderer, r, g, b, a)) {
+			spdlog::error("设置渲染绘制颜色失败：{}", SDL_GetError());
+		}
+	}
+
+	void Renderer::setDrawColorFloat(float r, float g, float b, float a)
+	{
+		if (!SDL_SetRenderDrawColorFloat(mRenderer, r, g, b, a)) {
+			spdlog::error("设置渲染绘制颜色失败：{}", SDL_GetError());
+		}
+	}
+
+	void Renderer::clearScreen() {
+		if (!SDL_RenderClear(mRenderer)) {
+			spdlog::error("清除渲染器失败：{}", SDL_GetError());
+		}
+	}
+
+	void Renderer::drawUIFilledRect(const engine::utils::Rect& rect, const engine::utils::FColor& color)
+	{
+		setDrawColorFloat(color.r, color.g, color.b, color.a);
+		SDL_FRect sdl_rect = { rect.mPosition.x, rect.mPosition.y, rect.mSize.x, rect.mSize.y };
+		if (!SDL_RenderFillRect(mRenderer, &sdl_rect)) {
+			spdlog::error("绘制填充矩形失败：{}", SDL_GetError());
+		}
+		setDrawColor(0, 0, 0, 1.0f);
+	}
+
+	void Renderer::present()
+	{
+		SDL_RenderPresent(mRenderer);
+	}
+
+	std::optional<SDL_FRect> Renderer::getImageSrcRect(const Image& image)
+	{
+		SDL_Texture* texture = mResourceManager->getTexture(image.getTextureId());
+		if (!texture) {
+			spdlog::error("无法为 ID {} 获取纹理。", image.getTextureId());
 			return std::nullopt;
 		}
-		return result;
-	}
-}
 
-bool Renderer::isRectInViewPort(const Camera& camera, const SDL_FRect& rect) {
-	glm::vec2 viewPortSize = camera.getViewPortSize();
-	// 相当于AABB碰撞检测
-	return rect.x + rect.w >= 0 && rect.x <= viewPortSize.x && rect.y + rect.h >= 0 && rect.y <= viewPortSize.y;
-}
-} // engine::render
+		auto src_rect = image.getSourceRect();
+		if (src_rect.has_value()) {     // 如果Image中存在指定rect，则判断尺寸是否有效
+			if (src_rect.value().mSize.x <= 0 || src_rect.value().mSize.y <= 0) {
+				spdlog::error("源矩形尺寸无效，ID: {}, path: {}", image.getTextureId(), image.getTexturePath());
+				return std::nullopt;
+			}
+			return SDL_FRect{
+				src_rect.value().mPosition.x,
+				src_rect.value().mPosition.y,
+				src_rect.value().mSize.x,
+				src_rect.value().mSize.y
+			};
+		}
+		else {                        // 否则获取纹理尺寸并返回整个纹理大小
+			SDL_FRect result = { 0, 0, 0, 0 };
+			if (!SDL_GetTextureSize(texture, &result.w, &result.h)) {
+				spdlog::error("无法获取纹理尺寸，ID: {}, path: {}", image.getTextureId(), image.getTexturePath());
+				return std::nullopt;
+			}
+			return result;
+		}
+	}
+
+	bool Renderer::isRectInViewport(const Camera& camera, const SDL_FRect& rect)
+	{
+		glm::vec2 viewport_size = camera.getViewportSize();
+		return rect.x + rect.w >= 0 && rect.x <= viewport_size.x &&     // 相当于 AABB碰撞检测
+			rect.y + rect.h >= 0 && rect.y <= viewport_size.y;
+	}
+
+} // namespace engine::render
