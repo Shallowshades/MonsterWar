@@ -4,115 +4,88 @@
  * @version 1.0
  * 
  * @author Shallowshades
- * @date   2025.11.04
+ * @date   2026.07.14
  *********************************************************************/
 
 #pragma once
 #ifndef SCENE_H
 #define SCENE_H
-#include <vector>
 #include <memory>
 #include <string>
 #include <string_view>
+#include <entt/entity/registry.hpp>
 
-namespace engine::core { class Context; }
-namespace engine::ui { class UIManager; }
-namespace engine::object { class GameObject; }
-namespace engine::scene { class SceneManager; }
+namespace engine::core {
+    class Context;
+}
+
+namespace engine::ui {
+    class UIManager;
+}
 
 namespace engine::scene {
+    class SceneManager;
 
-/**
- * @brief 场景基类, 负责管理场景中的游戏对象和场景生命周期.
- * 
- * 包含一组游戏对象, 并提供更新, 渲染, 处理输入和清理的接口
- * 派生类应实现具体的场景逻辑
- */
-class Scene {
-public:
-	/**
-	 * @brief 构造函数.
-	 * 
-	 * @param context 场景上下文
-	 * @param sceneManager 场景管理器
-	 */
-	Scene(std::string_view name, engine::core::Context& context);
-	virtual ~Scene();
+    /**
+     * @brief 场景基类，负责管理场景中的游戏对象和场景生命周期。
+     *
+     * 包含一组游戏对象，并提供更新、渲染、处理输入和清理的接口。
+     * 派生类应实现具体的场景逻辑。
+     */
+    class Scene {
+    public:
+        /**
+         * @brief 构造函数。
+         *
+         * @param name 场景的名称。
+         * @param context 场景上下文。
+         */
+        Scene(std::string_view name, engine::core::Context& context);
 
-	// 禁用拷贝和移动语义
-	Scene(const Scene&) = delete;							///< @brief 删除拷贝构造
-	Scene& operator=(const Scene&) = delete;				///< @brief 删除拷贝赋值构造
-	Scene(Scene&&) = delete;								///< @brief 删除移动构造
-	Scene& operator=(Scene&&) = delete;						///< @brief 删除移动赋值构造
+        virtual ~Scene();                                                               // 1. 基类必须声明虚析构函数才能让派生类析构函数被正确调用。
+                                                                                        // 2. 析构函数定义必须写在cpp中，不然需要引入GameObject头文件
 
-	// 核心循环函数
-	virtual void init();									///< @brief 初始化场景
-	virtual void update(float deltaTime);					///< @brief 更新场景
-	virtual void render();									///< @brief 渲染场景
-	virtual void handleInput();								///< @brief 处理输入
-	virtual void clean();									///< @brief 清理场景
+        // 禁止拷贝和移动构造
+        Scene(const Scene&) = delete;
+        Scene& operator=(const Scene&) = delete;
+        Scene(Scene&&) = delete;
+        Scene& operator=(Scene&&) = delete;
 
-	/**
-	 * @brief 直接向场景中添加一个游戏对象.
-	 * 初始化时可用, 游戏进行中不安全; 右值引用&&传参与std::move配合, 避免拷贝
-	 */
-	virtual void addGameObject(std::unique_ptr<engine::object::GameObject>&& gameObject);
-	
-	/**
-	 * @brief 安全地添加游戏对象. (添加到pendingAdditions中).
-	 */
-	virtual void safeAddGameObject(std::unique_ptr<engine::object::GameObject>&& gameObject);
-	
-	/**
-	 * @brief 直接从场景中移除一个游戏对象. (一般不使用, 但保留实现逻辑)
-	 */
-	virtual void removeGameObject(engine::object::GameObject* gameObjectPtr);
-	
-	/**
-	 * @brief 安全地移除游戏对象. 设置needRemove标记
-	 */
-	virtual void safeRemoveGameObject(engine::object::GameObject* gameObjectPtr);
-	
-	/**
-	 * @brief 获取场景中游戏对象的容器.
-	 */
-	const std::vector<std::unique_ptr<engine::object::GameObject>>& getGameObjects() const;
-	
-	/**
-	 * @brief 根据名称查找游戏对象(返回找到的第一个对象).
-	 */
-	engine::object::GameObject* findGameObjectByName(std::string_view name) const;
+        // 核心循环方法
+		virtual void init();                                                            ///< @brief 初始化场景。
+		virtual void update(float delta_time);                                          ///< @brief 更新场景。
+		virtual void render();                                                          ///< @brief 渲染场景。
+		virtual void handleInput();                                                     ///< @brief 处理输入。
+		virtual void clean();                                                           ///< @brief 清理场景。
 
-	// 请求弹出当前场景
-	void requestPopScene();
-	// 请求压入一个新场景
-	void requestPushScene(std::unique_ptr<engine::scene::Scene>&& scene);
-	// 请求替换当前场景
-	void requestReplaceScene(std::unique_ptr<engine::scene::Scene>&& scene);
-	// 退出游戏
-	void quit();
+        /// @brief 请求弹出当前场景。
+        void requestPopScene();
 
-	void setName(std::string_view name);												///< @brief 设置场景名称
-	std::string_view getName() const;													///< @brief 获取场景名称
-	void setIsInitialized(bool initialized);											///< @brief 设置场景是否已初始化
-	bool getIsInitialized() const;														///< @brief 获取场景是否已初始化
+        /// @brief 请求压入一个新场景。
+        void requestPushScene(std::unique_ptr<engine::scene::Scene>&& scene);
 
-	engine::core::Context& getContext() const;											///< @brief 获取上下文引用	
-	std::vector<std::unique_ptr<engine::object::GameObject>>& getGameObjects();			///< @brief 获取场景中的游戏对象
+        /// @brief 请求替换当前场景。
+        void requestReplaceScene(std::unique_ptr<engine::scene::Scene>&& scene);
 
-protected:
-	void processPendingAdditions();														///< @brief 处理待添加的游戏对象
+        /// @brief 退出游戏。
+        void quit();
 
-protected:
-	constexpr static std::string_view mLogTag = "Scene";								///< @brief 日志标识
+        // getters and setters
+        void setName(std::string_view name) { mSceneName = name; }                      ///< @brief 设置场景名称
+        std::string_view getName() const { return mSceneName; }                      ///< @brief 获取场景名称
+        void setInitialized(bool initialized) { mIsInitialized = initialized; }         ///< @brief 设置场景是否已初始化
+        bool getIsInitialized() const { return mIsInitialized; }                        ///< @brief 获取场景是否已初始化ss
+        entt::registry& getRegistry() { return mRegistry; }                             ///< @brief 获取注册表引用
+        engine::core::Context& getContext() const { return mContext; }                  ///< @brief 获取上下文引用
 
-	std::string mSceneName;																///< @brief 场景名称
-	engine::core::Context& mContext;													///< @brief 上下文引用
-	std::unique_ptr<engine::ui::UIManager> mUIManager;									///< @brief UI管理器(初始化时自动创建)
-	bool mIsInitialized;																///< @brief 场景是否已被初始化
-	std::vector<std::unique_ptr<engine::object::GameObject>> mGameObjects;				///< @brief 场景中的游戏对象
-	std::vector<std::unique_ptr<engine::object::GameObject>> mPendingAdditions;			///< @brief 待添加的游戏对象
-};
+    protected:
+        std::string mSceneName;                                                         ///< @brief 场景名称
+        engine::core::Context& mContext;                                                ///< @brief 上下文引用（隐式，构造时传入）
+        std::unique_ptr<engine::ui::UIManager> mUIManager;                              ///< @brief UI管理器(初始化时自动创建)
+        entt::registry mRegistry;                                                       ///< @brief ECS注册表
+        bool mIsInitialized = false;                                                    ///< @brief 场景是否已初始化(非当前场景很可能未被删除，因此需要初始化标志避免重复初始化)
+    };
+
 } // namespace engine::scene
 
 #endif // SCENE_H

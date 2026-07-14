@@ -95,7 +95,7 @@ engine::utils::Rect UIElement::getBounds() const {
 
 bool UIElement::isPointInside(const glm::vec2& point) const {
 	auto bounds = getBounds();
-	return (point.x >= bounds.position.x && point.x < (bounds.position.x + bounds.size.x) &&
-		point.y >= bounds.position.y && point.y < (bounds.position.y + bounds.size.y));
+	return (point.x >= bounds.mPosition.x && point.x < (bounds.mPosition.x + bounds.mSize.x) &&
+		point.y >= bounds.mPosition.y && point.y < (bounds.mPosition.y + bounds.mSize.y));
 }
 }
