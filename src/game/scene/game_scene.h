@@ -26,10 +26,7 @@ namespace game::scene {
 		void clean() override;
 
 	private:
-		// --- 测试资源管理器 ---
-		void testResourceManager();
-		// --- 测试ECS ---
-		void testECS();
+		[[nodiscard]] bool loadLevel();
 
 	private:
 		std::unique_ptr<engine::system::RenderSystem> mRenderSystem;

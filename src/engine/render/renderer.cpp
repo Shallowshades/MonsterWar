@@ -117,7 +117,7 @@ namespace engine::render {
 		if (!SDL_RenderFillRect(mRenderer, &sdl_rect)) {
 			spdlog::error("绘制填充矩形失败：{}", SDL_GetError());
 		}
-		setDrawColor(0, 0, 0, 1.0f);
+		setDrawColor(0, 0, 0, 1);
 	}
 
 	void Renderer::present()
