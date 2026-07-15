@@ -29,7 +29,7 @@ namespace engine::loader {
     BasicEntityBuilder* BasicEntityBuilder::configure(const nlohmann::json* object_json) {
         reset();
         if (!object_json) {
-            spdlog::error("配置生成器时，object_json 不能为空");
+            spdlog::error("配置生成器时, object_json 不能为空");
             return nullptr;
         }
         mObjectJson = object_json;
@@ -64,7 +64,7 @@ namespace engine::loader {
 
     BasicEntityBuilder* BasicEntityBuilder::build() {
         if (!mObjectJson && !mTileInfo) {
-            spdlog::error("object_json 和 tile_info 都为空，无法进行构建");
+            spdlog::error("object_json 和 tile_info 都为空, 无法进行构建");
             return this;
         }
 
@@ -90,13 +90,13 @@ namespace engine::loader {
             std::string name = mObjectJson->value("name", "");
             entt::id_type name_id = entt::hashed_string(name.c_str());
             mRegistry.emplace<engine::component::NameComponent>(mEntityId, name_id, name);
-            spdlog::trace("添加 NameComponent 组件，name: {}", mObjectJson->value("name", ""));
+            spdlog::trace("添加 NameComponent 组件, name: {}", mObjectJson->value("name", ""));
         }
     }
 
     void BasicEntityBuilder::buildSprite() {
         spdlog::trace("构建Sprite组件");
-        // 如果是自定义形状对象，则不需要SpriteComponent
+        // 如果是自定义形状对象, 则不需要SpriteComponent
         if (!mTileInfo) return;
         // 创建Sprite时候确保纹理加载
         auto& resource_manager = mContext.getResourceManager();
@@ -109,20 +109,20 @@ namespace engine::loader {
         glm::vec2 scale = glm::vec2(1.0f);
         float rotation = 0.0f;
 
-        // 对象层实体，位置、尺寸和旋转信息从 object_json_ 中获取
+        // 对象层实体, 位置、尺寸和旋转信息从 object_json_ 中获取
         if (mObjectJson) {
             mPosition = glm::vec2(mObjectJson->value("x", 0.0f), mObjectJson->value("y", 0.0f));
             mDstSize = glm::vec2(mObjectJson->value("width", 0.0f), mObjectJson->value("height", 0.0f));
             mPosition = glm::vec2(mPosition.x, mPosition.y - mDstSize.y);  // 图片对象的position需要进行调整(左下角到左上角)
             rotation = mObjectJson->value("rotation", 0.0f);
-            // 如果是图片对象，需要调整缩放
+            // 如果是图片对象, 需要调整缩放
             if (mTileInfo) {
                 mSrcSize = glm::vec2(mTileInfo->mSprite.mSourceRect.mSize.x, mTileInfo->mSprite.mSourceRect.mSize.y);
                 scale = mDstSize / mSrcSize;
             }
         }
 
-        // 瓦片层实体，通过index (Tiled瓦片层data数据的索引) 计算位置
+        // 瓦片层实体, 通过index (Tiled瓦片层data数据的索引) 计算位置
         if (mIndex >= 0) {
             auto map_size = mLevelLoader.getMapSize();
             auto tile_size = mLevelLoader.getTileSize();
@@ -136,23 +136,23 @@ namespace engine::loader {
 
     void BasicEntityBuilder::buildAnimation() {
         spdlog::trace("构建Animation组件");
-        // 如果存在动画，其信息已经解析并保存在tile_info_中
+        // 如果存在动画, 其信息已经解析并保存在tile_info_中
         if (mTileInfo && mTileInfo->mAnimation) {
             // 创建动画map
             std::unordered_map<entt::id_type, engine::component::Animation> animations;
             auto animation_id = entt::hashed_string("tile");    // 图块动画名称默认为"tile"
             animations.emplace(animation_id, std::move(mTileInfo->mAnimation.value()));
-            // 通过动画map创建AnimationComponent，并添加
+            // 通过动画map创建AnimationComponent, 并添加
             mRegistry.emplace<engine::component::AnimationComponent>(mEntityId, std::move(animations), animation_id);
         }
     }
 
     void BasicEntityBuilder::buildAudio() {
         spdlog::trace("构建Audio组件");
-        // 当前项目并未使用，未来可约定自定义属性并解析
+        // 当前项目并未使用, 未来可约定自定义属性并解析
     }
 
-    // --- 代理函数，让子类能获取到LevelLoader的私有方法 ---
+    // --- 代理函数, 让子类能获取到LevelLoader的私有方法 ---
     template<typename T>
     std::optional<T> BasicEntityBuilder::getTileProperty(const nlohmann::json& tile_json, std::string_view property_name) {
         return mLevelLoader.getTileProperty<T>(tile_json, property_name);
