@@ -3,6 +3,7 @@
 #include "../../engine/system/render_system.h"
 #include "../../engine/system/movement_system.h"
 #include "../../engine/system/animation_system.h"
+#include "../../engine/system/ysort_system.h"
 #include "../../engine/loader/level_loader.h"
 #include <entt/core/hashed_string.hpp>
 #include <entt/signal/sigh.hpp>
@@ -19,6 +20,7 @@ namespace game::scene {
 		mRenderSystem = std::make_unique<engine::system::RenderSystem>();
 		mMovementSystem = std::make_unique<engine::system::MovementSystem>();
 		mAnimationSystem = std::make_unique<engine::system::AnimationSystem>();
+		mYsortSystem = std::make_unique<engine::system::YSortSystem>();
 
 		spdlog::info("GameScene 构造完成");
 	}
@@ -38,6 +40,7 @@ namespace game::scene {
 	void GameScene::update(float delta_time) {
 		mMovementSystem->update(mRegistry, delta_time);
 		mAnimationSystem->update(mRegistry, delta_time);
+		mYsortSystem->update(mRegistry);					// 调用顺序要在MovementSystem之后
 
 		Scene::update(delta_time);
 	}

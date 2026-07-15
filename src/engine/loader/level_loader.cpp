@@ -7,6 +7,7 @@
 #include "../component/sprite_component.h"
 #include "../component/transform_component.h"
 #include "../component/parallax_component.h"
+#include "../component/render_component.h"
 #include "../render/renderer.h"
 #include "../utils/math.h"
 #include <filesystem>
@@ -54,10 +55,15 @@ namespace engine::loader {
 			return false;
 		}
 
-		// 3. 获取基本地图信息 (名称、地图尺寸、瓦片尺寸)
+		// 3. 获取基本地图信息 (名称、地图尺寸、瓦片尺寸), 并设置颜色
 		mMapPath = level_path;
 		mMapSize = glm::ivec2(json_data.value("width", 0), json_data.value("height", 0));
 		mTileSize = glm::ivec2(json_data.value("tilewidth", 0), json_data.value("tileheight", 0));
+		if (json_data.contains("backgroundcolor")) {
+			auto color_string = json_data["backgroundcolor"].get<std::string>();
+			auto color = engine::utils::parseHexColor(color_string);
+			mScene->getContext().getRenderer().setBgColorFloat(color.r, color.g, color.b, color.a);
+		}
 
 		// 4. 加载 tileset 数据
 		if (json_data.contains("tilesets") && json_data["tilesets"].is_array()) {
@@ -86,6 +92,16 @@ namespace engine::loader {
 				continue;
 			}
 
+			// 可以指定当前图层的序号（默认从0开始，每载入一个图层，序号加1），这个序号用于决定渲染顺序
+			if (layer_json.contains("properties")) {
+				auto& properties = layer_json["properties"];
+				for (auto& property : properties) {
+					if (property.contains("name") && property["name"] == "order") {
+						mCurrentLayer = property["value"].get<int>();
+					}
+				}
+			}
+
 			// 根据图层类型决定加载方法
 			if (layer_type == "imagelayer") {
 				loadImageLayer(layer_json);
@@ -99,6 +115,9 @@ namespace engine::loader {
 			else {
 				spdlog::warn("不支持的图层类型: {}", layer_type);
 			}
+
+			spdlog::info("当前图层: {}, 图层ID: {}", layer_json.value("name", "Unnamed"), mCurrentLayer);
+			mCurrentLayer++;   // 每加载一个图层，图层ID加1
 		}
 
 		spdlog::info("关卡加载完成: {}", level_path);
@@ -142,6 +161,7 @@ namespace engine::loader {
 		registry.emplace<engine::component::TransformComponent>(entity, offset);
 		registry.emplace<engine::component::ParallaxComponent>(entity, scroll_factor, repeat);
 		registry.emplace<engine::component::SpriteComponent>(entity, sprite);
+		registry.emplace<engine::component::RenderComponent>(entity, mCurrentLayer);
 		/* 实体与组件创建完毕后即由registry自动管理，不需要“添加到场景”的步骤 */
 
 		spdlog::info("加载图层: '{}' 完成", layer_name);
@@ -169,7 +189,7 @@ namespace engine::loader {
 		// 获取图层数据 (瓦片 ID 列表)
 		const auto& data = layer_json["data"];
 
-		size_t index = 0;   // data数据的索引，它决定图块在地图中的位置
+		int32_t index = 0;   // data数据的索引，它决定图块在地图中的位置
 		// --- 每一个瓦片都是一个独立的entity ---
 		for (const int gid : data) {
 			if (gid == 0) {
@@ -305,6 +325,18 @@ namespace engine::loader {
 			return std::nullopt;
 		}
 
+		// 判断并存储是否水平翻转 (最高的第32位为1)
+		bool is_flipped_horizontally = gid & 0x80000000;
+		/* 未来可添加其它翻转支持，目前sprite组件只支持水平翻转
+			// 判断垂直翻转 (最高的第31位为1)
+			bool is_flipped_vertically = gid & 0x40000000;
+			// 判断对角线翻转 (最高的第30位为1)
+			bool is_flipped_diagonally = gid & 0x20000000;
+		*/
+
+		// 还原gid的实际值 (最高的三个标志位置为0，而其余位全为1。这个掩码的十六进制表示为 0x1FFFFFFF。)
+		gid = gid & 0x1FFFFFFF;
+
 		// upper_bound：查找tileset_data_中键大于 gid 的第一个元素，返回迭代器
 		auto tileset_it = mTilesetData.upper_bound(gid);
 		if (tileset_it == mTilesetData.begin()) {
@@ -330,8 +362,8 @@ namespace engine::loader {
 			auto image_path = tileset["image"].get<std::string>();
 			// 计算纹理绝对路径
 			auto texture_path = resolvePath(image_path, file_path);
-			// 创建精灵
-			tile_info.mSprite = engine::component::Sprite(texture_path, texture_rect);
+			// 创建精灵，考虑水平翻转标志
+			tile_info.mSprite = engine::component::Sprite(texture_path, texture_rect, is_flipped_horizontally);
 			tile_info.mType = getTileTypeById(tileset, local_id);   // 获取瓦片类型（只有瓦片id，还没找具体瓦片json）
 			is_single_image = true;
 		}
@@ -362,7 +394,7 @@ namespace engine::loader {
 						glm::vec2(tile_json.value("x", 0.0f), tile_json.value("y", 0.0f)),
 						glm::vec2(tile_json.value("width", image_width), tile_json.value("height", image_height))
 					};
-					tile_info.mSprite = engine::component::Sprite(texture_path, texture_rect);
+					tile_info.mSprite = engine::component::Sprite(texture_path, texture_rect, is_flipped_horizontally);
 					mScene->getContext().getResourceManager().loadTexture(entt::hashed_string(texture_path.c_str()), texture_path);  // 确保纹理被加载
 					tile_info.mType = getTileType(tile_json);    // 获取瓦片类型（已经有具体瓦片json了）
 				}

@@ -46,6 +46,7 @@ namespace engine::loader {
 		// --- getters and setters ---
 		const glm::ivec2& getMapSize() const { return mMapSize; }
 		const glm::ivec2& getTileSize() const { return mTileSize; }
+		int32_t getCurrentLayer() const { return mCurrentLayer; }
 
 	private:
 		void loadImageLayer(const nlohmann::json& layer_json);    ///< @brief 加载图片图层
@@ -129,15 +130,13 @@ namespace engine::loader {
 		std::string resolvePath(std::string_view relative_path, std::string_view file_path);
 
 	private:
-		engine::scene::Scene* mScene;       ///< @brief 场景指针(非拥有)
-
-		std::string mMapPath;              ///< @brief 地图路径（拼接路径时需要）
-		glm::ivec2 mMapSize;               ///< @brief 地图尺寸(瓦片数量)
-		glm::ivec2 mTileSize;              ///< @brief 瓦片尺寸(像素)
-
-		std::map<int, nlohmann::json> mTilesetData;            ///< @brief firstgid -> 瓦片集数据
-
-		std::unique_ptr<BasicEntityBuilder> mEntityBuilder;    ///< @brief 实体生成器(生成器模式)
+		engine::scene::Scene* mScene;							///< @brief 场景指针(非拥有)
+		std::string mMapPath;									///< @brief 地图路径（拼接路径时需要）
+		glm::ivec2 mMapSize;									///< @brief 地图尺寸(瓦片数量)
+		glm::ivec2 mTileSize;									///< @brief 瓦片尺寸(像素)
+		std::map<int, nlohmann::json> mTilesetData;				///< @brief firstgid -> 瓦片集数据
+		std::unique_ptr<BasicEntityBuilder> mEntityBuilder;		///< @brief 实体生成器(生成器模式)
+		int32_t	mCurrentLayer = 0;								///< @brief 当前图层序号（用于RenderComponent，决定渲染顺序）
 	};
 
 } // namespace engine::loader

@@ -32,6 +32,7 @@ namespace game::scene {
 		std::unique_ptr<engine::system::RenderSystem> mRenderSystem;
 		std::unique_ptr<engine::system::MovementSystem> mMovementSystem;
 		std::unique_ptr<engine::system::AnimationSystem> mAnimationSystem;
+		std::unique_ptr<engine::system::YSortSystem> mYsortSystem;
 	};
 
 

@@ -4,6 +4,7 @@
 #include "../component/name_component.h"
 #include "../component/sprite_component.h"
 #include "../component/transform_component.h"
+#include "../component/render_component.h"
 #include "../resource/resource_manager.h"
 #include <entt/entt.hpp>
 #include <spdlog/spdlog.h>
@@ -72,6 +73,7 @@ namespace engine::loader {
         buildBase();
         buildSprite();
         buildTransform();
+        buildRender();
         buildAnimation();
         buildAudio();
         return this;
@@ -132,6 +134,13 @@ namespace engine::loader {
 
         // 添加 TransformComponent
         mRegistry.emplace<engine::component::TransformComponent>(mEntityId, mPosition, scale, rotation);
+    }
+
+    void BasicEntityBuilder::buildRender() {
+		spdlog::trace("构建Render组件");
+		int layer = mLevelLoader.getCurrentLayer();     // 确定图层
+		float depth = mPosition.y;                      // 确定深度（默认y坐标）
+		mRegistry.emplace<engine::component::RenderComponent>(mEntityId, layer, depth);
     }
 
     void BasicEntityBuilder::buildAnimation() {

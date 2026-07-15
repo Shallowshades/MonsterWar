@@ -82,6 +82,8 @@ namespace engine::render {
 
         void setDrawColor(Uint8 r, Uint8 g, Uint8 b, Uint8 a = 255);        ///< @brief 设置绘制颜色，包装 SDL_SetRenderDrawColor 函数，使用 Uint8 类型
         void setDrawColorFloat(float r, float g, float b, float a = 1.0f);  ///< @brief 设置绘制颜色，包装 SDL_SetRenderDrawColorFloat 函数，使用 float 类型
+        
+        void setBgColorFloat(float r, float g, float b, float a = 1.0f);    ///< @brief 设置背景颜色，使用 float 类型
 
         SDL_Renderer* getSDLRenderer() const { return mRenderer; }          ///< @brief 获取底层的 SDL_Renderer 指针
 
@@ -92,9 +94,9 @@ namespace engine::render {
         Renderer& operator=(Renderer&&) = delete;
 
     private:
-        std::optional<SDL_FRect> getImageSrcRect(const Image& image);       ///< @brief 获取Image的源矩形，用于具体绘制。出现错误则返回std::nullopt并跳过绘制
-        bool isRectInViewport(const Camera& camera, const SDL_FRect& rect);  ///< @brief 判断矩形是否在视口中，用于视口裁剪
-
+        std::optional<SDL_FRect> getImageSrcRect(const Image& image);           ///< @brief 获取Image的源矩形，用于具体绘制。出现错误则返回std::nullopt并跳过绘制
+        bool isRectInViewport(const Camera& camera, const SDL_FRect& rect);     ///< @brief 判断矩形是否在视口中，用于视口裁剪
+        engine::utils::FColor mBackgroundColor{ 0.0f, 0.0f, 0.0f, 1.0f };       ///< @brief 清除屏幕的颜色（默认黑色），可调用setBgColorFloat设置
     };
 
 } // namespace engine::render

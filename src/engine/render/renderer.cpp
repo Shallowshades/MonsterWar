@@ -104,7 +104,12 @@ namespace engine::render {
 		}
 	}
 
+	void Renderer::setBgColorFloat(float r, float g, float b, float a) {
+		mBackgroundColor = { r, g, b, a }; 
+	}
+
 	void Renderer::clearScreen() {
+		setDrawColorFloat(mBackgroundColor.r, mBackgroundColor.g, mBackgroundColor.b, mBackgroundColor.a);
 		if (!SDL_RenderClear(mRenderer)) {
 			spdlog::error("清除渲染器失败：{}", SDL_GetError());
 		}
