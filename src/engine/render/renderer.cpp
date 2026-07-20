@@ -57,7 +57,7 @@ namespace engine::render {
 		};
 
 		// 执行绘制(默认旋转中心为精灵的中心点)
-		if (!SDL_RenderTextureRotated(mRenderer, texture, &src_rect, &dest_rect, rotation, NULL, sprite.is_flipped_ ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE)) {
+		if (!SDL_RenderTextureRotated(mRenderer, texture, &src_rect, &dest_rect, rotation, NULL, sprite.mIsFlipped ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE)) {
 			spdlog::error("渲染旋转纹理失败（ID: {}）：{}", sprite.mTextureId, SDL_GetError());
 		}
 	}
@@ -105,7 +105,7 @@ namespace engine::render {
 	}
 
 	void Renderer::setBgColorFloat(float r, float g, float b, float a) {
-		mBackgroundColor = { r, g, b, a }; 
+		mBackgroundColor = { r, g, b, a };
 	}
 
 	void Renderer::clearScreen() {
