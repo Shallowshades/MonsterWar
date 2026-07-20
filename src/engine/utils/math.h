@@ -2,7 +2,7 @@
  * @file   math.h
  * @brief  数学计算类
  * @version 1.0
- * 
+ *
  * @author Shallowshades
  * @date   2026.07.14
  *********************************************************************/
@@ -13,6 +13,7 @@
 
 #include <glm/vec2.hpp>
 #include <string_view>
+#include <random>
 
 namespace engine::utils {
 
@@ -41,10 +42,10 @@ namespace engine::utils {
     };
 
     /**
-	 * @brief 解析十六进制颜色字符串（如 "#RRGGBB" 或 "#RRGGBBAA"）为 FColor
-	 * @param hex_color 颜色字符串（支持 "#RRGGBB" 或 "#RRGGBBAA" 格式）
-	 * @return FColor 结构体，若解析失败则返回全 0
-	 */
+     * @brief 解析十六进制颜色字符串（如 "#RRGGBB" 或 "#RRGGBBAA"）为 FColor
+     * @param hex_color 颜色字符串（支持 "#RRGGBB" 或 "#RRGGBBAA" 格式）
+     * @return FColor 结构体，若解析失败则返回全 0
+     */
     constexpr FColor parseHexColor(std::string_view hex_color) {
         // 16进制符号（字符）转为10进制整数的工具函数
         auto hexToInt = [](char c) -> int {
@@ -77,6 +78,19 @@ namespace engine::utils {
             static_cast<float>(b) / 255.0f,
             static_cast<float>(a) / 255.0f
         };
+    }
+
+    /**
+     * @brief 生成指定范围内的随机整数 [min, max]
+     * @param min 最小值（包含）
+     * @param max 最大值（包含）
+     * @return 随机整数
+     */
+    inline int randomInt(int min, int max) {
+        // static thread_local 表示该变量在每个线程中各自独立，互不影响，避免多线程下的竞争条件
+        static thread_local std::mt19937 generator{ std::random_device{}() };
+        std::uniform_int_distribution<int> distribution(min, max);
+        return distribution(generator);
     }
 
 } // namespace engine::utils

@@ -5,8 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Run
 
 ```powershell
-# Configure (from project root)
-cmake -S . -B build -G "Visual Studio 17 2022"
+# Configure (from project root) — Ninja 生成器，并行编译速度快
+cmake -S . -B build -G Ninja
 
 # Build
 cmake --build build --config Debug

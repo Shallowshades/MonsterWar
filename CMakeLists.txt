@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.10.0)
 project(MonsterWar VERSION 0.1.0 LANGUAGES C CXX)
 
 # 设置C++标准
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -351,7 +351,11 @@ set(SOURCES
     src/engine/ui/state/ui_normal_state.cpp
     src/engine/ui/state/ui_pressed_state.cpp
     src/engine/ui/state/ui_hover_state.cpp
+    # 游戏层源文件
+    src/game/loader/entity_builder_mw.cpp
     src/game/scene/game_scene.cpp
+    src/game/system/follow_path_system.cpp
+    src/game/system/remove_dead_system.cpp
 )
 
 # --- 添加 ImGui 开始 ---
