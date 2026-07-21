@@ -358,6 +358,7 @@ set(SOURCES
     src/game/scene/game_scene.cpp
     src/game/system/follow_path_system.cpp
     src/game/system/remove_dead_system.cpp
+    src/game/system/block_system.cpp
 )
 
 # --- 添加 ImGui 开始 ---

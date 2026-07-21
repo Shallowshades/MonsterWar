@@ -21,6 +21,8 @@
 #include "../component/stats_component.h"
 #include "../component/enemy_component.h"
 #include "../component/class_name_component.h"
+#include "../component/player_component.h"
+#include "../component/blocker_component.h"
 #include <entt/entity/registry.hpp>
 #include <entt/core/hashed_string.hpp>
 #include <spdlog/spdlog.h>
@@ -34,6 +36,24 @@ namespace game::factory {
     EntityFactory::EntityFactory(entt::registry& registry,
         BlueprintManager& blueprint_manager)
         : mRegistry(registry), mBlueprintManager(blueprint_manager) {
+    }
+
+    entt::entity EntityFactory::createPlayerUnit(entt::id_type class_id, const glm::vec2& position, int level, int rarity) {
+        auto entity = mRegistry.create();
+        const auto& blueprint = mBlueprintManager.getPlayerClassBlueprint(class_id);
+        // 添加组件
+        addTransformComponent(entity, position);
+        addSpriteComponent(entity, blueprint.mSprite);
+        addAnimationComponent(entity, blueprint.mAnimations, blueprint.mSprite, "idle"_hs);
+        addAudioComponent(entity, blueprint.mSounds);
+        addStatsComponent(entity, blueprint.mStats, level, rarity);
+        addPlayerComponent(entity, blueprint.mPlayer, rarity);
+
+        // 补充其他必要组件
+        mRegistry.emplace<game::component::ClassNameComponent>(entity, class_id, blueprint.mDisplayInfo.mName);
+        mRegistry.emplace<engine::component::RenderComponent>(entity);
+
+        return entity;
     }
 
     entt::entity EntityFactory::createEnemyUnit(entt::id_type class_id, const glm::vec2& position, int target_waypoint_id, int level, int rarity) {
@@ -106,6 +126,24 @@ namespace game::factory {
             0.0f,
             level,
             rarity);
+    }
+
+    void EntityFactory::addPlayerComponent(entt::entity entity, const data::PlayerBlueprint& player, int rarity) {
+        auto cost = static_cast<int>(std::round(player.mCost * (0.9f + 0.1f * rarity)));
+        mRegistry.emplace<game::component::PlayerComponent>(entity, cost);
+        // 添加类型标签（近战、远程、治疗）
+        if (player.mType == game::defs::PlayerType::MELEE) {
+            mRegistry.emplace<game::defs::MeleeUnitTag>(entity);    // 近战单位标签
+            // 近战类型添加阻挡者组件
+            mRegistry.emplace<game::component::BlockerComponent>(entity, player.mBlock);
+        }
+        else if (player.mType == game::defs::PlayerType::RANGED) {
+            mRegistry.emplace<game::defs::RangedUnitTag>(entity);    // 远程单位标签
+            if (player.mHealer) {
+                mRegistry.emplace<game::defs::HealerTag>(entity);    // 治疗单位标签
+            }
+        }
+        // TODO: 未来添加技能组件
     }
 
     void EntityFactory::addEnemyComponent(entt::entity entity, const data::EnemyBlueprint& enemy, int target_waypoint_id) {

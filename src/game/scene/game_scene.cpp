@@ -1,14 +1,17 @@
 #include "game_scene.h"
 #include "../component/enemy_component.h"
+#include "../component/player_component.h"
 #include "../factory/entity_factory.h"
 #include "../factory/blueprint_manager.h"
 #include "../loader/entity_builder_mw.h"
 #include "../system/follow_path_system.h"
 #include "../system/remove_dead_system.h"
+#include "../system/block_system.h"
 #include "../../engine/component/transform_component.h"
 #include "../../engine/component/velocity_component.h"
 #include "../../engine/component/sprite_component.h"
 #include "../../engine/component/render_component.h"
+#include "../../engine/input/input_manager.h"
 #include "../../engine/core/context.h"
 #include "../../engine/system/render_system.h"
 #include "../../engine/system/movement_system.h"
@@ -26,14 +29,17 @@ namespace game::scene {
 	GameScene::GameScene(engine::core::Context& context)
 		: engine::scene::Scene("GameScene", context) {
 
+		auto& dispatcher = mContext.getDispatcher();
+
 		// 初始化系统
 		mRenderSystem = std::make_unique<engine::system::RenderSystem>();
 		mMovementSystem = std::make_unique<engine::system::MovementSystem>();
-		mAnimationSystem = std::make_unique<engine::system::AnimationSystem>();
+		mAnimationSystem = std::make_unique<engine::system::AnimationSystem>(mRegistry, dispatcher);
 		mYsortSystem = std::make_unique<engine::system::YSortSystem>();
 
 		mFollowPathSystem = std::make_unique<game::system::FollowPathSystem>();
 		mRemoveDeadSystem = std::make_unique<game::system::RemoveDeadSystem>();
+		mBlockSystem = std::make_unique<game::system::BlockSystem>();
 
 		spdlog::info("GameScene 构造完成");
 	}
@@ -49,6 +55,10 @@ namespace game::scene {
 
 		if (!initEventConnections()) {
 			spdlog::error("初始化事件连接失败");
+			return;
+		}
+		if (!initInputConnections()) {
+			spdlog::error("初始化输入连接失败");
 			return;
 		}
 		if (!initEntityFactory()) {
@@ -68,9 +78,10 @@ namespace game::scene {
 
 		// 注意系统更新的顺序
 		mFollowPathSystem->update(mRegistry, dispatcher, mWaypointNodes);
+		mBlockSystem->update(mRegistry, dispatcher);
 
 		mMovementSystem->update(mRegistry, delta_time);
-		mAnimationSystem->update(mRegistry, delta_time);
+		mAnimationSystem->update(delta_time);
 		mYsortSystem->update(mRegistry);					    // 调用顺序要在MovementSystem之后
 
 		Scene::update(delta_time);
@@ -84,8 +95,13 @@ namespace game::scene {
 
 	void GameScene::clean() {
 		auto& dispatcher = mContext.getDispatcher();
+		auto& input_manager = mContext.getInputManager();
 		// 断开所有事件连接
 		dispatcher.disconnect(this);
+		// 断开输入信号连接
+		input_manager.onAction("mouse_right"_hs).disconnect<&GameScene::onCreateTestPlayerMelee>(this);
+		input_manager.onAction("mouse_left"_hs).disconnect<&GameScene::onCreateTestPlayerRanged>(this);
+		input_manager.onAction("pause"_hs).disconnect<&GameScene::onClearAllPlayers>(this);
 		Scene::clean();
 	}
 
@@ -112,11 +128,20 @@ namespace game::scene {
 		return true;
 	}
 
+	bool GameScene::initInputConnections() {
+		auto& input_manager = mContext.getInputManager();
+		input_manager.onAction("mouse_right"_hs).connect<&GameScene::onCreateTestPlayerMelee>(this);
+		input_manager.onAction("mouse_left"_hs).connect<&GameScene::onCreateTestPlayerRanged>(this);
+		input_manager.onAction("pause"_hs).connect<&GameScene::onClearAllPlayers>(this);
+		return true;
+	}
+
 	bool GameScene::initEntityFactory() {
 		// 如果蓝图管理器为空，则创建一个（将来可能由构造函数传入）
 		if (!mBlueprintManager) {
 			mBlueprintManager = std::make_shared<game::factory::BlueprintManager>(mContext.getResourceManager());
-			if (!mBlueprintManager->loadEnemyClassBlueprints("assets/data/enemy_data.json")) {
+			if (!mBlueprintManager->loadEnemyClassBlueprints("assets/data/enemy_data.json") ||
+				!mBlueprintManager->loadPlayerClassBlueprints("assets/data/player_data.json")) {
 				spdlog::error("加载蓝图失败");
 				return false;
 			}
@@ -153,6 +178,28 @@ namespace game::scene {
 			mEntityFactory->createEnemyUnit("goblin"_hs, position, start_index);
 			mEntityFactory->createEnemyUnit("dark_witch"_hs, position, start_index);
 		}
+	}
+
+	bool GameScene::onCreateTestPlayerMelee() {
+		auto position = mContext.getInputManager().getLogicalMousePosition();
+		mEntityFactory->createPlayerUnit("warrior"_hs, position);
+		spdlog::info("创建战士: 位置: {}, {}", position.x, position.y);
+		return true;
+	}
+
+	bool GameScene::onCreateTestPlayerRanged() {
+		auto position = mContext.getInputManager().getLogicalMousePosition();
+		mEntityFactory->createPlayerUnit("archer"_hs, position);
+		spdlog::info("创建弓箭手: 位置: {}, {}", position.x, position.y);
+		return true;
+	}
+
+	bool GameScene::onClearAllPlayers() {
+		auto view = mRegistry.view<game::component::PlayerComponent>();
+		for (auto entity : view) {
+			mRegistry.destroy(entity);
+		}
+		return true;
 	}
 
 } // namespace game::scene

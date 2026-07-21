@@ -27,8 +27,9 @@ main.cpp
       → update(delta)
         → RemoveDeadSystem (清理死亡实体)
         → FollowPathSystem (敌人路径跟随，触发 EnemyArriveHomeEvent)
+        → BlockSystem (检测阻挡，设置速度 0 + 攻击动画)
         → MovementSystem (Velocity → Transform)
-        → AnimationSystem (帧动画推进)
+        → AnimationSystem (帧动画推进，响应 PlayAnimationEvent)
         → YSortSystem (Y 坐标排序)
       → render()
         → RenderSystem (按 layer+depth 排序渲染)
@@ -61,6 +62,9 @@ main.cpp
 | EnemyComponent     | `enemy_component.h`      | 敌人目标路径节点 ID + 移动速度     |
 | StatsComponent     | `stats_component.h`      | RPG 属性（HP/ATK/DEF/射程/攻速等） |
 | ClassNameComponent | `class_name_component.h` | 职业名称或敌人类型（ID + 名称）    |
+| PlayerComponent    | `player_component.h`    | 玩家单位，出击消耗                  |
+| BlockerComponent   | `blocker_component.h`   | 阻挡者（最大/当前阻挡数量）         |
+| BlockedByComponent | `blocked_by_component.h`| 被阻挡者（记录阻挡自己的实体）      |
 
 ## ECS 系统
 
@@ -69,7 +73,7 @@ main.cpp
 | 系统            | 文件                   | 说明                                                              |
 | --------------- | ---------------------- | ----------------------------------------------------------------- |
 | MovementSystem  | `movement_system.cpp`  | 遍历 Velocity + Transform 实体，`velocity * dt` 更新位置          |
-| AnimationSystem | `animation_system.cpp` | 遍历 Animation + Sprite 实体，推进帧计时器并切换帧                |
+| AnimationSystem | `animation_system.cpp` | 遍历 Animation + Sprite 实体，推进帧计时器并切换帧；通过 PlayAnimationEvent 驱动 |
 | RenderSystem    | `render_system.cpp`    | 遍历 Transform + Sprite + Render 实体，按 (layer, depth) 排序渲染 |
 | YSortSystem     | `ysort_system.cpp`     | 遍历 RenderComponent 实体，将 `mDepth` 设为 Y 坐标                |
 
@@ -79,6 +83,7 @@ main.cpp
 | ---------------- | ------------------------ | ----------------------------------------------------- |
 | FollowPathSystem | `follow_path_system.cpp` | 敌人沿路径节点移动，到达终点触发 EnemyArriveHomeEvent |
 | RemoveDeadSystem | `remove_dead_system.cpp` | 延迟清理标记 DeadTag 的死亡实体                       |
+| BlockSystem      | `block_system.cpp`      | 检测阻挡距离，设置敌人速度为 0 并切换攻击动画         |
 
 ## 关卡加载系统（Builder 模式）
 
@@ -120,15 +125,19 @@ main.cpp
 
 实现了蓝图驱动的实体创建机制，将实体数据定义与创建逻辑解耦。
 
-- **BlueprintManager** (`game::factory`) — 从 JSON 加载敌人蓝图数据并解析为结构化蓝图
-  - 支持子蓝图分别解析：Stats、Sprite、Animation、Sound、Enemy、DisplayInfo
-  - 提供 `getEnemyClassBlueprint()` 接口按 ID 查询蓝图
+- **BlueprintManager** (`game::factory`) — 从 JSON 加载敌人/玩家蓝图数据并解析为结构化蓝图
+  - 支持子蓝图分别解析：Stats、Sprite、Animation、Sound、Enemy、Player、DisplayInfo
+  - 提供 `getEnemyClassBlueprint()` / `getPlayerClassBlueprint()` 按 ID 查询蓝图
 - **EntityFactory** (`game::factory`) — 根据蓝图数据创建 ECS 实体并组装组件
-  - `createEnemyUnit()` — 按蓝图自动添加 Transform、Sprite、Animation、Stats 等组件
+  - `createEnemyUnit()` — 按蓝图自动添加 Transform、Sprite、Animation、Stats、Enemy 等组件
+  - `createPlayerUnit()` — 按蓝图创建玩家单位，添加 Player、Blocker 等组件
   - 提供独立的 `addXxxComponent()` 方法供子类扩展
-- **蓝图数据结构** (`entity_blueprint.h`) — 定义了 Stats、Sprite、Animation 等子蓝图结构体
-  - `EnemyClassBlueprint` 聚合所有子蓝图，作为完整敌人类型定义
-- **GameScene** 整合：`initEntityFactory()` 初始化工厂，`createTestEnemy()` 生成测试敌人
+- **蓝图数据结构** (`entity_blueprint.h`) — 定义了一系列子蓝图结构体
+  - `EnemyClassBlueprint` — 聚合所有子蓝图，作为完整敌人类型定义
+  - `PlayerClassBlueprint` — 玩家职业蓝图，包含 `PlayerBlueprint`（类型、技能、阻挡、消耗）
+  - `PlayerBlueprint` 通过 `PlayerType` 枚举（MELEE / RANGED / MIXED）区分单位类型
+- **玩家单位组件**：`PlayerComponent`（出击消耗）、`BlockerComponent`（阻挡计数）、`BlockedByComponent`（被阻挡引用）
+- **新增 Tag**：`HealerTag`（治疗单位标签）
 
 ## 资源配置与数据定义
 
@@ -162,6 +171,7 @@ main.cpp
 | 事件                 | 说明                         |
 | -------------------- | ---------------------------- |
 | EnemyArriveHomeEvent | 敌人到达基地，触发扣血等逻辑 |
+| PlayAnimationEvent   | 播放动画（实体 ID + 动画名 + 循环标志） |
 
 ## 引擎基础设施
 
@@ -200,14 +210,14 @@ src/
 │   │   └── state/                    #     状态模式：Normal / Hover / Pressed
 │   └── utils/                        #   工具（Math, Events, Alignment）
 └── game/                             # 游戏层 — MonsterWar 游戏逻辑
-    ├── component/                    #   游戏组件（Enemy, Stats, ClassName）
+    ├── component/                    #   游戏组件（Enemy, Stats, ClassName, Player, Blocker）
     ├── data/                         #   数据结构（WaypointNode, EntityBlueprint）
-    ├── defs/                         #   标签与事件定义（Tags, Events）
+    ├── defs/                         #   标签与事件定义 + 常量（Tags, Events, Constants）
     ├── factory/                      #   工厂（BlueprintManager, EntityFactory）
     ├── loader/                       #   关卡扩展构建器（EntityBuilderMW）
     ├── scene/                        #   游戏场景（GameScene — 主游戏场景）
     │   └── game_scene.cpp/h
-    └── system/                       #   游戏系统（FollowPath, RemoveDead）
+    └── system/                       #   游戏系统（FollowPath, RemoveDead, Block）
         └── follow_path_system.cpp/h
 ```
 

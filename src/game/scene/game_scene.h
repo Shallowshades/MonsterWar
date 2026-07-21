@@ -22,6 +22,9 @@ namespace game::factory {
 	class EntityFactory;
 	class BlueprintManager;
 }
+namespace game::system {
+	class BlockSystem;
+}
 
 namespace game::scene {
 
@@ -38,10 +41,16 @@ namespace game::scene {
 	private:
 		[[nodiscard]] bool loadLevel();
 		[[nodiscard]] bool initEventConnections();
+		[[nodiscard]] bool initInputConnections();
 		[[nodiscard]] bool initEntityFactory();
 
 		// 事件回调函数
 		void onEnemyArriveHome(const game::defs::EnemyArriveHomeEvent& event);
+
+		// 输入回调函数
+		[[nodiscard]] bool onCreateTestPlayerMelee();
+		[[nodiscard]] bool onCreateTestPlayerRanged();
+		[[nodiscard]] bool onClearAllPlayers();
 
 		// 测试函数
 		void createTestEnemy();
@@ -53,6 +62,7 @@ namespace game::scene {
 		std::unique_ptr<engine::system::YSortSystem> mYsortSystem;
 		std::unique_ptr<game::system::FollowPathSystem> mFollowPathSystem;
 		std::unique_ptr<game::system::RemoveDeadSystem> mRemoveDeadSystem;
+		std::unique_ptr<game::system::BlockSystem> mBlockSystem;
 
 		std::unordered_map<int, game::data::WaypointNode> mWaypointNodes;  // 路径节点ID到节点数据的映射
 		std::vector<int> mStartPoints;                                     // 起点ID列表

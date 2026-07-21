@@ -57,13 +57,13 @@ namespace engine::core {
 		// 存储动作名称到SDL_Scancode名称列表的映射
 		std::unordered_map<std::string, std::vector<std::string>> mInputMappings = {
 			// 提供一些合理的默认值, 以防配置文件加载失败或者缺少此部分 
-			{"MoveLeft", {"A", "Left"}},
-			{"MoveRight", {"D", "Right"}},
-			{"MoveUp", {"W", "Up"}},
-			{"MoveDown", {"S", "Down"}},
-			{"Jump", {"J", "Space"}},
-			{"Attack", {"K", "MouseLeft"}},
-			{"Pause", {"P", "Escape"}},
+			{"move_left", {"A", "Left"}},
+			{"move_right", {"D", "Right"}},
+			{"move_up", {"W", "Up"}},
+			{"move_down", {"S", "Down"}},
+			{"jump", {"J", "Space"}},
+			{"attack", {"K", "MouseLeft"}},
+			{"pause", {"P", "Escape"}},
 			// 可以继续添加更多的默认动作
 		};
 	};
