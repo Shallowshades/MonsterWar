@@ -353,6 +353,8 @@ set(SOURCES
     src/engine/ui/state/ui_hover_state.cpp
     # 游戏层源文件
     src/game/loader/entity_builder_mw.cpp
+    src/game/factory/blueprint_manager.cpp
+    src/game/factory/entity_factory.cpp
     src/game/scene/game_scene.cpp
     src/game/system/follow_path_system.cpp
     src/game/system/remove_dead_system.cpp
