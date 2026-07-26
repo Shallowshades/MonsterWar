@@ -48,12 +48,13 @@ namespace game::scene {
 		void onEnemyArriveHome(const game::defs::EnemyArriveHomeEvent& event);
 
 		// 输入回调函数
-		[[nodiscard]] bool onCreateTestPlayerMelee();
-		[[nodiscard]] bool onCreateTestPlayerRanged();
-		[[nodiscard]] bool onClearAllPlayers();
 
 		// 测试函数
 		void createTestEnemy();
+		[[nodiscard]] bool onCreateTestPlayerMelee();
+		[[nodiscard]] bool onCreateTestPlayerRanged();
+		[[nodiscard]] bool onCreateTestPlayerHealer();
+		[[nodiscard]] bool onClearAllPlayers();
 
 	private:
 		std::unique_ptr<engine::system::RenderSystem> mRenderSystem;
@@ -63,6 +64,11 @@ namespace game::scene {
 		std::unique_ptr<game::system::FollowPathSystem> mFollowPathSystem;
 		std::unique_ptr<game::system::RemoveDeadSystem> mRemoveDeadSystem;
 		std::unique_ptr<game::system::BlockSystem> mBlockSystem;
+		std::unique_ptr<game::system::SetTargetSystem> mSetTargetSystem;
+		std::unique_ptr<game::system::AttackStarterSystem> mAttackStarterSystem;
+		std::unique_ptr<game::system::TimerSystem> mTimerSystem;
+		std::unique_ptr<game::system::OrientationSystem> mOrientationSystem;
+		std::unique_ptr<game::system::AnimationStateSystem> mAnimationStateSystem;
 
 		std::unordered_map<int, game::data::WaypointNode> mWaypointNodes;  // 路径节点ID到节点数据的映射
 		std::vector<int> mStartPoints;                                     // 起点ID列表

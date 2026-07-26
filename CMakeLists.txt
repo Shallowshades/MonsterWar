@@ -359,6 +359,11 @@ set(SOURCES
     src/game/system/follow_path_system.cpp
     src/game/system/remove_dead_system.cpp
     src/game/system/block_system.cpp
+    src/game/system/attack_starter_system.cpp
+    src/game/system/timer_system.cpp
+    src/game/system/orientation_system.cpp
+    src/game/system/set_target_system.cpp
+    src/game/system/animation_state_system.cpp
 )
 
 # --- 添加 ImGui 开始 ---

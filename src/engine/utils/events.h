@@ -33,4 +33,10 @@ namespace engine::utils {
 		entt::id_type mAnimationId{ entt::null };			///< @brief 动画ID
 		bool mLoop{ true };									///< @brief 是否循环
 	};
+
+	/// @brief 动画播放完成事件
+	struct AnimationFinishedEvent {
+		entt::entity mEntity{ entt::null };           		///< @brief 目标实体
+		entt::id_type mAnimationId{ entt::null };    		///< @brief 动画ID
+	};
 } // namespace engine::utils

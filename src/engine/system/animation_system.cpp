@@ -52,6 +52,8 @@ namespace engine::system {
 					else {
 						// 动画播放完毕且不循环，停在最后一帧
 						anim_component.mCurrentFrameIndex = current_animation.mFrames.size() - 1;
+						// 发送动画播放完成事件
+						mDispatcher.enqueue(engine::utils::AnimationFinishedEvent{ entity, anim_component.mCurrentAnimationId });
 					}
 				}
 			}

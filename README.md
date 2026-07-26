@@ -11,7 +11,7 @@ MonsterWar 是一个正在开发中的 2D 游戏，采用**引擎/游戏分离**
 | 层级                       | 说明                                           |
 | -------------------------- | ---------------------------------------------- |
 | **引擎层** (`src/engine/`) | ECS 框架、渲染、资源管理、UI、音频、输入、场景 |
-| **游戏层** (`src/game/`)   | 游戏场景、敌人 AI、实体工厂、蓝图系统          |
+| **游戏层** (`src/game/`)   | 游戏场景、敌人 AI（寻路+战斗）、实体工厂、蓝图系统、战斗系统      |
 
 ### 应用流程
 
@@ -26,10 +26,14 @@ main.cpp
       → handleEvents (SDL 事件 → InputManager → dispatcher)
       → update(delta)
         → RemoveDeadSystem (清理死亡实体)
+        → TimerSystem (推进攻击冷却计时器，冷却结束添加 AttackReadyTag)
+        → SetTargetSystem (为无目标角色寻找/刷新攻击目标)
+        → OrientationSystem (根据目标/移动方向翻转精灵朝向)
         → FollowPathSystem (敌人路径跟随，触发 EnemyArriveHomeEvent)
-        → BlockSystem (检测阻挡，设置速度 0 + 攻击动画)
+        → BlockSystem (检测阻挡，设置速度 0 + 阻挡动画)
+        → AttackStarterSystem (冷却完毕的角色触发攻击动画，锁定行动)
         → MovementSystem (Velocity → Transform)
-        → AnimationSystem (帧动画推进，响应 PlayAnimationEvent)
+        → AnimationSystem (帧动画推进，响应 PlayAnimationEvent / AnimationFinishedEvent)
         → YSortSystem (Y 坐标排序)
       → render()
         → RenderSystem (按 layer+depth 排序渲染)
@@ -65,6 +69,7 @@ main.cpp
 | PlayerComponent    | `player_component.h`    | 玩家单位，出击消耗                  |
 | BlockerComponent   | `blocker_component.h`   | 阻挡者（最大/当前阻挡数量）         |
 | BlockedByComponent | `blocked_by_component.h`| 被阻挡者（记录阻挡自己的实体）      |
+| TargetComponent    | `target_component.h`    | 攻击目标（锁定要攻击的实体）        |
 
 ## ECS 系统
 
@@ -81,9 +86,14 @@ main.cpp
 
 | 系统             | 文件                     | 说明                                                  |
 | ---------------- | ------------------------ | ----------------------------------------------------- |
-| FollowPathSystem | `follow_path_system.cpp` | 敌人沿路径节点移动，到达终点触发 EnemyArriveHomeEvent |
-| RemoveDeadSystem | `remove_dead_system.cpp` | 延迟清理标记 DeadTag 的死亡实体                       |
-| BlockSystem      | `block_system.cpp`      | 检测阻挡距离，设置敌人速度为 0 并切换攻击动画         |
+| FollowPathSystem      | `follow_path_system.cpp`      | 敌人沿路径节点移动，到达终点触发 EnemyArriveHomeEvent |
+| RemoveDeadSystem      | `remove_dead_system.cpp`      | 延迟清理标记 DeadTag 的死亡实体                       |
+| BlockSystem           | `block_system.cpp`             | 检测阻挡距离，设置敌人速度为 0 并切换阻挡动画         |
+| TimerSystem           | `timer_system.cpp`             | 推进攻击冷却计时器，冷却结束添加 AttackReadyTag       |
+| SetTargetSystem       | `set_target_system.cpp`        | 为无目标角色寻找目标（玩家找敌人、远程敌人找玩家、治疗者找低血量盟友） |
+| AttackStarterSystem   | `attack_starter_system.cpp`    | AttackReadyTag 实体触发攻击动画，添加 ActionLockTag   |
+| OrientationSystem     | `orientation_system.cpp`       | 根据目标位置/阻挡者/移动方向翻转精灵朝向              |
+| AnimationStateSystem  | `animation_state_system.cpp`   | 监听 AnimationFinishedEvent，恢复循环动画（idle/walk）|
 
 ## 关卡加载系统（Builder 模式）
 
@@ -137,7 +147,58 @@ main.cpp
   - `PlayerClassBlueprint` — 玩家职业蓝图，包含 `PlayerBlueprint`（类型、技能、阻挡、消耗）
   - `PlayerBlueprint` 通过 `PlayerType` 枚举（MELEE / RANGED / MIXED）区分单位类型
 - **玩家单位组件**：`PlayerComponent`（出击消耗）、`BlockerComponent`（阻挡计数）、`BlockedByComponent`（被阻挡引用）
-- **新增 Tag**：`HealerTag`（治疗单位标签）
+## 战斗系统
+
+实现了基于 ECS 标签和冷却计时的自动战斗循环。
+
+### 战斗流程
+
+```
+TimerSystem (冷却计时)
+    → 冷却结束 → 添加 AttackReadyTag
+SetTargetSystem (目标锁定)
+    → 玩家(近战/远程) → 范围内最近的敌人
+    → 远程敌人 → 范围内最近的玩家
+    → 治疗者 → 范围内血量百分比最低的受伤盟友
+    → 目标超出范围/死亡 → 清除目标
+OrientationSystem (朝向)
+    → 有目标 → 面朝目标
+    → 被阻挡 → 面朝阻挡者
+    → 移动中 → 面朝移动方向
+AttackStarterSystem (攻击触发)
+    → 筛选 AttackReadyTag 实体
+    → 触发 PlayAnimationEvent
+    → 添加 ActionLockTag (锁定行动)
+    → 移除 AttackReadyTag (重置冷却)
+AnimationStateSystem (动画状态恢复)
+    → 监听 AnimationFinishedEvent
+    → 被阻挡敌人 → 恢复 idle 循环动画
+    → 未被阻挡敌人 → 恢复 walk 循环动画
+    → 玩家 → 恢复 idle 循环动画
+    → 移除 ActionLockTag (解除行动锁定)
+```
+
+### 游戏标签（`game::defs`）
+
+ECS 空标签（tag），用于标记实体状态，配合 view 的 `exclude` 做筛选：
+
+| 标签             | 文件       | 说明                                       |
+| ---------------- | ---------- | ------------------------------------------ |
+| DeadTag          | `tags.h`   | 标记死亡实体，下一帧由 RemoveDeadSystem 清理 |
+| AttackReadyTag   | `tags.h`   | 攻击冷却结束，可发起攻击                     |
+| ActionLockTag    | `tags.h`   | 行动锁定（播放攻击动画时禁止移动）           |
+| InjuredTag       | `tags.h`   | 生命值未满，供治疗者检测                     |
+| FaceLeftTag      | `tags.h`   | 默认朝左的角色类型（朝向右时翻转精灵）       |
+| HealerTag        | `tags.h`   | 治疗单位类型                                |
+| MeleeUnitTag     | `tags.h`   | 近战单位类型                                |
+| RangedUnitTag    | `tags.h`   | 远程单位类型                                |
+
+### 事件扩展
+
+| 事件                    | 说明                                           |
+| ----------------------- | ---------------------------------------------- |
+| PlayAnimationEvent      | 请求播放指定动画（实体 ID + 动画名 + 循环标志） |
+| AnimationFinishedEvent  | 动画播放完毕时发出（供 AnimationStateSystem 恢复循环动画） |
 
 ## 资源配置与数据定义
 
@@ -171,7 +232,6 @@ main.cpp
 | 事件                 | 说明                         |
 | -------------------- | ---------------------------- |
 | EnemyArriveHomeEvent | 敌人到达基地，触发扣血等逻辑 |
-| PlayAnimationEvent   | 播放动画（实体 ID + 动画名 + 循环标志） |
 
 ## 引擎基础设施
 
@@ -217,8 +277,15 @@ src/
     ├── loader/                       #   关卡扩展构建器（EntityBuilderMW）
     ├── scene/                        #   游戏场景（GameScene — 主游戏场景）
     │   └── game_scene.cpp/h
-    └── system/                       #   游戏系统（FollowPath, RemoveDead, Block）
-        └── follow_path_system.cpp/h
+    └── system/                       #   游戏系统（战斗、寻路、阻挡等）
+        ├── follow_path_system.cpp/h
+        ├── block_system.cpp/h
+        ├── remove_dead_system.cpp/h
+        ├── timer_system.cpp/h              # 攻击冷却计时
+        ├── set_target_system.cpp/h         # 自动锁定攻击目标
+        ├── attack_starter_system.cpp/h     # 触发攻击动画
+        ├── orientation_system.cpp/h        # 精灵朝向控制
+        └── animation_state_system.cpp/h    # 动画状态恢复
 ```
 
 ```
