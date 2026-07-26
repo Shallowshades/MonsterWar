@@ -90,12 +90,11 @@ namespace game::scene {
 
 		// 注意系统更新的顺序
 		mTimerSystem->update(mRegistry, delta_time);
-		mSetTargetSystem->update(mRegistry);
-		mOrientationSystem->update(mRegistry);
-		mFollowPathSystem->update(mRegistry, dispatcher, mWaypointNodes);
 		mBlockSystem->update(mRegistry, dispatcher);
+		mSetTargetSystem->update(mRegistry);
+		mFollowPathSystem->update(mRegistry, dispatcher, mWaypointNodes);
+		mOrientationSystem->update(mRegistry);					// 调用顺序要在Block、SetTarget、FollowPath之后
 		mAttackStarterSystem->update(mRegistry, dispatcher);
-
 		mMovementSystem->update(mRegistry, delta_time);
 		mAnimationSystem->update(delta_time);
 		mYsortSystem->update(mRegistry);					    // 调用顺序要在MovementSystem之后
