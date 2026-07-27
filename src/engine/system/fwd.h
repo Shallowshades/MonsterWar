@@ -8,5 +8,5 @@ namespace engine::system {
 	class AnimationSystem;
 	class MovementSystem;
 	class YSortSystem;
-
+	class AudioSystem;
 }   // namespace engine::system

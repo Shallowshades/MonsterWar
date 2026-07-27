@@ -8,22 +8,25 @@
 #include "../system/follow_path_system.h"
 #include "../system/remove_dead_system.h"
 #include "../system/block_system.h"
-#include "../../engine/component/transform_component.h"
-#include "../../engine/component/velocity_component.h"
-#include "../../engine/component/sprite_component.h"
-#include "../../engine/component/render_component.h"
 #include "../system/set_target_system.h"
 #include "../system/attack_starter_system.h"
 #include "../system/timer_system.h"
 #include "../system/orientation_system.h"
 #include "../system/animation_state_system.h"
+#include "../system/animation_event_system.h"
+#include "../system/combat_resolve_system.h"
 #include "../defs/tags.h"
-#include "../../engine/input/input_manager.h"
+#include "../../engine/component/transform_component.h"
+#include "../../engine/component/velocity_component.h"
+#include "../../engine/component/sprite_component.h"
+#include "../../engine/component/render_component.h"
 #include "../../engine/core/context.h"
+#include "../../engine/input/input_manager.h"
 #include "../../engine/system/render_system.h"
 #include "../../engine/system/movement_system.h"
 #include "../../engine/system/animation_system.h"
 #include "../../engine/system/ysort_system.h"
+#include "../../engine/system/audio_system.h"
 #include "../../engine/loader/level_loader.h"
 #include <entt/core/hashed_string.hpp>
 #include <entt/signal/sigh.hpp>
@@ -43,6 +46,7 @@ namespace game::scene {
 		mMovementSystem = std::make_unique<engine::system::MovementSystem>();
 		mAnimationSystem = std::make_unique<engine::system::AnimationSystem>(mRegistry, dispatcher);
 		mYsortSystem = std::make_unique<engine::system::YSortSystem>();
+		mAudioSystem = std::make_unique<engine::system::AudioSystem>(mRegistry, mContext);
 
 		mFollowPathSystem = std::make_unique<game::system::FollowPathSystem>();
 		mRemoveDeadSystem = std::make_unique<game::system::RemoveDeadSystem>();
@@ -52,6 +56,8 @@ namespace game::scene {
 		mTimerSystem = std::make_unique<game::system::TimerSystem>();
 		mOrientationSystem = std::make_unique<game::system::OrientationSystem>();
 		mAnimationStateSystem = std::make_unique<game::system::AnimationStateSystem>(mRegistry, dispatcher);
+		mAnimationEventSystem = std::make_unique<game::system::AnimationEventSystem>(mRegistry, dispatcher);
+		mCombatResolveSystem = std::make_unique<game::system::CombatResolveSystem>(mRegistry, dispatcher);
 
 		spdlog::info("GameScene 构造完成");
 	}

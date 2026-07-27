@@ -21,6 +21,8 @@ namespace game::system {
     class TimerSystem;
     class OrientationSystem;
     class AnimationStateSystem;
+    class AnimationEventSystem;
+    class CombatResolveSystem;
 
 }   // namespace game::system
 

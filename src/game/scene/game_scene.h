@@ -57,10 +57,13 @@ namespace game::scene {
 		[[nodiscard]] bool onClearAllPlayers();
 
 	private:
+		// 引擎系统
 		std::unique_ptr<engine::system::RenderSystem> mRenderSystem;
 		std::unique_ptr<engine::system::MovementSystem> mMovementSystem;
 		std::unique_ptr<engine::system::AnimationSystem> mAnimationSystem;
 		std::unique_ptr<engine::system::YSortSystem> mYsortSystem;
+		std::unique_ptr<engine::system::AudioSystem> mAudioSystem;
+		// 游戏系统
 		std::unique_ptr<game::system::FollowPathSystem> mFollowPathSystem;
 		std::unique_ptr<game::system::RemoveDeadSystem> mRemoveDeadSystem;
 		std::unique_ptr<game::system::BlockSystem> mBlockSystem;
@@ -69,6 +72,8 @@ namespace game::scene {
 		std::unique_ptr<game::system::TimerSystem> mTimerSystem;
 		std::unique_ptr<game::system::OrientationSystem> mOrientationSystem;
 		std::unique_ptr<game::system::AnimationStateSystem> mAnimationStateSystem;
+		std::unique_ptr<game::system::AnimationEventSystem> mAnimationEventSystem;
+	std::unique_ptr<game::system::CombatResolveSystem> mCombatResolveSystem;
 
 		std::unordered_map<int, game::data::WaypointNode> mWaypointNodes;  // 路径节点ID到节点数据的映射
 		std::vector<int> mStartPoints;                                     // 起点ID列表

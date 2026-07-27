@@ -81,6 +81,7 @@ main.cpp
 | AnimationSystem | `animation_system.cpp` | 遍历 Animation + Sprite 实体，推进帧计时器并切换帧；通过 PlayAnimationEvent 驱动 |
 | RenderSystem    | `render_system.cpp`    | 遍历 Transform + Sprite + Render 实体，按 (layer, depth) 排序渲染 |
 | YSortSystem     | `ysort_system.cpp`     | 遍历 RenderComponent 实体，将 `mDepth` 设为 Y 坐标                |
+| AudioSystem     | `audio_system.cpp`     | 监听 PlaySoundEvent，通过 AudioPlayer 播放音效                    |
 
 ### 游戏层系统（`game::system`）
 
@@ -94,6 +95,8 @@ main.cpp
 | AttackStarterSystem   | `attack_starter_system.cpp`    | AttackReadyTag 实体触发攻击动画，添加 ActionLockTag   |
 | OrientationSystem     | `orientation_system.cpp`       | 根据目标位置/阻挡者/移动方向翻转精灵朝向              |
 | AnimationStateSystem  | `animation_state_system.cpp`   | 监听 AnimationFinishedEvent，恢复循环动画（idle/walk）|
+| AnimationEventSystem  | `animation_event_system.cpp`   | 监听 AnimationEvent（动画帧事件），发出 AttackEvent / HealEvent / PlaySoundEvent |
+| CombatResolveSystem   | `combat_resolve_system.cpp`    | 监听 AttackEvent / HealEvent，计算伤害/治疗量，处理死亡和阻挡计数  |
 
 ## 关卡加载系统（Builder 模式）
 
@@ -170,6 +173,17 @@ AttackStarterSystem (攻击触发)
     → 触发 PlayAnimationEvent
     → 添加 ActionLockTag (锁定行动)
     → 移除 AttackReadyTag (重置冷却)
+AnimationSystem (帧推进 → 帧事件)
+    → 推进到有 mEvents 的帧时发出 AnimationEvent
+AnimationEventSystem (动画帧事件处理)
+    → 玩家命中 → 对目标发出 AttackEvent 或 HealEvent，附带 PlaySoundEvent
+    → 敌人命中 → 对阻挡者发出 AttackEvent
+CombatResolveSystem (战斗结算)
+    → AttackEvent: damage = atk - def (最小 10% atk)，扣血 → 死亡 DeadTag 或受伤 InjuredTag
+    → 敌人死亡 → 减少阻挡者 BlockerComponent.mCurrentCount
+    → HealEvent: 回血 → 满血移除 InjuredTag
+AudioSystem (音效播放)
+    → 监听 PlaySoundEvent，通过 AudioPlayer 播放
 AnimationStateSystem (动画状态恢复)
     → 监听 AnimationFinishedEvent
     → 被阻挡敌人 → 恢复 idle 循环动画
@@ -193,12 +207,38 @@ ECS 空标签（tag），用于标记实体状态，配合 view 的 `exclude` �
 | MeleeUnitTag     | `tags.h`   | 近战单位类型                                |
 | RangedUnitTag    | `tags.h`   | 远程单位类型                                |
 
-### 事件扩展
+### 游戏层常量（`game::defs`）
 
-| 事件                    | 说明                                           |
-| ----------------------- | ---------------------------------------------- |
-| PlayAnimationEvent      | 请求播放指定动画（实体 ID + 动画名 + 循环标志） |
-| AnimationFinishedEvent  | 动画播放完毕时发出（供 AnimationStateSystem 恢复循环动画） |
+| 常量          | 文件           | 说明                           |
+| ------------- | -------------- | ------------------------------ |
+| BLOCK_RADIUS  | `constants.h`  | 阻挡检测半径（40.0），小于此距离视为被阻挡 |
+| UNIT_RADIUS   | `constants.h`  | 角色自身半径（20.0），用于计算攻击范围（射程 + UNIT_RADIUS） |
+
+### 玩家类型枚举（`game::defs::PlayerType`）
+
+| 值      | 说明                                   |
+| ------- | -------------------------------------- |
+| MELEE   | 近战型，只能放置在近战区域               |
+| RANGED  | 远程型，只能放置在远程区域               |
+| MIXED   | 混合型（暂不实现，未来可扩展）           |
+
+### 输入绑定（测试用）
+
+`GameScene` 中注册了以下测试用输入绑定：
+
+| 输入 | 快捷键 | 行为 |
+| ---- | ------ | ---- |
+| 鼠标左键 | `mouse_left` | 在鼠标位置创建弓箭手（远程单位） |
+| 鼠标右键 | `mouse_right` | 在鼠标位置创建战士（近战单位） |
+| A 键 | `move_left` | 在鼠标位置创建女巫（治疗单位） |
+| P / Escape | `pause` | 清除所有已创建的玩家单位 |
+
+### 动画帧事件
+
+动画数据结构（`Animation`）中的 `mEvents` 映射表将帧索引映射到事件名称 ID：
+- 在 JSON 蓝图中配置，如 `"events": { "0": "hit" }` 表示第 0 帧触发 "hit" 事件
+- `AnimationSystem` 推进到有事件标记的帧时发出 `AnimationEvent`
+- `AnimationEventSystem` 接收后处理为攻击/治疗/音效等具体逻辑
 
 ## 资源配置与数据定义
 
@@ -226,12 +266,18 @@ ECS 空标签（tag），用于标记实体状态，配合 view 的 `exclude` �
 | PushSceneEvent    | 压入新场景到场景栈 |
 | PopSceneEvent     | 弹出当前场景       |
 | ReplaceSceneEvent | 替换当前场景       |
+| PlayAnimationEvent    | 请求播放动画（实体 + 动画名 + 循环标志）    |
+| AnimationFinishedEvent| 动画播放完毕（供 AnimationStateSystem 使用）|
+| AnimationEvent        | 动画帧事件（在特定帧触发，如 hit）         |
+| PlaySoundEvent        | 播放音效（可指定目标实体或全局播放）       |
 
 ### 游戏事件（`game::defs`）
 
 | 事件                 | 说明                         |
 | -------------------- | ---------------------------- |
-| EnemyArriveHomeEvent | 敌人到达基地，触发扣血等逻辑 |
+| EnemyArriveHomeEvent | 敌人到达基地                 |
+| AttackEvent          | 攻击命中（攻击者 + 目标 + 原始伤害） |
+| HealEvent            | 治疗命中（治疗者 + 目标 + 治疗量） |
 
 ## 引擎基础设施
 
@@ -270,7 +316,7 @@ src/
 │   │   └── state/                    #     状态模式：Normal / Hover / Pressed
 │   └── utils/                        #   工具（Math, Events, Alignment）
 └── game/                             # 游戏层 — MonsterWar 游戏逻辑
-    ├── component/                    #   游戏组件（Enemy, Stats, ClassName, Player, Blocker）
+    ├── component/                    #   游戏组件（Enemy, Stats, ClassName, Player, Blocker, Target）
     ├── data/                         #   数据结构（WaypointNode, EntityBlueprint）
     ├── defs/                         #   标签与事件定义 + 常量（Tags, Events, Constants）
     ├── factory/                      #   工厂（BlueprintManager, EntityFactory）
@@ -285,7 +331,9 @@ src/
         ├── set_target_system.cpp/h         # 自动锁定攻击目标
         ├── attack_starter_system.cpp/h     # 触发攻击动画
         ├── orientation_system.cpp/h        # 精灵朝向控制
-        └── animation_state_system.cpp/h    # 动画状态恢复
+        ├── animation_state_system.cpp/h    # 动画状态恢复
+        ├── animation_event_system.cpp/h    # 动画帧事件
+        └── combat_resolve_system.cpp/h     # 伤害/治疗计算与结算
 ```
 
 ```

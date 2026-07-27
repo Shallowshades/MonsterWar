@@ -39,4 +39,17 @@ namespace engine::utils {
 		entt::entity mEntity{ entt::null };           		///< @brief 目标实体
 		entt::id_type mAnimationId{ entt::null };    		///< @brief 动画ID
 	};
+
+	/// @brief 动画事件
+	struct AnimationEvent {
+		entt::entity mEntity{ entt::null };					///< @brief 目标实体
+		entt::id_type mEventNameId{ entt::null };			///< @brief 事件名称ID
+		entt::id_type mAnimationNameId{ entt::null };		///< @brief 动画名称ID
+	};
+
+	/// @brief 播放音效事件
+	struct PlaySoundEvent {
+		entt::entity mEntity{ entt::null };					///< @brief 目标实体（可以为空，即播放全局音效）
+		entt::id_type mSoundId{ entt::null };				///< @brief 音效ID
+	};
 } // namespace engine::utils

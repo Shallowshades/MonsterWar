@@ -340,6 +340,7 @@ set(SOURCES
     src/engine/system/render_system.cpp
     src/engine/system/movement_system.cpp
     src/engine/system/ysort_system.cpp
+    src/engine/system/audio_system.cpp
     src/engine/ui/ui_manager.cpp
     src/engine/ui/ui_element.cpp
     src/engine/ui/ui_interactive.cpp
@@ -364,6 +365,8 @@ set(SOURCES
     src/game/system/orientation_system.cpp
     src/game/system/set_target_system.cpp
     src/game/system/animation_state_system.cpp
+    src/game/system/animation_event_system.cpp
+    src/game/system/combat_resolve_system.cpp
 )
 
 # --- 添加 ImGui 开始 ---

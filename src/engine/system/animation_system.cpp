@@ -44,6 +44,13 @@ namespace engine::system {
 				anim_component.mCurrentTime_ms -= current_frame.mDuration_ms;
 				anim_component.mCurrentFrameIndex++;
 
+				// 检查是否要发送动画事件
+				if (current_animation.mEvents.find(static_cast<int32_t>(anim_component.mCurrentFrameIndex)) != current_animation.mEvents.end()) {
+					mDispatcher.enqueue(engine::utils::AnimationEvent{ entity,
+						current_animation.mEvents.at(static_cast<int32_t>(anim_component.mCurrentFrameIndex)),
+						anim_component.mCurrentAnimationId });
+				}
+
 				// 处理动画播放完成
 				if (anim_component.mCurrentFrameIndex >= current_animation.mFrames.size()) {
 					if (current_animation.mLoop) {

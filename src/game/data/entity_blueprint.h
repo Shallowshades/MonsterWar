@@ -51,6 +51,7 @@ namespace game::data {
         float mMsPerFrame{ 0.0f };
         int mRow{ 0 };
         std::vector<int> mFrames;               ///< @brief 动画帧索引数组
+        std::unordered_map<int, entt::id_type> mEvents;   ///< @brief 动画事件，键为帧索引，值为事件ID
     };
 
     /**

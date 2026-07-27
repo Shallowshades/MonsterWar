@@ -39,6 +39,7 @@ namespace engine::component {
 	 */
 	struct Animation {
 		std::vector<AnimationFrame> mFrames;                            ///< @brief 动画帧
+		std::unordered_map<int, entt::id_type> mEvents;				///< @brief 动画事件，键为帧索引，值为事件ID
 		float mTotalDuration_ms{};                                      ///< @brief 动画总时长（毫秒）
 		bool mLoop{ true };                                             ///< @brief 是否循环
 
@@ -46,10 +47,11 @@ namespace engine::component {
 		 * @brief 构造函数
 		 * @param name 动画名称
 		 * @param frames 动画帧
+		 * @param events 动画事件，默认为空
 		 * @param loop 是否循环，默认true
 		 */
-		Animation(std::vector<AnimationFrame> frames, bool loop = true) :
-			mFrames(std::move(frames)), mLoop(loop) {
+		Animation(std::vector<AnimationFrame> frames, std::unordered_map<int, entt::id_type> events = {}, bool loop = true) :
+			mFrames(std::move(frames)), mLoop(loop), mEvents(std::move(events)) {
 			// 计算动画总时长 (总时长 = 所有帧时长之和)
 			mTotalDuration_ms = 0.0f;
 			for (const auto& frame : mFrames) {

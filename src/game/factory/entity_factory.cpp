@@ -105,7 +105,8 @@ namespace game::factory {
                 source_rect.mPosition.y += anim_blueprint.mRow * source_rect.mSize.y;
                 frames.emplace_back(source_rect, anim_blueprint.mMsPerFrame);
             }
-            animations.emplace(anim_id, engine::component::Animation(std::move(frames)));
+            // 将创建好的动画帧容器插入动画map容器 (可直接使用蓝图中的事件信息)
+            animations.emplace(anim_id, engine::component::Animation(std::move(frames), anim_blueprint.mEvents));
         }
         mRegistry.emplace<engine::component::AnimationComponent>(entity, std::move(animations), default_animation_id);
     }
