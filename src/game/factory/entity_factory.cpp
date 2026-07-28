@@ -23,6 +23,7 @@
 #include "../component/class_name_component.h"
 #include "../component/player_component.h"
 #include "../component/blocker_component.h"
+#include "../component/projectile_component.h"
 #include <entt/entity/registry.hpp>
 #include <entt/core/hashed_string.hpp>
 #include <spdlog/spdlog.h>
@@ -48,6 +49,7 @@ namespace game::factory {
         addAudioComponent(entity, blueprint.mSounds);
         addStatsComponent(entity, blueprint.mStats, level, rarity);
         addPlayerComponent(entity, blueprint.mPlayer, rarity);
+        addProjectileIDComponent(entity, blueprint.mProjectileId);
 
         // 补充其他必要组件
         mRegistry.emplace<game::component::ClassNameComponent>(entity, class_id, blueprint.mDisplayInfo.mName);
@@ -66,6 +68,7 @@ namespace game::factory {
         addAudioComponent(entity, blueprint.mSounds);
         addStatsComponent(entity, blueprint.mStats, level, rarity);
         addEnemyComponent(entity, blueprint.mEnemy, target_waypoint_id);
+        addProjectileIDComponent(entity, blueprint.mProjectileId);
 
         // 补充其他必要组件
         mRegistry.emplace<game::component::ClassNameComponent>(entity, class_id, blueprint.mDisplayInfo.mName);
@@ -73,6 +76,34 @@ namespace game::factory {
 
         return entity;
     }
+
+    entt::entity EntityFactory::createProjectile(entt::id_type id, const glm::vec2& start_position, const glm::vec2& target_position, entt::entity target, float damage) {
+        // 创建投射物实体
+        auto entity = mRegistry.create();
+        const auto& blueprint = mBlueprintManager.getProjectileBlueprint(id);
+        // --- 依次添加必要组件 ---
+        // 添加ProjectileComponent
+        mRegistry.emplace<game::component::ProjectileComponent>(entity,
+            target,
+            damage,
+            start_position,
+            target_position,
+            start_position,
+            blueprint.mArcHeight,
+            blueprint.mTotalFlightTime,
+            0.0f);
+        // 添加SpriteComponent
+        addSpriteComponent(entity, blueprint.mSprite);
+        // 添加TransformComponent
+        addTransformComponent(entity, start_position);
+        // 添加AudioComponent
+        addAudioComponent(entity, blueprint.mSounds);
+        // 添加RenderComponent(让投射物位于主图层+1，即可以遮住角色)
+        mRegistry.emplace<engine::component::RenderComponent>(entity, engine::component::RenderComponent::MAIN_LAYER + 1);
+        return entity;
+    }
+
+    // --- 组件创建函数 ---
 
     void EntityFactory::addTransformComponent(entt::entity entity, const glm::vec2& position, const glm::vec2& scale, float rotation) {
         mRegistry.emplace<engine::component::TransformComponent>(entity, position, scale, rotation);
@@ -165,6 +196,11 @@ namespace game::factory {
             audio_map.emplace(sound_key, sound_id);
         }
         mRegistry.emplace<engine::component::AudioComponent>(entity, std::move(audio_map));
+    }
+
+    void EntityFactory::addProjectileIDComponent(entt::entity entity, entt::id_type id) {
+        if (id == entt::null) return;
+        mRegistry.emplace<game::component::ProjectileIDComponent>(entity, id);
     }
 
 }   // namespace game::factory

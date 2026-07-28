@@ -32,6 +32,7 @@ main.cpp
         → FollowPathSystem (敌人路径跟随，触发 EnemyArriveHomeEvent)
         → BlockSystem (检测阻挡，设置速度 0 + 阻挡动画)
         → AttackStarterSystem (冷却完毕的角色触发攻击动画，锁定行动)
+        → ProjectileSystem (投射物飞行弧线更新，到达后发出 AttackEvent)
         → MovementSystem (Velocity → Transform)
         → AnimationSystem (帧动画推进，响应 PlayAnimationEvent / AnimationFinishedEvent)
         → YSortSystem (Y 坐标排序)
@@ -70,6 +71,8 @@ main.cpp
 | BlockerComponent   | `blocker_component.h`   | 阻挡者（最大/当前阻挡数量）         |
 | BlockedByComponent | `blocked_by_component.h`| 被阻挡者（记录阻挡自己的实体）      |
 | TargetComponent    | `target_component.h`    | 攻击目标（锁定要攻击的实体）        |
+| ProjectileComponent | `projectile_component.h` | 投射物（目标、伤害、弧线飞行参数）  |
+| ProjectileIDComponent | `projectile_component.h` | 投射物ID，附加在远程角色上         |
 
 ## ECS 系统
 
@@ -97,6 +100,7 @@ main.cpp
 | AnimationStateSystem  | `animation_state_system.cpp`   | 监听 AnimationFinishedEvent，恢复循环动画（idle/walk）|
 | AnimationEventSystem  | `animation_event_system.cpp`   | 监听 AnimationEvent（动画帧事件），发出 AttackEvent / HealEvent / PlaySoundEvent |
 | CombatResolveSystem   | `combat_resolve_system.cpp`    | 监听 AttackEvent / HealEvent，计算伤害/治疗量，处理死亡和阻挡计数  |
+| ProjectileSystem      | `projectile_system.cpp`        | 响应 EmitProjectileEvent 创建投射物实体，更新飞行弧线轨迹，到达后发出 AttackEvent |
 
 ## 关卡加载系统（Builder 模式）
 
@@ -149,6 +153,8 @@ main.cpp
   - `EnemyClassBlueprint` — 聚合所有子蓝图，作为完整敌人类型定义
   - `PlayerClassBlueprint` — 玩家职业蓝图，包含 `PlayerBlueprint`（类型、技能、阻挡、消耗）
   - `PlayerBlueprint` 通过 `PlayerType` 枚举（MELEE / RANGED / MIXED）区分单位类型
+  - `ProjectileBlueprint` — 投射物蓝图（弧线高度、飞行时间、精灵、音效）
+  - `PlayerClassBlueprint` / `EnemyClassBlueprint` 包含 `mProjectileId` 字段，关联远程单位的投射物类型
 - **玩家单位组件**：`PlayerComponent`（出击消耗）、`BlockerComponent`（阻挡计数）、`BlockedByComponent`（被阻挡引用）
 ## 战斗系统
 
@@ -178,6 +184,12 @@ AnimationSystem (帧推进 → 帧事件)
 AnimationEventSystem (动画帧事件处理)
     → 玩家命中 → 对目标发出 AttackEvent 或 HealEvent，附带 PlaySoundEvent
     → 敌人命中 → 对阻挡者发出 AttackEvent
+    → 角色在"emit"帧 → 发出 EmitProjectileEvent
+ProjectileSystem (投射物飞行)
+    → 响应 EmitProjectileEvent，根据 projectile_data.json 蓝图创建投射物实体
+    → 每帧更新位置：水平线性插值 + 垂直正弦弧线（mArcHeight 控制弧度高度）
+    → 到达目标位置（mTotalFlightTime 耗尽）→ 发出 AttackEvent + PlaySoundEvent
+    → 投射物标记 DeadTag，下一帧清理
 CombatResolveSystem (战斗结算)
     → AttackEvent: damage = atk - def (最小 10% atk)，扣血 → 死亡 DeadTag 或受伤 InjuredTag
     → 敌人死亡 → 减少阻挡者 BlockerComponent.mCurrentCount
@@ -278,6 +290,7 @@ ECS 空标签（tag），用于标记实体状态，配合 view 的 `exclude` �
 | EnemyArriveHomeEvent | 敌人到达基地                 |
 | AttackEvent          | 攻击命中（攻击者 + 目标 + 原始伤害） |
 | HealEvent            | 治疗命中（治疗者 + 目标 + 治疗量） |
+| EmitProjectileEvent  | 发射投射物（投射物ID + 目标 + 起止位置 + 伤害） |
 
 ## 引擎基础设施
 
@@ -316,7 +329,7 @@ src/
 │   │   └── state/                    #     状态模式：Normal / Hover / Pressed
 │   └── utils/                        #   工具（Math, Events, Alignment）
 └── game/                             # 游戏层 — MonsterWar 游戏逻辑
-    ├── component/                    #   游戏组件（Enemy, Stats, ClassName, Player, Blocker, Target）
+    ├── component/                    #   游戏组件（Enemy, Stats, ClassName, Player, Blocker, Target, Projectile）
     ├── data/                         #   数据结构（WaypointNode, EntityBlueprint）
     ├── defs/                         #   标签与事件定义 + 常量（Tags, Events, Constants）
     ├── factory/                      #   工厂（BlueprintManager, EntityFactory）
@@ -333,7 +346,8 @@ src/
         ├── orientation_system.cpp/h        # 精灵朝向控制
         ├── animation_state_system.cpp/h    # 动画状态恢复
         ├── animation_event_system.cpp/h    # 动画帧事件
-        └── combat_resolve_system.cpp/h     # 伤害/治疗计算与结算
+        ├── combat_resolve_system.cpp/h     # 伤害/治疗计算与结算
+        └── projectile_system.cpp/h         # 投射物飞行与命中
 ```
 
 ```

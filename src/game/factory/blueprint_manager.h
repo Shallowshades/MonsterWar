@@ -36,33 +36,25 @@ namespace game::factory {
 
         std::unordered_map<entt::id_type, data::PlayerClassBlueprint> mPlayerClassBlueprints; ///< @brief 玩家职业蓝图
         std::unordered_map<entt::id_type, data::EnemyClassBlueprint> mEnemyClassBlueprints;   ///< @brief 敌人类型蓝图容器
+        std::unordered_map<entt::id_type, data::ProjectileBlueprint> mProjectileBlueprints;    ///< @brief 投射物蓝图
         // TODO: 未来添加其他蓝图容器
 
     public:
         explicit BlueprintManager(engine::resource::ResourceManager& resource_manager);
 
         [[nodiscard]] bool loadPlayerClassBlueprints(std::string_view player_json_path);    ///< @brief 加载玩家职业蓝图, 返回是否成功
-
-        /**
-         * @brief 加载敌人类型蓝图
-         * @param enemy_json_path JSON文件路径
-         * @return 是否加载成功
-         */
-        [[nodiscard]] bool loadEnemyClassBlueprints(std::string_view enemy_json_path);
+        [[nodiscard]] bool loadEnemyClassBlueprints(std::string_view enemy_json_path);      ///< @brief 加载敌人类型蓝图, 返回是否成功
+        [[nodiscard]] bool loadProjectileBlueprints(std::string_view projectile_json_path); ///< @brief 加载投射物蓝图, 返回是否成功
         // TODO: 未来添加其他蓝图加载函数
 
         const data::PlayerClassBlueprint& getPlayerClassBlueprint(entt::id_type id) const;  ///< @brief 获取指定ID的玩家职业蓝图
-
-        /**
-         * @brief 获取指定ID的敌人类型蓝图
-         * @param id 蓝图ID
-         * @return 敌人类型蓝图引用
-         */
-        [[nodiscard]] const data::EnemyClassBlueprint& getEnemyClassBlueprint(entt::id_type id) const;
+        const data::EnemyClassBlueprint& getEnemyClassBlueprint(entt::id_type id) const;    ///< @brief 获取指定ID的敌人类型蓝图
+        const data::ProjectileBlueprint& getProjectileBlueprint(entt::id_type id) const;    ///< @brief 获取指定ID的投射物蓝图
         // TODO: 未来添加其他蓝图获取函数
 
     private:
         // --- 分别针对各个子蓝图进行json解析，并创建对应的蓝图结构体 ---
+        [[nodiscard]] entt::id_type parseProjectileID(const nlohmann::json& json);
         [[nodiscard]] data::StatsBlueprint parseStats(const nlohmann::json& json);
         [[nodiscard]] data::SpriteBlueprint parseSprite(const nlohmann::json& json);
         [[nodiscard]] std::unordered_map<entt::id_type, data::AnimationBlueprint> parseAnimationsMap(const nlohmann::json& json);

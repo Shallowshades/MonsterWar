@@ -24,6 +24,7 @@ namespace game::factory {
 }
 namespace game::system {
 	class BlockSystem;
+	class ProjectileSystem;
 }
 
 namespace game::scene {
@@ -43,6 +44,7 @@ namespace game::scene {
 		[[nodiscard]] bool initEventConnections();
 		[[nodiscard]] bool initInputConnections();
 		[[nodiscard]] bool initEntityFactory();
+		[[nodiscard]] bool initSystems();
 
 		// 事件回调函数
 		void onEnemyArriveHome(const game::defs::EnemyArriveHomeEvent& event);
@@ -73,7 +75,8 @@ namespace game::scene {
 		std::unique_ptr<game::system::OrientationSystem> mOrientationSystem;
 		std::unique_ptr<game::system::AnimationStateSystem> mAnimationStateSystem;
 		std::unique_ptr<game::system::AnimationEventSystem> mAnimationEventSystem;
-	std::unique_ptr<game::system::CombatResolveSystem> mCombatResolveSystem;
+		std::unique_ptr<game::system::CombatResolveSystem> mCombatResolveSystem;
+		std::unique_ptr<game::system::ProjectileSystem> mProjectileSystem;
 
 		std::unordered_map<int, game::data::WaypointNode> mWaypointNodes;  // 路径节点ID到节点数据的映射
 		std::vector<int> mStartPoints;                                     // 起点ID列表

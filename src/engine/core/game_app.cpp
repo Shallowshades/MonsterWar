@@ -38,6 +38,9 @@ void engine::core::GameApp::run() {
 		update(delta);
 		render();
 
+		// 分发事件（让新创建的实体先更新再渲染）
+		mDispatcher->update();
+
 		// spdlog::info("Delta Time: {}", delta);
 	}
 
@@ -92,9 +95,6 @@ void engine::core::GameApp::handleEvents() {
 void engine::core::GameApp::update(float delta) {
 	// 游戏逻辑更新
 	mSceneManager->update(delta);
-
-	// 分发事件
-	mDispatcher->update();
 }
 
 void engine::core::GameApp::render() {
@@ -255,7 +255,7 @@ bool engine::core::GameApp::initTextRenderer() {
 
 bool engine::core::GameApp::initCamera() {
 	try {
-		mCamera = std::make_unique<engine::render::Camera>(mGameState->getLogicalSize());	
+		mCamera = std::make_unique<engine::render::Camera>(mGameState->getLogicalSize());
 	}
 	catch (const std::exception& e) {
 		spdlog::error("{} 初始化相机失败: {}", mLogTag.data(), e.what());

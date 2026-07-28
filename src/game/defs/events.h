@@ -12,6 +12,7 @@
 #define GAME_EVENTS_H
 
 #include <entt/entity/entity.hpp>
+#include <glm/vec2.hpp>
 
 namespace game::defs {
 
@@ -29,6 +30,15 @@ namespace game::defs {
         entt::entity mHealer{ entt::null };   ///< @brief 治疗者
         entt::entity mTarget{ entt::null };   ///< @brief 目标
         float mAmount{};                    ///< @brief 治疗量
+    };
+
+    /// @brief 发射投射物事件
+    struct EmitProjectileEvent {
+        entt::id_type mId{ entt::null };          ///< @brief 投射物ID
+        entt::entity mTarget{ entt::null };       ///< @brief 目标实体
+        glm::vec2 mStartPosition{};             ///< @brief 起始位置
+        glm::vec2 mTargetPosition{};             ///< @brief 目标位置
+        float mDamage{};                        ///< @brief 伤害
     };
 
 }   // namespace game::defs
