@@ -57,6 +57,7 @@ namespace game::system {
                     // 给敌人添加被阻挡组件
                     registry.emplace<game::component::BlockedByComponent>(enemy_entity, blocker_entity);
                     spdlog::info("敌人: ID: {}, 被阻挡, 阻挡者: ID: {}", entt::to_integral(enemy_entity), entt::to_integral(blocker_entity));
+                    break;  // 敌人已被当前阻挡者阻挡，跳过其余阻挡者，避免重复 emplace
 
                 }
             }

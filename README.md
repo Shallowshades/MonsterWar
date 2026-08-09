@@ -38,6 +38,7 @@ main.cpp
         → YSortSystem (Y 坐标排序)
       → render()
         → RenderSystem (按 layer+depth 排序渲染)
+        → HealthBarSystem (绘制受伤单位的血量条)
     → close()
       → 逆序清理所有子系统
 ```
@@ -101,6 +102,8 @@ main.cpp
 | AnimationEventSystem  | `animation_event_system.cpp`   | 监听 AnimationEvent（动画帧事件），发出 AttackEvent / HealEvent / PlaySoundEvent |
 | CombatResolveSystem   | `combat_resolve_system.cpp`    | 监听 AttackEvent / HealEvent，计算伤害/治疗量，处理死亡和阻挡计数  |
 | ProjectileSystem      | `projectile_system.cpp`        | 响应 EmitProjectileEvent 创建投射物实体，更新飞行弧线轨迹，到达后发出 AttackEvent |
+| EffectSystem          | `effect_system.cpp`            | 监听 EnemyDeadEffectEvent，通过实体工厂创建死亡特效 |
+| HealthBarSystem       | `health_bar_system.cpp`        | 渲染受伤单位的血量条（按血量百分比变色）          |
 
 ## 关卡加载系统（Builder 模式）
 
@@ -148,6 +151,8 @@ main.cpp
 - **EntityFactory** (`game::factory`) — 根据蓝图数据创建 ECS 实体并组装组件
   - `createEnemyUnit()` — 按蓝图自动添加 Transform、Sprite、Animation、Stats、Enemy 等组件
   - `createPlayerUnit()` — 按蓝图创建玩家单位，添加 Player、Blocker 等组件
+  - `createEnemyDeadEffect()` — 根据敌人蓝图创建死亡特效实体（复用 "damage" 动画，播完自动移除）
+  - `addOneAnimationComponent()` — 创建只含单个动画的组件（`loop=false`），用于特效实体
   - 提供独立的 `addXxxComponent()` 方法供子类扩展
 - **蓝图数据结构** (`entity_blueprint.h`) — 定义了一系列子蓝图结构体
   - `EnemyClassBlueprint` — 聚合所有子蓝图，作为完整敌人类型定义
@@ -192,8 +197,11 @@ ProjectileSystem (投射物飞行)
     → 投射物标记 DeadTag，下一帧清理
 CombatResolveSystem (战斗结算)
     → AttackEvent: damage = atk - def (最小 10% atk)，扣血 → 死亡 DeadTag 或受伤 InjuredTag
-    → 敌人死亡 → 减少阻挡者 BlockerComponent.mCurrentCount
+    → 敌人死亡 → 减少阻挡者 BlockerComponent.mCurrentCount + 发出 EnemyDeadEffectEvent
     → HealEvent: 回血 → 满血移除 InjuredTag
+EffectSystem (特效)
+    → 监听 EnemyDeadEffectEvent
+    → createEnemyDeadEffect：复用敌人蓝图的 "damage" 动画创建一次性特效实体
 AudioSystem (音效播放)
     → 监听 PlaySoundEvent，通过 AudioPlayer 播放
 AnimationStateSystem (动画状态恢复)
@@ -201,7 +209,11 @@ AnimationStateSystem (动画状态恢复)
     → 被阻挡敌人 → 恢复 idle 循环动画
     → 未被阻挡敌人 → 恢复 walk 循环动画
     → 玩家 → 恢复 idle 循环动画
+    → 一次性特效实体 (OneShotRemoveTag) → 标记 DeadTag，交由 RemoveDeadSystem 清理
     → 移除 ActionLockTag (解除行动锁定)
+HealthBarSystem (血量条渲染)
+    → 遍历 HasHealthBarTag + InjuredTag 的受伤单位
+    → 血量百分比 >70% 绿色 / >30% 橙色 / 其余红色
 ```
 
 ### 游戏标签（`game::defs`）
@@ -218,13 +230,17 @@ ECS 空标签（tag），用于标记实体状态，配合 view 的 `exclude` �
 | HealerTag        | `tags.h`   | 治疗单位类型                                |
 | MeleeUnitTag     | `tags.h`   | 近战单位类型                                |
 | RangedUnitTag    | `tags.h`   | 远程单位类型                                |
+| OneShotRemoveTag | `tags.h`   | 一次性动画实体（死亡特效），播完标记 DeadTag 自动移除 |
+| HasHealthBarTag  | `tags.h`   | 需要显示血量条的实体（玩家/敌人单位）        |
 
 ### 游戏层常量（`game::defs`）
 
-| 常量          | 文件           | 说明                           |
-| ------------- | -------------- | ------------------------------ |
-| BLOCK_RADIUS  | `constants.h`  | 阻挡检测半径（40.0），小于此距离视为被阻挡 |
-| UNIT_RADIUS   | `constants.h`  | 角色自身半径（20.0），用于计算攻击范围（射程 + UNIT_RADIUS） |
+| 常量                | 文件           | 说明                           |
+| ------------------- | -------------- | ------------------------------ |
+| BLOCK_RADIUS        | `constants.h`  | 阻挡检测半径（40.0），小于此距离视为被阻挡 |
+| UNIT_RADIUS         | `constants.h`  | 角色自身半径（20.0），用于计算攻击范围（射程 + UNIT_RADIUS） |
+| HEALTH_BAR_SIZE     | `constants.h`  | 血量条大小（48.0 × 8.0） |
+| HEALTH_BAR_OFFSET_Y | `constants.h`  | 血量条竖直方向偏移（8.0，水平方向居中） |
 
 ### 玩家类型枚举（`game::defs::PlayerType`）
 
@@ -291,6 +307,7 @@ ECS 空标签（tag），用于标记实体状态，配合 view 的 `exclude` �
 | AttackEvent          | 攻击命中（攻击者 + 目标 + 原始伤害） |
 | HealEvent            | 治疗命中（治疗者 + 目标 + 治疗量） |
 | EmitProjectileEvent  | 发射投射物（投射物ID + 目标 + 起止位置 + 伤害） |
+| EnemyDeadEffectEvent | 敌人死亡特效（敌人ID + 位置 + 翻转标志） |
 
 ## 引擎基础设施
 
@@ -299,7 +316,7 @@ ECS 空标签（tag），用于标记实体状态，配合 view 的 `exclude` �
 - **Context** (`engine::core`) — 依赖注入容器，持有所有引擎模块引用（Renderer、Camera、ResourceManager 等）
 - **Time** (`engine::core`) — 高性能时间管理，提供 delta time 和时间缩放功能
 - **GameState** (`engine::core`) — 游戏状态枚举（运行/暂停），封装 SDL_Window 和 SDL_Renderer
-- **Renderer** (`engine::render`) — SDL3 渲染封装，支持纹理绘制、混合模式和 alpha 调制
+- **Renderer** (`engine::render`) — SDL3 渲染封装，支持纹理绘制、世界坐标矩形（填充/边框）绘制、混合模式和 alpha 调制
 - **Camera** (`engine::render`) — 相机位置、视口管理、世界坐标与屏幕坐标转换
 - **TextRenderer** (`engine::render`) — 字体加载与文本渲染（基于 SDL_ttf）
 - **ResourceManager** (`engine::resource`) — 纹理/字体/音频的统一资源管理门面类
@@ -347,7 +364,9 @@ src/
         ├── animation_state_system.cpp/h    # 动画状态恢复
         ├── animation_event_system.cpp/h    # 动画帧事件
         ├── combat_resolve_system.cpp/h     # 伤害/治疗计算与结算
-        └── projectile_system.cpp/h         # 投射物飞行与命中
+        ├── projectile_system.cpp/h         # 投射物飞行与命中
+        ├── effect_system.cpp/h             # 特效创建（死亡特效）
+        └── health_bar_system.cpp/h         # 血量条渲染
 ```
 
 ```
