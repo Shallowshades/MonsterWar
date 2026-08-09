@@ -41,6 +41,16 @@ namespace game::factory {
         entt::entity createPlayerUnit(entt::id_type class_id, const glm::vec2& position, int level = 1, int rarity = 1);
         entt::entity createEnemyUnit(entt::id_type class_id, const glm::vec2& position, int target_waypoint_id, int level = 1, int rarity = 1);
         entt::entity createProjectile(entt::id_type id, const glm::vec2& start_position, const glm::vec2& target_position, entt::entity target, float damage);
+
+        /**
+         * @brief 创建敌人死亡特效
+         * @note 特效直接复用敌人蓝图的 "damage" 动画
+         * @param class_id 敌人ID
+         * @param position 特效位置
+         * @param is_flipped 是否翻转
+         * @return 死亡特效实体
+         */
+        entt::entity createEnemyDeadEffect(entt::id_type class_id, const glm::vec2& position, const bool is_flipped = false);
         // TODO: 未来添加其他实体的创建函数
 
     private:
@@ -48,6 +58,8 @@ namespace game::factory {
         void addTransformComponent(entt::entity entity, const glm::vec2& position, const glm::vec2& scale = glm::vec2(1.0f), float rotation = 0.0f);
         void addSpriteComponent(entt::entity entity, const data::SpriteBlueprint& sprite, const bool is_flipped = false);
         void addAnimationComponent(entt::entity entity, const std::unordered_map<entt::id_type, data::AnimationBlueprint>& animation_blueprints, const  data::SpriteBlueprint& sprite_blueprint, entt::id_type default_animation_id);
+        /// @brief 单个动画组件添加（组件中只包含一个动画），用于创建特效
+        void addOneAnimationComponent(entt::entity entity, const data::AnimationBlueprint& animation_blueprint, const data::SpriteBlueprint& sprite_blueprint, entt::id_type animation_id, bool loop = false);
         void addStatsComponent(entt::entity entity, const data::StatsBlueprint& stats, int level = 1, int rarity = 1);
         void addPlayerComponent(entt::entity entity, const data::PlayerBlueprint& player, int rarity);
         void addEnemyComponent(entt::entity entity, const data::EnemyBlueprint& enemy, int target_waypoint_id);

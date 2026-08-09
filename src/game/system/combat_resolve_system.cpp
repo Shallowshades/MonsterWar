@@ -4,6 +4,9 @@
 #include "../component/enemy_component.h"
 #include "../component/blocked_by_component.h"
 #include "../component/blocker_component.h"
+#include "../component/class_name_component.h"
+#include "../../engine/component/transform_component.h"
+#include "../../engine/component/sprite_component.h"
 #include "../defs/tags.h"
 #include "../defs/events.h"
 #include <entt/entity/registry.hpp>
@@ -61,7 +64,13 @@ namespace game::system {
                 target_stats.mHp = 0;
                 mRegistry.emplace_or_replace<game::defs::DeadTag>(event.mTarget);
                 spdlog::info("敌人 ID: {} 死亡", entt::to_integral(event.mTarget));
-                // TODO: 添加死亡特效
+
+                // 发送死亡特效事件（需要先获取class_id、位置和是否翻转）
+                const auto [class_name, transform, sprite] = mRegistry.get<game::component::ClassNameComponent,
+                    engine::component::TransformComponent,
+                    engine::component::SpriteComponent>(event.mTarget);
+                mDispatcher.enqueue(game::defs::EnemyDeadEffectEvent{ class_name.mClassId, transform.mPosition, sprite.mSprite.mIsFlipped });
+
                 // TODO: 更新统计信息
                 // 如果敌人被阻挡，减少阻挡者的阻挡计数
                 if (auto blocked_by = mRegistry.try_get<game::component::BlockedByComponent>(event.mTarget); blocked_by) {

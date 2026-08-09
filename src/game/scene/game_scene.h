@@ -77,6 +77,8 @@ namespace game::scene {
 		std::unique_ptr<game::system::AnimationEventSystem> mAnimationEventSystem;
 		std::unique_ptr<game::system::CombatResolveSystem> mCombatResolveSystem;
 		std::unique_ptr<game::system::ProjectileSystem> mProjectileSystem;
+		std::unique_ptr<game::system::EffectSystem> mEffectSystem;
+		std::unique_ptr<game::system::HealthBarSystem> mHealthBarSystem;
 
 		std::unordered_map<int, game::data::WaypointNode> mWaypointNodes;  // 路径节点ID到节点数据的映射
 		std::vector<int> mStartPoints;                                     // 起点ID列表

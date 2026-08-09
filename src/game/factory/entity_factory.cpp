@@ -54,6 +54,7 @@ namespace game::factory {
         // 补充其他必要组件
         mRegistry.emplace<game::component::ClassNameComponent>(entity, class_id, blueprint.mDisplayInfo.mName);
         mRegistry.emplace<engine::component::RenderComponent>(entity);
+        mRegistry.emplace<game::defs::HasHealthBarTag>(entity);
 
         return entity;
     }
@@ -73,6 +74,7 @@ namespace game::factory {
         // 补充其他必要组件
         mRegistry.emplace<game::component::ClassNameComponent>(entity, class_id, blueprint.mDisplayInfo.mName);
         mRegistry.emplace<engine::component::RenderComponent>(entity);  // 使用默认主图层
+        mRegistry.emplace<game::defs::HasHealthBarTag>(entity);
 
         return entity;
     }
@@ -100,6 +102,22 @@ namespace game::factory {
         addAudioComponent(entity, blueprint.mSounds);
         // 添加RenderComponent(让投射物位于主图层+1，即可以遮住角色)
         mRegistry.emplace<engine::component::RenderComponent>(entity, engine::component::RenderComponent::MAIN_LAYER + 1);
+        return entity;
+    }
+
+    entt::entity EntityFactory::createEnemyDeadEffect(entt::id_type class_id, const glm::vec2& position, const bool is_flipped) {
+        auto entity = mRegistry.create();
+        const auto& blueprint = mBlueprintManager.getEnemyClassBlueprint(class_id);
+        // 添加Transform组件
+        addTransformComponent(entity, position);
+        // 添加Sprite组件
+        addSpriteComponent(entity, blueprint.mSprite, is_flipped);
+        // 添加Animation组件(死亡动画名称为"damage")
+        addOneAnimationComponent(entity, blueprint.mAnimations.at("damage"_hs), blueprint.mSprite, "damage"_hs);
+
+        // 补充其他必要组件
+        mRegistry.emplace<engine::component::RenderComponent>(entity);
+        mRegistry.emplace<game::defs::OneShotRemoveTag>(entity);
         return entity;
     }
 
@@ -140,6 +158,28 @@ namespace game::factory {
             animations.emplace(anim_id, engine::component::Animation(std::move(frames), anim_blueprint.mEvents));
         }
         mRegistry.emplace<engine::component::AnimationComponent>(entity, std::move(animations), default_animation_id);
+    }
+
+    void EntityFactory::addOneAnimationComponent(entt::entity entity,
+        const data::AnimationBlueprint& animation_blueprint,
+        const data::SpriteBlueprint& sprite_blueprint,
+        entt::id_type animation_id,
+        bool loop) {
+        // 创建动画帧容器
+        std::vector<engine::component::AnimationFrame> frames;
+        // 依次读取动画蓝图中每一个动画帧，并插入容器
+        for (const auto& frame_index : animation_blueprint.mFrames) {
+            engine::utils::Rect source_rect = sprite_blueprint.mSrcRect;
+            source_rect.mPosition.x += frame_index * source_rect.mSize.x;
+            source_rect.mPosition.y += animation_blueprint.mRow * source_rect.mSize.y;
+            frames.emplace_back(source_rect, animation_blueprint.mMsPerFrame);
+        }
+        // 创建动画map容器 (只有一个动画)
+        std::unordered_map<entt::id_type, engine::component::Animation> animations;
+        // 将创建好的动画帧容器插入动画map容器，注意传入loop参数
+        animations.emplace(animation_id, engine::component::Animation(std::move(frames), animation_blueprint.mEvents, loop));
+        // 通过动画map容器创建动画组件
+        mRegistry.emplace<engine::component::AnimationComponent>(entity, std::move(animations), animation_id);
     }
 
     void EntityFactory::addStatsComponent(entt::entity entity, const data::StatsBlueprint& stats, int level, int rarity) {

@@ -41,6 +41,13 @@ namespace game::defs {
         float mDamage{};                        ///< @brief 伤害
     };
 
+    /// @brief 敌人死亡特效事件
+    struct EnemyDeadEffectEvent {
+        entt::id_type mClassId{ entt::null };   ///< @brief 敌人ID
+        glm::vec2 mPosition{};                  ///< @brief 死亡位置
+        bool mIsFlipped{ false };               ///< @brief 是否翻转
+    };
+
 }   // namespace game::defs
 
 #endif // GAME_EVENTS_H

@@ -25,6 +25,9 @@ namespace game::defs {
     struct AttackReadyTag {};       ///< @brief “可攻击”标签，用于标记实体可以进行攻击（冷却完毕）
     struct InjuredTag {};           ///< @brief 受伤标签，用于标记实体受伤（有HP损失）
     struct ActionLockTag {};        ///< @brief 动作锁定标签，让角色播放完当前动画再进行下一步动作（硬直）
+
+    struct OneShotRemoveTag {};     ///< @brief 一次性动画标签，播放完成后自动移除（用于特效）
+    struct HasHealthBarTag {};      ///< @brief 血量条标签，标记实体需要显示血量条
 }   // namespace game::defs
 
 #endif // GAME_TAGS_H

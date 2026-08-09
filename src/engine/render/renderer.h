@@ -77,6 +77,27 @@ namespace engine::render {
          */
         void drawUIFilledRect(const engine::utils::Rect& rect, const engine::utils::FColor& color);
 
+        /**
+         * @brief 绘制填充矩形（世界坐标）
+         *
+         * @param camera 游戏相机，用于坐标转换
+         * @param position 世界坐标中的左上角位置
+         * @param size 矩形大小
+         * @param color 填充颜色
+         */
+        void drawFilledRect(const Camera& camera, const glm::vec2& position, const glm::vec2& size, const engine::utils::FColor& color);
+
+        /**
+         * @brief 绘制矩形边框（世界坐标）
+         *
+         * @param camera 游戏相机，用于坐标转换
+         * @param position 世界坐标中的左上角位置
+         * @param size 矩形大小
+         * @param color 边框颜色
+         * @param thickness 边框厚度（像素），通过逐层收缩绘制实现
+         */
+        void drawRect(const Camera& camera, const glm::vec2& position, const glm::vec2& size, const engine::utils::FColor& color, const int thickness = 1);
+
         void present();                                                     ///< @brief 更新屏幕，包装 SDL_RenderPresent 函数
         void clearScreen();                                                 ///< @brief 清屏，包装 SDL_RenderClear 函数
 

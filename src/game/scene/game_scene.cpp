@@ -16,6 +16,8 @@
 #include "../system/animation_event_system.h"
 #include "../system/combat_resolve_system.h"
 #include "../system/projectile_system.h"
+#include "../system/effect_system.h"
+#include "../system/health_bar_system.h"
 #include "../defs/tags.h"
 #include "../../engine/component/transform_component.h"
 #include "../../engine/component/velocity_component.h"
@@ -23,6 +25,7 @@
 #include "../../engine/component/render_component.h"
 #include "../../engine/core/context.h"
 #include "../../engine/input/input_manager.h"
+#include "../../engine/render/camera.h"
 #include "../../engine/system/render_system.h"
 #include "../../engine/system/movement_system.h"
 #include "../../engine/system/animation_system.h"
@@ -94,7 +97,12 @@ namespace game::scene {
 	}
 
 	void GameScene::render() {
-		mRenderSystem->update(mRegistry, mContext.getRenderer(), mContext.getCamera());
+		auto& renderer = mContext.getRenderer();
+		auto& camera = mContext.getCamera();
+
+		// 注意渲染顺序，保证正确的遮盖关系
+		mRenderSystem->update(mRegistry, renderer, camera);
+		mHealthBarSystem->update(mRegistry, renderer, camera);
 
 		Scene::render();
 	}
@@ -180,6 +188,8 @@ namespace game::scene {
 		mAnimationEventSystem = std::make_unique<game::system::AnimationEventSystem>(mRegistry, dispatcher);
 		mCombatResolveSystem = std::make_unique<game::system::CombatResolveSystem>(mRegistry, dispatcher);
 		mProjectileSystem = std::make_unique<game::system::ProjectileSystem>(mRegistry, dispatcher, *mEntityFactory);
+		mEffectSystem = std::make_unique<game::system::EffectSystem>(mRegistry, dispatcher, *mEntityFactory);
+		mHealthBarSystem = std::make_unique<game::system::HealthBarSystem>();
 		spdlog::info("系统初始化完成");
 		return true;
 	}
