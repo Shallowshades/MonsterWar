@@ -10,6 +10,7 @@
 #pragma once
 
 #include "../data/waypoint_node.h"
+#include "../data/session_data.h"
 #include "../defs/events.h"
 #include "../system/fwd.h"
 #include "../../engine/scene/scene.h"
@@ -40,6 +41,7 @@ namespace game::scene {
 		void clean() override;
 
 	private:
+		[[nodiscard]] bool initSessionData();
 		[[nodiscard]] bool loadLevel();
 		[[nodiscard]] bool initEventConnections();
 		[[nodiscard]] bool initInputConnections();
@@ -52,6 +54,7 @@ namespace game::scene {
 		// 输入回调函数
 
 		// 测试函数
+		void testSessionData();
 		void createTestEnemy();
 		[[nodiscard]] bool onCreateTestPlayerMelee();
 		[[nodiscard]] bool onCreateTestPlayerRanged();
@@ -87,6 +90,9 @@ namespace game::scene {
 
 		// 管理数据的实例很可能同时被多个场景使用，因此使用共享指针
 		std::shared_ptr<game::factory::BlueprintManager> mBlueprintManager;  // 蓝图管理器，负责管理蓝图数据
+		std::shared_ptr<game::data::SessionData> mSessionData;               // 会话数据，关卡切换时需要传递的数据
+
+		int mLevelNumber{ 1 };    // 当前关卡号（会话数据的缓存副本）
 	};
 
 } // game::scene

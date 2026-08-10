@@ -49,6 +49,11 @@ namespace game::scene {
 	}
 
 	void GameScene::init() {
+		if (!initSessionData()) {
+			spdlog::error("初始化会话数据失败");
+			return;
+		}
+
 		if (!loadLevel()) {
 			spdlog::error("加载关卡失败");
 			return;
@@ -70,6 +75,7 @@ namespace game::scene {
 			spdlog::error("初始化系统失败");
 			return;
 		}
+		testSessionData();
 		createTestEnemy();
 
 		Scene::init();
@@ -118,6 +124,19 @@ namespace game::scene {
 		input_manager.onAction("pause"_hs).disconnect<&GameScene::onClearAllPlayers>(this);
 		input_manager.onAction("move_left"_hs).disconnect<&GameScene::onCreateTestPlayerHealer>(this);
 		Scene::clean();
+	}
+
+	bool GameScene::initSessionData() {
+		// 会话数据可能由多个场景共享，为空时才创建并加载默认数据
+		if (!mSessionData) {
+			mSessionData = std::make_shared<game::data::SessionData>();
+			if (!mSessionData->loadDefaultData()) {
+				spdlog::error("初始化会话数据失败");
+				return false;
+			}
+		}
+		mLevelNumber = mSessionData->getLevelNumber();
+		return true;
 	}
 
 	bool GameScene::loadLevel() {
@@ -201,6 +220,16 @@ namespace game::scene {
 	}
 
 	// --- 测试函数 ---
+	void GameScene::testSessionData() {
+		spdlog::info("关卡号: {}", mLevelNumber);
+		spdlog::info("积分: {}", mSessionData->getPoint());
+		spdlog::info("是否通关: {}", mSessionData->isLevelClear());
+		for (auto& unit : mSessionData->getUnitMap()) {
+			spdlog::info("角色名: {}, 职业: {}, 等级: {}, 稀有度: {}",
+				unit.second.mName, unit.second.mClass, unit.second.mLevel, unit.second.mRarity);
+		}
+	}
+
 	void GameScene::createTestEnemy() {
 		// 每个起点创建一批敌人
 		for (auto start_index : mStartPoints) {

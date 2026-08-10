@@ -161,6 +161,27 @@ main.cpp
   - `ProjectileBlueprint` — 投射物蓝图（弧线高度、飞行时间、精灵、音效）
   - `PlayerClassBlueprint` / `EnemyClassBlueprint` 包含 `mProjectileId` 字段，关联远程单位的投射物类型
 - **玩家单位组件**：`PlayerComponent`（出击消耗）、`BlockerComponent`（阻挡计数）、`BlockedByComponent`（被阻挡引用）
+
+## 会话数据系统（SessionData）
+
+实现了跨场景的游戏进度持久化，把"当前关卡、积分、通关状态、玩家角色池"从一场战斗的临时状态中独立出来。
+
+- **SessionData** (`game::data`) — 会话数据类，持有游戏进度，用 `shared_ptr` 供多个场景共享
+  - 关卡信息：`mLevelNumber`（当前关卡）/ `mPoint`（积分）/ `mLevelClear`（是否通关）
+  - 角色池：`mUnitMap`（角色名哈希 → UnitData）
+  - `loadDefaultData()` — 从 `assets/data/default_session_data.json` 加载默认进度
+  - `saveToFile()` — 序列化为 JSON 存档（自动创建父目录、4 空格缩进）
+  - 角色操作：`addUnit()` / `removeUnit()` / `addUnitLevel()` / `addUnitRarity()` / `clearUnits()`
+  - 进度操作：`addPoint()` / `addOneLevel()` / `setLevelClear()` / `clear()`
+- **UnitData** — 单个角色的数据档案：角色名哈希、职业哈希、名字、职业、等级、稀有度
+- **GameScene 集成** (`game_scene.cpp`) — `initSessionData()` 在 `init()` 最前面初始化，从默认数据加载后缓存 `mLevelNumber`；`testSessionData()` 打印验证
+
+```
+GameScene（当前战斗）── 读写 ──▶ SessionData（内存进度）── saveToFile() ──▶ 存档 JSON
+                                      │
+                                      └── loadDefaultData() ◀── default_session_data.json
+```
+
 ## 战斗系统
 
 实现了基于 ECS 标签和冷却计时的自动战斗循环。
@@ -347,7 +368,7 @@ src/
 │   └── utils/                        #   工具（Math, Events, Alignment）
 └── game/                             # 游戏层 — MonsterWar 游戏逻辑
     ├── component/                    #   游戏组件（Enemy, Stats, ClassName, Player, Blocker, Target, Projectile）
-    ├── data/                         #   数据结构（WaypointNode, EntityBlueprint）
+    ├── data/                         #   数据结构（WaypointNode, EntityBlueprint, SessionData）
     ├── defs/                         #   标签与事件定义 + 常量（Tags, Events, Constants）
     ├── factory/                      #   工厂（BlueprintManager, EntityFactory）
     ├── loader/                       #   关卡扩展构建器（EntityBuilderMW）
@@ -376,6 +397,7 @@ assets/
 │   ├── enemy_data.json               #   敌人蓝图数据
 │   ├── player_data.json              #   玩家数据
 │   ├── skill_data.json               #   技能数据
+│   ├── default_session_data.json     #   默认会话数据
 │   └── ...
 ├── maps/                             # Tiled 地图文件
 │   ├── level1.tmj / level2.tmj       #   关卡地图
@@ -383,7 +405,7 @@ assets/
 │   └── tileset/                      #   瓦片集（.tsj）
 ├── textures/                         # 纹理资源
 │   └── Enemy/                        #   敌人精灵图
-└── save/                             # 存档文件
+└── save/                             # 存档文件（SLOT_x.json）
 ```
 
 ## 构建与运行
