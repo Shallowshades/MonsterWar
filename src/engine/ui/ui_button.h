@@ -12,6 +12,7 @@
 #define UI_BUTTON_H
 
 #include "ui_interactive.h"
+#include "../render/image.h"
 #include <functional>
 #include <utility>
 
@@ -27,29 +28,37 @@ namespace engine::ui {
 class UIButton final : public UIInteractive {
 public:
     /**
-        * @brief 构造函数
-        * @param normalImageId 正常状态的精灵ID
-        * @param hoverImageId 悬停状态的精灵ID
-        * @param pressedImageId 按下状态的精灵ID
+        * @brief 构造函数（直接传入三态图片）
+        * @param normalImage 正常状态的图片
+        * @param hoverImage 悬停状态的图片
+        * @param pressedImage 按下状态的图片
         * @param position 位置
         * @param size 大小
-        * @param callback 回调函数
+        * @param callback 点击回调函数
+        * @note 适用于图片已从配置文件构造好的场景（如UIConfig中的肖像框）
         */
     UIButton(engine::core::Context& context,
-        std::string_view normalImageId,
-        std::string_view hoverImageId,
-        std::string_view pressedImageId,
+        engine::render::Image normalImage,
+        engine::render::Image hoverImage,
+        engine::render::Image pressedImage,
         const glm::vec2& position = { 0.0f, 0.0f },
         const glm::vec2& size = { 0.0f, 0.0f },
         std::function<void()> callback = nullptr);
     ~UIButton() override = default;
 
-    void clicked() override;     ///< @brief 重写基类方法，当按钮被点击时调用回调函数
+    void clicked() override;        ///< @brief 点击回调（由按下状态的mouse_left释放信号触发）
+    void hover_enter() override;    ///< @brief 悬停进入回调（由悬停状态enter触发）
+    void hover_leave() override;    ///< @brief 悬停离开回调（由悬停状态update触发）
 
-    void setCallback(std::function<void()> callback) { mCallback = std::move(callback); }   ///< @brief 设置点击回调函数
-    std::function<void()> getCallback() const { return mCallback; }                         ///< @brief 获取点击回调函数
+    void setClickCallback(std::function<void()> callback);       ///< @brief 设置点击回调函数
+    void setHoverEnterCallback(std::function<void()> callback);  ///< @brief 设置悬停进入回调函数
+    void setHoverLeaveCallback(std::function<void()> callback);  ///< @brief 设置悬停离开回调函数
+    void setHoverSound(std::string_view filePath);               ///< @brief 设置悬停音效（注册到"hover"）
+    void setClickSound(std::string_view filePath);               ///< @brief 设置点击音效（注册到"pressed"）
 private:
-	std::function<void()> mCallback;        ///< @brief 可自定义的函数（函数包装器）
+	std::function<void()> mClickCallback;        ///< @brief 点击回调
+	std::function<void()> mHoverEnterCallback;   ///< @brief 悬停进入回调
+	std::function<void()> mHoverLeaveCallback;   ///< @brief 悬停离开回调
 };
 
 } // namespace engine::ui

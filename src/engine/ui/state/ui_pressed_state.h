@@ -23,12 +23,13 @@ namespace engine::ui::state {
 class UIPressedState final : public UIState {
     friend class engine::ui::UIInteractive;
 public:
-    UIPressedState(engine::ui::UIInteractive* owner) : UIState(owner) {}
-    ~UIPressedState() override = default;
+    UIPressedState(engine::ui::UIInteractive* owner);
+    ~UIPressedState() override;
 
 private:
     void enter() override;
-    std::unique_ptr<UIState> handleInput(engine::core::Context& context) override;
+    void update(float deltaTime, engine::core::Context& context) override;
+    bool onMouseReleased();   ///< @brief 鼠标释放回调函数（订阅信号触发，非轮询isActionReleased）
 };
 
 } // namespace engine::ui::state

@@ -12,18 +12,16 @@ using namespace entt::literals;
 namespace engine::ui::state {
 
 void UINormalState::enter() {
-	mOwner->setImage("normal"_hs);
+	mOwner->setCurrentImage("normal"_hs);
 	spdlog::debug("切换到正常状态");
 }
 
-std::unique_ptr<UIState> UINormalState::handleInput(engine::core::Context& context) {
+void UINormalState::update(float, engine::core::Context& context) {
 	auto& inputManager = context.getInputManager();
 	auto mousePosition = inputManager.getLogicalMousePosition();
-	if (mOwner->isPointInside(mousePosition)) {         // 如果鼠标在UI元素内，则切换到悬停状态
-		mOwner->playSound("hover"_hs);
-		return std::make_unique<engine::ui::state::UIHoverState>(mOwner);
+	if (mOwner->isPointInside(mousePosition)) {         // 如果鼠标进入UI元素内，则延迟切换到悬停状态
+		mOwner->setNextState(std::make_unique<UIHoverState>(mOwner));
 	}
-	return nullptr;
 }
 
 } // namespace engine::ui::state

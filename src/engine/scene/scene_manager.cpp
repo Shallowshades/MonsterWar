@@ -49,13 +49,6 @@ namespace engine::scene {
 		}
 	}
 
-	void SceneManager::handleInput() {
-		Scene* currentScene = getCurrentScene();
-		if (currentScene) {
-			currentScene->handleInput();
-		}
-	}
-
 	void SceneManager::clean() {
 		spdlog::trace("{} 正在清理场景管理器并清空场景栈...", mLogTag.data());
 		while (!mSceneStack.empty()) {

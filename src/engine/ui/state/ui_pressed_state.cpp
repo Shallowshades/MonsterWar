@@ -11,26 +11,39 @@ using namespace entt::literals;
 
 namespace engine::ui::state {
 
+	UIPressedState::UIPressedState(engine::ui::UIInteractive* owner) : UIState(owner) {
+		mOwner->getContext().getInputManager().onAction("mouse_left"_hs, engine::input::ActionState::RELEASED)
+			.connect<&UIPressedState::onMouseReleased>(this);
+	}
+
+	UIPressedState::~UIPressedState() {
+		mOwner->getContext().getInputManager().onAction("mouse_left"_hs, engine::input::ActionState::RELEASED)
+			.disconnect<&UIPressedState::onMouseReleased>(this);
+	}
+
 	void UIPressedState::enter() {
-		mOwner->setImage("pressed"_hs);
-		mOwner->playSound("pressed"_hs);
+		mOwner->setCurrentImage("pressed"_hs);
 		spdlog::debug("切换到按下状态");
 	}
 
-	std::unique_ptr<UIState> UIPressedState::handleInput(engine::core::Context& context) {
+	void UIPressedState::update(float, engine::core::Context& context) {
 		auto& inputManager = context.getInputManager();
 		auto mousePosition = inputManager.getLogicalMousePosition();
-		if (inputManager.isActionReleased("mouse_left"_hs)) {
-			if (!mOwner->isPointInside(mousePosition)) {        // 松开鼠标时，如果不在UI元素内，则切换到正常状态
-				return std::make_unique<engine::ui::state::UINormalState>(mOwner);
-			}
-			else {												// 松开鼠标时，如果还在UI元素内，则触发点击事件
-				mOwner->clicked();
-				return std::make_unique<engine::ui::state::UIHoverState>(mOwner);
-			}
+		if (!mOwner->isPointInside(mousePosition)) {		// 按住状态下鼠标滑出元素 → 回到正常状态（不触发点击）
+			mOwner->setNextState(std::make_unique<UINormalState>(mOwner));
 		}
+	}
 
-		return nullptr;
+	bool UIPressedState::onMouseReleased() {
+		auto& inputManager = mOwner->getContext().getInputManager();
+		if (mOwner->isPointInside(inputManager.getLogicalMousePosition())) {	// 在元素内松开 → 触发点击并回到悬停状态
+			mOwner->clicked();
+			mOwner->setNextState(std::make_unique<UIHoverState>(mOwner));
+		}
+		else {																	// 在元素外松开 → 回到正常状态
+			mOwner->setNextState(std::make_unique<UINormalState>(mOwner));
+		}
+		return true;
 	}
 
 } // namespace engine::ui::state

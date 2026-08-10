@@ -29,7 +29,7 @@ namespace engine::scene {
     /**
      * @brief 场景基类，负责管理场景中的游戏对象和场景生命周期。
      *
-     * 包含一组游戏对象，并提供更新、渲染、处理输入和清理的接口。
+     * 包含一组游戏对象，并提供更新、渲染和清理的接口。
      * 派生类应实现具体的场景逻辑。
      */
     class Scene {
@@ -55,7 +55,6 @@ namespace engine::scene {
 		virtual void init();                                                            ///< @brief 初始化场景。
 		virtual void update(float delta_time);                                          ///< @brief 更新场景。
 		virtual void render();                                                          ///< @brief 渲染场景。
-		virtual void handleInput();                                                     ///< @brief 处理输入。
 		virtual void clean();                                                           ///< @brief 清理场景。
 
         /// @brief 请求弹出当前场景。

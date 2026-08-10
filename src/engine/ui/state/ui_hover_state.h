@@ -18,16 +18,19 @@ namespace engine::ui::state {
 * @brief 悬停状态
 *
 * 当鼠标悬停在UI元素上时，会切换到该状态。
+* @note 通过订阅 InputManager 的"mouse_left"按下信号来感知按下事件（事件回调，非轮询）。
 */
 class UIHoverState final : public UIState {
 	friend class engine::ui::UIInteractive;
 public:
-	UIHoverState(engine::ui::UIInteractive* owner) : UIState(owner) {}
-	~UIHoverState() override = default;
+	UIHoverState(engine::ui::UIInteractive* owner);
+	~UIHoverState() override;
 
 private:
 	void enter() override;
-	std::unique_ptr<UIState> handleInput(engine::core::Context& context) override;
+	void update(float deltaTime, engine::core::Context& context) override;
+
+	bool onMousePressed();   ///< @brief 鼠标按下回调函数（订阅信号触发，非轮询isActionPressed）
 };
 
 } // namespace engine::ui::state

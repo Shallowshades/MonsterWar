@@ -6,31 +6,71 @@
 using namespace entt::literals;
 
 namespace engine::ui {
+
 UIButton::UIButton(engine::core::Context& context,
-	std::string_view normalImageId,
-	std::string_view hoverImageId,
-	std::string_view pressedImageId,
+	engine::render::Image normalImage,
+	engine::render::Image hoverImage,
+	engine::render::Image pressedImage,
 	const glm::vec2& position,
 	const glm::vec2& size,
 	std::function<void()> callback)
-	: UIInteractive(context, position, size), mCallback(std::move(callback))
+	: UIInteractive(context, position, size)
 {
-	addImage("normal"_hs, engine::render::Image(normalImageId));
-	addImage("hover"_hs, engine::render::Image(hoverImageId));
-	addImage("pressed"_hs, engine::render::Image(pressedImageId));
+	addImage("normal"_hs, std::move(normalImage));
+	addImage("hover"_hs, std::move(hoverImage));
+	addImage("pressed"_hs, std::move(pressedImage));
 
 	// 设置默认状态为"normal"
 	setState(std::make_unique<engine::ui::state::UINormalState>(this));
 
-	// 设置默认音效
-	addSound("hover"_hs, "assets/audio/button_hover.wav"_hs);
-	addSound("pressed"_hs, "assets/audio/button_click.wav"_hs);
+	if (callback) {
+		setClickCallback(std::move(callback));
+	}
+
+	// 默认音效（本地保留：AudioPlayer 对未加载的音效会打印 error）
+	setHoverSound("assets/audio/button_hover.wav");
+	setClickSound("assets/audio/button_click.wav");
 	spdlog::trace("UIButton 构造完成");
 }
 
-void UIButton::clicked()
-{
-	if (mCallback) mCallback();
+void UIButton::clicked() {
+	if (mClickCallback) {
+		mClickCallback();
+	}
+	playSound("pressed"_hs);
+}
+
+void UIButton::hover_enter() {
+	if (mHoverEnterCallback) {
+		mHoverEnterCallback();
+	}
+	playSound("hover"_hs);
+}
+
+void UIButton::hover_leave() {
+	if (mHoverLeaveCallback) {
+		mHoverLeaveCallback();
+	}
+}
+
+void UIButton::setClickCallback(std::function<void()> callback) {
+	mClickCallback = std::move(callback);
+}
+
+void UIButton::setHoverEnterCallback(std::function<void()> callback) {
+	mHoverEnterCallback = std::move(callback);
+}
+
+void UIButton::setHoverLeaveCallback(std::function<void()> callback) {
+	mHoverLeaveCallback = std::move(callback);
+}
+
+void UIButton::setHoverSound(std::string_view filePath) {
+	addSound("hover"_hs, filePath);
+}
+
+void UIButton::setClickSound(std::string_view filePath) {
+	addSound("pressed"_hs, filePath);
 }
 
 } // namespace engine::ui

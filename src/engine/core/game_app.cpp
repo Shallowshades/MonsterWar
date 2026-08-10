@@ -86,10 +86,8 @@ bool engine::core::GameApp::init() {
 }
 
 void engine::core::GameApp::handleEvents() {
-	// 处理并分发输入事件
+	// 处理并分发输入事件（UI通过订阅InputManager信号驱动，无需轮询handleInput）
 	mInputManager->update();
-
-	mSceneManager->handleInput();
 }
 
 void engine::core::GameApp::update(float delta) {

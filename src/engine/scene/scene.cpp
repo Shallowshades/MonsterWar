@@ -37,13 +37,6 @@ namespace engine::scene {
 		mUIManager->render(mContext);
 	}
 
-	void Scene::handleInput() {
-		if (!mIsInitialized) return;
-
-		// 处理UI管理器输入
-		if (mUIManager->handleInput(mContext)) return;   // 如果输入事件被UI处理则返回，不再处理游戏对象输入
-	}
-
 	void Scene::clean() {
 		if (!mIsInitialized) return;
 

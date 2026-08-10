@@ -43,7 +43,6 @@ public:
 	// 核心循环函数
 	void update(float deltaTime);										///< @brief 更新
 	void render();														///< @brief 渲染
-	void handleInput();													///< @brief 处理输入
 	void clean();														///< @brief 清理
 
 private:

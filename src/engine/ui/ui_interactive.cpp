@@ -31,11 +31,11 @@ void UIInteractive::addImage(entt::id_type nameId, engine::render::Image image) 
 	if (mSize.x == 0.0f && mSize.y == 0.0f) {
 		mSize = mContext.getResourceManager().getTextureSize(image.getTextureId());
 	}
-	// 添加精灵
-	mImages.emplace(nameId, std::move(image));
+	// 添加精灵（同名的直接覆盖，避免重复添加警告）
+	mImages.insert_or_assign(nameId, std::move(image));
 }
 
-void UIInteractive::setImage(entt::id_type nameId) {
+void UIInteractive::setCurrentImage(entt::id_type nameId) {
 	if (mImages.find(nameId) != mImages.end()) {
 		mCurrentImageId = nameId;
 	}
@@ -44,7 +44,9 @@ void UIInteractive::setImage(entt::id_type nameId) {
 	}
 }
 
-void UIInteractive::addSound(entt::id_type nameId, entt::hashed_string hashedPath) {
+void UIInteractive::addSound(entt::id_type nameId, std::string_view filePath) {
+	auto hashedPath = entt::hashed_string(filePath.data());
+
 	// 插入容器
 	mSounds.emplace(nameId, hashedPath.value());
 
@@ -65,19 +67,27 @@ void UIInteractive::playSound(entt::id_type nameId) {
 	}
 }
 
-bool UIInteractive::handleInput(engine::core::Context& context) {
-	if (UIElement::handleInput(context)) {
-		return true;
+void UIInteractive::setNextState(std::unique_ptr<engine::ui::state::UIState> state) {
+	if (!state) {
+		spdlog::warn("尝试设置空的下一个状态！");
+		return;
+	}
+	mNextState = std::move(state);
+}
+
+void UIInteractive::update(float deltaTime, engine::core::Context& context) {
+	// 先应用延迟的状态切换（事件回调中只排队，这里在帧内安全地切换并调用enter/析构）
+	if (mNextState) {
+		setState(std::move(mNextState));
 	}
 
-	// 先更新子节点，再更新自己（状态）
+	// 更新自身状态（事件驱动，内部根据鼠标位置判断悬停/离开）
 	if (mState && mInteractive) {
-		if (auto nextState = mState->handleInput(context); nextState) {
-			setState(std::move(nextState));
-			return true;
-		}
+		mState->update(deltaTime, context);
 	}
-	return false;
+
+	// 再更新子元素
+	UIElement::update(deltaTime, context);
 }
 
 void UIInteractive::render(engine::core::Context& context) {

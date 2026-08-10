@@ -28,7 +28,8 @@ namespace engine::ui::state {
 * @brief 可交互UI元素在特定状态下的行为接口。
 *
 * 该接口定义了所有具体UI状态必须实现的通用操作，
-* 例如处理输入事件、更新状态逻辑以及确定视觉表现。
+* 例如更新状态逻辑以及确定视觉表现。
+* @note 输入不再由状态机轮询，而是通过 InputManager 的信号回调驱动（onMousePressed/onMouseReleased）。
 */
 class UIState {
     friend class engine::ui::UIInteractive;
@@ -46,9 +47,9 @@ public:
     UIState& operator=(UIState&&) = delete;
 
 protected:
-    // --- 核心方法 --- 
-    virtual void enter();
-    virtual std::unique_ptr<UIState> handleInput(engine::core::Context& context) = 0;
+    // --- 核心方法 ---
+    virtual void enter() = 0;                               ///< @brief 进入状态时调用（纯虚，必须实现）
+    virtual void update(float deltaTime, engine::core::Context& context);   ///< @brief 每帧更新状态逻辑
 protected:
 	engine::ui::UIInteractive* mOwner = nullptr;            ///< @brief 指向父节点
 };

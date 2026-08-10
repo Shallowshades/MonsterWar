@@ -63,7 +63,7 @@ namespace engine::render {
 	}
 
 	void Renderer::drawUIImage(const Image& image, const glm::vec2& position, const std::optional<glm::vec2>& size) {
-		auto texture = mResourceManager->getTexture(image.getTextureId());
+		auto texture = mResourceManager->getTexture(image.getTextureId(), image.getTexturePath());
 		if (!texture) {
 			spdlog::error("无法为 ID {} 获取纹理。", image.getTextureId());
 			return;

@@ -10,21 +10,33 @@
 using namespace entt::literals;
 
 namespace engine::ui::state {
+
+	UIHoverState::UIHoverState(engine::ui::UIInteractive* owner) : UIState(owner) {
+		mOwner->getContext().getInputManager().onAction("mouse_left"_hs).connect<&UIHoverState::onMousePressed>(this);
+	}
+
+	UIHoverState::~UIHoverState() {
+		mOwner->getContext().getInputManager().onAction("mouse_left"_hs).disconnect<&UIHoverState::onMousePressed>(this);
+	}
+
 	void UIHoverState::enter() {
-		mOwner->setImage("hover"_hs);
+		mOwner->setCurrentImage("hover"_hs);
+		mOwner->hover_enter();
 		spdlog::debug("切换到悬停状态");
 	}
 
-	std::unique_ptr<UIState> UIHoverState::handleInput(engine::core::Context& context) {
+	void UIHoverState::update(float, engine::core::Context& context) {
 		auto& inputManager = context.getInputManager();
 		auto mousePosition = inputManager.getLogicalMousePosition();
-		if (!mOwner->isPointInside(mousePosition)) {					// 如果鼠标不在UI元素内，则返回正常状态
-			return std::make_unique<UINormalState>(mOwner);
+		if (!mOwner->isPointInside(mousePosition)) {			// 鼠标离开元素 → 通知离开并回到正常状态
+			mOwner->hover_leave();
+			mOwner->setNextState(std::make_unique<UINormalState>(mOwner));
 		}
-		if (inputManager.isActionPressed("mouse_left"_hs)) {			// 如果鼠标按下，则返回按下状态
-			return std::make_unique<UIPressedState>(mOwner);
-		}
-		return nullptr;
+	}
+
+	bool UIHoverState::onMousePressed() {
+		mOwner->setNextState(std::make_unique<UIPressedState>(mOwner));
+		return true;
 	}
 
 } // namespace engine::ui::state

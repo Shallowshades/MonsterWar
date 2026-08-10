@@ -34,14 +34,6 @@ void UIManager::clearElements() {
 	}
 }
 
-bool UIManager::handleInput(engine::core::Context& context) {
-	if (mRootElement && mRootElement->isVisible()) {
-		// 从根元素开始向下分发事件
-		if (mRootElement->handleInput(context)) return true;
-	}
-	return false;
-}
-
 void UIManager::update(float deltaTime, engine::core::Context& context) {
 	if (mRootElement && mRootElement->isVisible()) {
 		// 从根元素开始向下更新

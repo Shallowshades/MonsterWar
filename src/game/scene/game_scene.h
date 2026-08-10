@@ -11,6 +11,7 @@
 
 #include "../data/waypoint_node.h"
 #include "../data/session_data.h"
+#include "../data/ui_config.h"
 #include "../defs/events.h"
 #include "../system/fwd.h"
 #include "../../engine/scene/scene.h"
@@ -19,6 +20,9 @@
 #include <unordered_map>
 #include <vector>
 
+namespace engine::ui {
+	class UIElement;
+}
 namespace game::factory {
 	class EntityFactory;
 	class BlueprintManager;
@@ -42,11 +46,15 @@ namespace game::scene {
 
 	private:
 		[[nodiscard]] bool initSessionData();
+		[[nodiscard]] bool initUIConfig();
 		[[nodiscard]] bool loadLevel();
 		[[nodiscard]] bool initEventConnections();
 		[[nodiscard]] bool initInputConnections();
 		[[nodiscard]] bool initEntityFactory();
 		[[nodiscard]] bool initSystems();
+
+		void createUnitsPortraitUI();    ///< @brief 创建画面下方的单位肖像UI
+		void arrangeUnitsPortraitUI(engine::ui::UIElement* anchor_panel, const glm::vec2& frame_size, float padding);    ///< @brief 排列画面下方的单位肖像UI (肖像增/减时调用)
 
 		// 事件回调函数
 		void onEnemyArriveHome(const game::defs::EnemyArriveHomeEvent& event);
@@ -91,6 +99,7 @@ namespace game::scene {
 		// 管理数据的实例很可能同时被多个场景使用，因此使用共享指针
 		std::shared_ptr<game::factory::BlueprintManager> mBlueprintManager;  // 蓝图管理器，负责管理蓝图数据
 		std::shared_ptr<game::data::SessionData> mSessionData;               // 会话数据，关卡切换时需要传递的数据
+		std::shared_ptr<game::data::UIConfig> mUIConfig;                     // UI配置，负责管理UI数据
 
 		int mLevelNumber{ 1 };    // 当前关卡号（会话数据的缓存副本）
 	};
