@@ -12,6 +12,7 @@
 #include "../data/waypoint_node.h"
 #include "../data/session_data.h"
 #include "../data/ui_config.h"
+#include "../data/game_stats.h"
 #include "../defs/events.h"
 #include "../system/fwd.h"
 #include "../../engine/scene/scene.h"
@@ -20,8 +21,8 @@
 #include <unordered_map>
 #include <vector>
 
-namespace engine::ui {
-	class UIElement;
+namespace game::ui {
+	class UnitsPortraitUI;
 }
 namespace game::factory {
 	class EntityFactory;
@@ -51,13 +52,9 @@ namespace game::scene {
 		[[nodiscard]] bool initEventConnections();
 		[[nodiscard]] bool initInputConnections();
 		[[nodiscard]] bool initEntityFactory();
+		[[nodiscard]] bool initRegistryContext();
+		[[nodiscard]] bool initUnitsPortraitUI();
 		[[nodiscard]] bool initSystems();
-
-		void createUnitsPortraitUI();    ///< @brief 创建画面下方的单位肖像UI
-		void arrangeUnitsPortraitUI(engine::ui::UIElement* anchor_panel, const glm::vec2& frame_size, float padding);    ///< @brief 排列画面下方的单位肖像UI (肖像增/减时调用)
-
-		// 事件回调函数
-		void onEnemyArriveHome(const game::defs::EnemyArriveHomeEvent& event);
 
 		// 输入回调函数
 
@@ -66,7 +63,6 @@ namespace game::scene {
 		void createTestEnemy();
 		[[nodiscard]] bool onCreateTestPlayerMelee();
 		[[nodiscard]] bool onCreateTestPlayerRanged();
-		[[nodiscard]] bool onCreateTestPlayerHealer();
 		[[nodiscard]] bool onClearAllPlayers();
 
 	private:
@@ -90,9 +86,13 @@ namespace game::scene {
 		std::unique_ptr<game::system::ProjectileSystem> mProjectileSystem;
 		std::unique_ptr<game::system::EffectSystem> mEffectSystem;
 		std::unique_ptr<game::system::HealthBarSystem> mHealthBarSystem;
+		std::unique_ptr<game::system::GameRuleSystem> mGameRuleSystem;       // 游戏规则系统（cost/关卡状态）
+
+		std::unique_ptr<game::ui::UnitsPortraitUI> mUnitsPortraitUI;         // 封装的单位肖像UI，负责管理单位肖像UI的创建、更新和排列
 
 		std::unordered_map<int, game::data::WaypointNode> mWaypointNodes;  // 路径节点ID到节点数据的映射
 		std::vector<int> mStartPoints;                                     // 起点ID列表
+		game::data::GameStats mGameStats;                                  // 关卡内游戏统计数据
 
 		std::unique_ptr<game::factory::EntityFactory> mEntityFactory;        // 实体工厂，负责创建和管理实体
 

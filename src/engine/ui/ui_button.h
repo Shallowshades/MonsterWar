@@ -34,7 +34,9 @@ public:
         * @param pressedImage 按下状态的图片
         * @param position 位置
         * @param size 大小
-        * @param callback 点击回调函数
+        * @param clickCallback 点击回调函数
+        * @param hoverEnterCallback 悬停进入回调函数
+        * @param hoverLeaveCallback 悬停离开回调函数
         * @note 适用于图片已从配置文件构造好的场景（如UIConfig中的肖像框）
         */
     UIButton(engine::core::Context& context,
@@ -43,7 +45,9 @@ public:
         engine::render::Image pressedImage,
         const glm::vec2& position = { 0.0f, 0.0f },
         const glm::vec2& size = { 0.0f, 0.0f },
-        std::function<void()> callback = nullptr);
+        std::function<void()> clickCallback = nullptr,
+        std::function<void()> hoverEnterCallback = nullptr,
+        std::function<void()> hoverLeaveCallback = nullptr);
     ~UIButton() override = default;
 
     void clicked() override;        ///< @brief 点击回调（由按下状态的mouse_left释放信号触发）

@@ -13,7 +13,9 @@ UIButton::UIButton(engine::core::Context& context,
 	engine::render::Image pressedImage,
 	const glm::vec2& position,
 	const glm::vec2& size,
-	std::function<void()> callback)
+	std::function<void()> clickCallback,
+	std::function<void()> hoverEnterCallback,
+	std::function<void()> hoverLeaveCallback)
 	: UIInteractive(context, position, size)
 {
 	addImage("normal"_hs, std::move(normalImage));
@@ -23,8 +25,14 @@ UIButton::UIButton(engine::core::Context& context,
 	// 设置默认状态为"normal"
 	setState(std::make_unique<engine::ui::state::UINormalState>(this));
 
-	if (callback) {
-		setClickCallback(std::move(callback));
+	if (clickCallback) {
+		setClickCallback(std::move(clickCallback));
+	}
+	if (hoverEnterCallback) {
+		setHoverEnterCallback(std::move(hoverEnterCallback));
+	}
+	if (hoverLeaveCallback) {
+		setHoverLeaveCallback(std::move(hoverLeaveCallback));
 	}
 
 	// 默认音效（本地保留：AudioPlayer 对未加载的音效会打印 error）

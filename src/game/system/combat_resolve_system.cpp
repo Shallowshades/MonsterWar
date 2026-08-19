@@ -5,6 +5,7 @@
 #include "../component/blocked_by_component.h"
 #include "../component/blocker_component.h"
 #include "../component/class_name_component.h"
+#include "../data/game_stats.h"
 #include "../../engine/component/transform_component.h"
 #include "../../engine/component/sprite_component.h"
 #include "../defs/tags.h"
@@ -71,7 +72,8 @@ namespace game::system {
                     engine::component::SpriteComponent>(event.mTarget);
                 mDispatcher.enqueue(game::defs::EnemyDeadEffectEvent{ class_name.mClassId, transform.mPosition, sprite.mSprite.mIsFlipped });
 
-                // TODO: 更新统计信息
+                // 更新统计信息：击杀数量+1
+                mRegistry.ctx().get<game::data::GameStats&>().mEnemyKilledCount++;
                 // 如果敌人被阻挡，减少阻挡者的阻挡计数
                 if (auto blocked_by = mRegistry.try_get<game::component::BlockedByComponent>(event.mTarget); blocked_by) {
                     auto blocker_entity = blocked_by->mEntity;

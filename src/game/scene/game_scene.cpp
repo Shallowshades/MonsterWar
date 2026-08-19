@@ -6,6 +6,7 @@
 #include "../factory/blueprint_manager.h"
 #include "../loader/entity_builder_mw.h"
 #include "../data/ui_config.h"
+#include "../data/game_stats.h"
 #include "../system/follow_path_system.h"
 #include "../system/remove_dead_system.h"
 #include "../system/block_system.h"
@@ -19,6 +20,8 @@
 #include "../system/projectile_system.h"
 #include "../system/effect_system.h"
 #include "../system/health_bar_system.h"
+#include "../system/game_rule_system.h"
+#include "../ui/units_portrait_ui.h"
 #include "../defs/tags.h"
 #include "../../engine/component/transform_component.h"
 #include "../../engine/component/velocity_component.h"
@@ -35,15 +38,9 @@
 #include "../../engine/system/audio_system.h"
 #include "../../engine/loader/level_loader.h"
 #include "../../engine/ui/ui_manager.h"
-#include "../../engine/ui/ui_panel.h"
-#include "../../engine/ui/ui_image.h"
-#include "../../engine/ui/ui_button.h"
-#include "../../engine/ui/ui_label.h"
 #include <entt/core/hashed_string.hpp>
 #include <entt/signal/sigh.hpp>
 #include <glm/vec2.hpp>
-#include <cmath>
-#include <string>
 #include <spdlog/spdlog.h>
 
 using namespace entt::literals;
@@ -86,13 +83,20 @@ namespace game::scene {
 			spdlog::error("初始化实体工厂失败");
 			return;
 		}
+		if (!initRegistryContext()) {
+			spdlog::error("初始化注册表上下文失败");
+			return;
+		}
+		if (!initUnitsPortraitUI()) {
+			spdlog::error("初始化单位肖像UI失败");
+			return;
+		}
 		if (!initSystems()) {
 			spdlog::error("初始化系统失败");
 			return;
 		}
 		testSessionData();
 		createTestEnemy();
-		createUnitsPortraitUI();
 
 		Scene::init();
 	}
@@ -105,6 +109,7 @@ namespace game::scene {
 
 		// 注意系统更新的顺序
 		mTimerSystem->update(mRegistry, delta_time);
+		mGameRuleSystem->update(delta_time);					// 规则系统（cost恢复、通关计时）
 		mBlockSystem->update(mRegistry, dispatcher);
 		mSetTargetSystem->update(mRegistry);
 		mFollowPathSystem->update(mRegistry, dispatcher, mWaypointNodes);
@@ -114,6 +119,8 @@ namespace game::scene {
 		mMovementSystem->update(mRegistry, delta_time);
 		mAnimationSystem->update(delta_time);
 		mYsortSystem->update(mRegistry);					    // 调用顺序要在MovementSystem之后
+
+		mUnitsPortraitUI->update(delta_time);					// 肖像UI（遮盖更新、左右滚动）
 
 		Scene::update(delta_time);
 	}
@@ -138,7 +145,6 @@ namespace game::scene {
 		input_manager.onAction("mouse_right"_hs).disconnect<&GameScene::onCreateTestPlayerMelee>(this);
 		input_manager.onAction("mouse_left"_hs).disconnect<&GameScene::onCreateTestPlayerRanged>(this);
 		input_manager.onAction("pause"_hs).disconnect<&GameScene::onClearAllPlayers>(this);
-		input_manager.onAction("move_left"_hs).disconnect<&GameScene::onCreateTestPlayerHealer>(this);
 		Scene::clean();
 	}
 
@@ -184,18 +190,16 @@ namespace game::scene {
 	}
 
 	bool GameScene::initEventConnections() {
-		auto& dispatcher = mContext.getDispatcher();
-		// 连接事件
-		dispatcher.sink<game::defs::EnemyArriveHomeEvent>().connect<&GameScene::onEnemyArriveHome>(this);
+		// 本场景直接处理的事件已迁移到各系统（如敌人到达基地 → GameRuleSystem）
 		return true;
 	}
 
 	bool GameScene::initInputConnections() {
 		auto& input_manager = mContext.getInputManager();
+		// NOTE: move_left/move_right 已让给肖像UI滚动（UnitsPortraitUI::update），不再用于测试建兵
 		input_manager.onAction("mouse_right"_hs).connect<&GameScene::onCreateTestPlayerMelee>(this);
 		input_manager.onAction("mouse_left"_hs).connect<&GameScene::onCreateTestPlayerRanged>(this);
 		input_manager.onAction("pause"_hs).connect<&GameScene::onClearAllPlayers>(this);
-		input_manager.onAction("move_left"_hs).connect<&GameScene::onCreateTestPlayerHealer>(this);
 		return true;
 	}
 
@@ -212,6 +216,20 @@ namespace game::scene {
 		}
 		mEntityFactory = std::make_unique<game::factory::EntityFactory>(mRegistry, *mBlueprintManager);
 		spdlog::info("EntityFactory 加载完成");
+		return true;
+	}
+
+	bool GameScene::initRegistryContext() {
+		// 将关卡统计与共享数据存入 registry.ctx()，供各系统/UI 直接获取
+		mRegistry.ctx().emplace<game::data::GameStats>(mGameStats);
+		mRegistry.ctx().emplace<std::shared_ptr<game::factory::BlueprintManager>>(mBlueprintManager);
+		mRegistry.ctx().emplace<std::shared_ptr<game::data::SessionData>>(mSessionData);
+		mRegistry.ctx().emplace<std::shared_ptr<game::data::UIConfig>>(mUIConfig);
+		return true;
+	}
+
+	bool GameScene::initUnitsPortraitUI() {
+		mUnitsPortraitUI = std::make_unique<game::ui::UnitsPortraitUI>(mRegistry, *mUIManager, mContext);
 		return true;
 	}
 
@@ -237,99 +255,12 @@ namespace game::scene {
 		mProjectileSystem = std::make_unique<game::system::ProjectileSystem>(mRegistry, dispatcher, *mEntityFactory);
 		mEffectSystem = std::make_unique<game::system::EffectSystem>(mRegistry, dispatcher, *mEntityFactory);
 		mHealthBarSystem = std::make_unique<game::system::HealthBarSystem>();
+		mGameRuleSystem = std::make_unique<game::system::GameRuleSystem>(mRegistry, dispatcher);
 		spdlog::info("系统初始化完成");
 		return true;
 	}
 
-	// --- 事件回调函数 ---
-	void GameScene::onEnemyArriveHome(const game::defs::EnemyArriveHomeEvent&) {
-		spdlog::info("敌人到达基地");
-		// TODO: 添加敌人到达基地的逻辑
-	}
-
-	// --- 出击选择UI ---
-	void GameScene::createUnitsPortraitUI() {
-		if (!mUIManager->init(mContext.getGameState().getLogicalSize())) return;
-
-		auto padding = mUIConfig->getUnitPanelPadding();
-		auto& unit_map = mSessionData->getUnitMap();
-		auto unit_num = unit_map.size();
-
-		// --- 在屏幕下方创建一个panel UI 条，用于显示角色肖像 ---
-		// 获取窗口大小和角色肖像框大小
-		auto window_size = mContext.getGameState().getLogicalSize();
-		auto frame_size = mUIConfig->getUnitPanelFrameSize();
-		// 根据角色数量、角色肖像框大小、间隔计算panel的位置和大小
-		auto pos = glm::vec2(0.0f, window_size.y - frame_size.y - 2 * padding);
-		auto size = glm::vec2(unit_num * frame_size.x + (unit_num + 1) * padding, frame_size.y + 2 * padding);
-		auto anchor_panel = std::make_unique<engine::ui::UIPanel>(pos, size);
-		// 设置背景色
-		anchor_panel->setBackgroundColor(engine::utils::FColor(0.1f, 0.1f, 0.1f, 0.1f));
-		// 设置ID，以后即可根据ID找到该panel
-		anchor_panel->setId("unit_panel"_hs);
-
-		// 依次添加角色肖像，每个肖像显示由四部分依次叠加：portrait，frame，icon，cost
-		// 可以通过一个frame_panel定位（位于上层anchor_panel之中）
-		int index = 0;
-		for (auto& [name_id, unit_data] : unit_map) {
-			auto portrait = mUIConfig->getPortrait(name_id);
-			auto frame = mUIConfig->getPortraitFrame(unit_data.mRarity);
-			auto icon = mUIConfig->getIcon(unit_data.mClassId);
-			auto cost = mBlueprintManager->getPlayerClassBlueprint(unit_data.mClassId).mPlayer.mCost;
-			cost = static_cast<int>(std::round(engine::utils::statModify(static_cast<float>(cost), 1, unit_data.mRarity))); // 只有稀有度对cost有影响
-
-			// 创建每个肖像的 frame_panel
-			auto frame_pos = glm::vec2(padding + index * (frame_size.x + padding), padding);
-			auto frame_panel = std::make_unique<engine::ui::UIPanel>(frame_pos, frame_size);
-			frame_panel->setId(name_id);
-
-			// 依次添加四个元素，为了能够交互，将frame设置为按钮，并绑定点击事件
-			frame_panel->addChild(std::make_unique<engine::ui::UIImage>(portrait, glm::vec2(0.0f, 0.0f), frame_size));
-			frame_panel->addChild(std::make_unique<engine::ui::UIButton>(mContext,
-				frame,
-				frame,
-				frame,
-				glm::vec2(0.0f, 0.0f),
-				frame_size
-				// TODO: 添加点击事件回调函数
-			));
-			frame_panel->addChild(std::make_unique<engine::ui::UIImage>(icon, glm::vec2(0.0f, 0.0f), frame_size / 2.0f));
-			frame_panel->addChild(std::make_unique<engine::ui::UILabel>(mContext.getTextRenderer(),
-				std::to_string(cost),
-				mUIConfig->getUnitPanelFontPath(),
-				mUIConfig->getUnitPanelFontSize(),
-				engine::utils::FColor::yellow(),
-				mUIConfig->getUnitPanelFontOffset()
-			));
-			// 最后添加一个灰色的遮盖panel，cost不足以支持该角色出击时显示
-			auto cover_panel = std::make_unique<engine::ui::UIPanel>(glm::vec2(0.0f, 0.0f), frame_size);
-			cover_panel->setBackgroundColor(engine::utils::FColor(0.0f, 0.0f, 0.0f, 0.2f));
-			cover_panel->setId("cover_panel"_hs);
-			frame_panel->addChild(std::move(cover_panel));
-
-			// 将frame_panel添加到anchor_panel中，并使用cost作为排序键
-			anchor_panel->addChild(std::move(frame_panel), cost);
-			index++;
-		}
-
-		// 对anchor_panel中的子元素(frame_panel)进行排序
-		anchor_panel->sortChildrenByOrderIndex();
-		// 按顺序排列anchor_panel中的子元素(frame_panel)的位置
-		arrangeUnitsPortraitUI(anchor_panel.get(), frame_size, padding);
-
-		mUIManager->addElement(std::move(anchor_panel));
-	}
-
-	void GameScene::arrangeUnitsPortraitUI(engine::ui::UIElement* anchor_panel, const glm::vec2& frame_size, float padding) {
-		// 遍历panel中的子元素(定位panel)，并依次设定位置
-		for (size_t i = 0; i < anchor_panel->getChildren().size(); i++) {
-			auto& child = anchor_panel->getChildren()[i];
-			child->setPosition(glm::vec2(padding + i * (frame_size.x + padding), padding));
-		}
-		// 更新panel的size
-		anchor_panel->setSize(glm::vec2(padding + anchor_panel->getChildren().size() * (frame_size.x + padding),
-			frame_size.y + 2 * padding));
-	}
+	// --- 出击选择UI（已迁移至 game::ui::UnitsPortraitUI，由 initUnitsPortraitUI() 创建） ---
 
 	// --- 测试函数 ---
 	void GameScene::testSessionData() {
@@ -373,13 +304,6 @@ namespace game::scene {
 		auto& stats = mRegistry.get<game::component::StatsComponent>(entity);
 		stats.mHp = stats.mMaxHp / 2;
 		spdlog::info("创建弓箭手: 位置: {}, {}", position.x, position.y);
-		return true;
-	}
-
-	bool GameScene::onCreateTestPlayerHealer() {
-		auto position = mContext.getInputManager().getLogicalMousePosition();
-		mEntityFactory->createPlayerUnit("witch"_hs, position);
-		spdlog::info("创建治疗者: 位置: {}, {}", position.x, position.y);
 		return true;
 	}
 
