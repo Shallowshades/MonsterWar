@@ -28,6 +28,10 @@ namespace game::defs {
 
     struct OneShotRemoveTag {};     ///< @brief 一次性动画标签，播放完成后自动移除（用于特效）
     struct HasHealthBarTag {};      ///< @brief 血量条标签，标记实体需要显示血量条
+
+    struct MeleePlaceTag {};        ///< @brief 近战可放置区域标签（标记地图上的近战放置点）
+    struct RangedPlaceTag {};       ///< @brief 远程可放置区域标签（标记地图上的远程放置点）
+    struct ShowRangeTag {};         ///< @brief 显示攻击范围标签，标记实体需要绘制攻击范围圆
 }   // namespace game::defs
 
 #endif // GAME_TAGS_H

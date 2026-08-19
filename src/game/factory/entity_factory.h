@@ -43,6 +43,17 @@ namespace game::factory {
         entt::entity createProjectile(entt::id_type id, const glm::vec2& start_position, const glm::vec2& target_position, entt::entity target, float damage);
 
         /**
+         * @brief 创建单位准备类型实体（跟随鼠标的待放置单位，不参与战斗）
+         * @note 拥有 UnitPrepComponent，由 PlaceUnitSystem 控制跟随鼠标与放置
+         * @param name_id 角色名ID
+         * @param class_id 职业ID（用于读取蓝图）
+         * @param cost 出击费用
+         * @param position 初始位置（世界坐标）
+         * @return 单位准备实体
+         */
+        entt::entity createUnitPrep(entt::id_type name_id, entt::id_type class_id, int cost, const glm::vec2& position);
+
+        /**
          * @brief 创建敌人死亡特效
          * @note 特效直接复用敌人蓝图的 "damage" 动画
          * @param class_id 敌人ID

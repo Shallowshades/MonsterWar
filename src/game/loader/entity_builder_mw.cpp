@@ -9,6 +9,8 @@
 
 #include "entity_builder_mw.h"
 #include "../../engine/core/context.h"
+#include "../../engine/component/tilelayer_component.h"
+#include "../defs/tags.h"
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
@@ -30,6 +32,7 @@ namespace game::loader
         }
         else {
             BasicEntityBuilder::build();
+            buildPlace();               // 如果识别到地点类型就添加
         }
 
         return this;
@@ -61,6 +64,27 @@ namespace game::loader
         // 添加到节点容器中
         mWaypointNodes[id] = game::data::WaypointNode(id, std::move(position), std::move(next_node_ids));
         spdlog::trace("mWaypointNodes size: {}", mWaypointNodes.size());
+    }
+
+    void EntityBuilderMW::buildPlace() {
+        // 读取瓦片的自定义属性，如果标记了 place 类型，则给实体添加对应的放置区域标签
+        if (mTileInfo && mTileInfo->mProperties) {
+            auto& properties = mTileInfo->mProperties.value();
+            for (auto& property : properties) {
+                if (property.value("name", "") == "place") {
+                    auto type = property.value("value", "");
+                    if (type == "melee") {
+                        mRegistry.emplace<game::defs::MeleePlaceTag>(mEntityId);
+                        spdlog::trace("添加近战放置区域标签, 实体: {}", entt::to_integral(mEntityId));
+                    }
+                    else if (type == "range") {
+                        mRegistry.emplace<game::defs::RangedPlaceTag>(mEntityId);
+                        spdlog::trace("添加远程放置区域标签, 实体: {}", entt::to_integral(mEntityId));
+                    }
+                    // TODO: 未来如果有其他类型可以继续添加
+                }
+            }
+        }
     }
 
 }   // namespace game::loader

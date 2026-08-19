@@ -24,6 +24,7 @@
 #include "../component/player_component.h"
 #include "../component/blocker_component.h"
 #include "../component/projectile_component.h"
+#include "../component/unit_prep_component.h"
 #include <entt/entity/registry.hpp>
 #include <entt/core/hashed_string.hpp>
 #include <spdlog/spdlog.h>
@@ -102,6 +103,26 @@ namespace game::factory {
         addAudioComponent(entity, blueprint.mSounds);
         // 添加RenderComponent(让投射物位于主图层+1，即可以遮住角色)
         mRegistry.emplace<engine::component::RenderComponent>(entity, engine::component::RenderComponent::MAIN_LAYER + 1);
+        return entity;
+    }
+
+    entt::entity EntityFactory::createUnitPrep(entt::id_type name_id, entt::id_type class_id, int cost, const glm::vec2& position) {
+        auto entity = mRegistry.create();
+        const auto& blueprint = mBlueprintManager.getPlayerClassBlueprint(class_id);
+        // 添加Transform和Sprite组件（跟随鼠标，暂用静态精灵显示）
+        addTransformComponent(entity, position);
+        addSpriteComponent(entity, blueprint.mSprite);
+        // 直接添加UnitPrepComponent组件（存储名称、类型、范围、费用）
+        mRegistry.emplace<game::component::UnitPrepComponent>(entity,
+            name_id,
+            blueprint.mPlayer.mType,
+            blueprint.mStats.mRange,
+            cost);
+        // 补充渲染组件（显示优先度很高）与显示攻击范围标志
+        mRegistry.emplace<engine::component::RenderComponent>(entity, 100);
+        if (blueprint.mPlayer.mType == game::defs::PlayerType::RANGED) {
+            mRegistry.emplace<game::defs::ShowRangeTag>(entity);
+        }
         return entity;
     }
 

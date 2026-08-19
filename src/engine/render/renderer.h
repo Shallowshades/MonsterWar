@@ -58,7 +58,7 @@ namespace engine::render {
          * @param rotation 旋转角度（度）。
          */
         void drawSprite(const Camera& camera, const component::Sprite& sprite, const glm::vec2& position,
-            const glm::vec2& size, const float rotation = 0.0f);
+            const glm::vec2& size, const float rotation = 0.0f, const engine::utils::FColor& color = engine::utils::FColor::white());
 
         /**
          * @brief 在屏幕坐标中直接渲染一个用于UI的Image对象。
@@ -97,6 +97,17 @@ namespace engine::render {
          * @param thickness 边框厚度（像素），通过逐层收缩绘制实现
          */
         void drawRect(const Camera& camera, const glm::vec2& position, const glm::vec2& size, const engine::utils::FColor& color, const int thickness = 1);
+
+        /**
+         * @brief 绘制填充圆形（世界坐标）
+         * @note 使用引擎自带的圆形纹理，通过颜色调整参数着色
+         *
+         * @param camera 游戏相机，用于坐标转换
+         * @param position 世界坐标中的圆心位置
+         * @param radius 半径
+         * @param color 填充颜色（RGBA）
+         */
+        void drawFilledCircle(const Camera& camera, const glm::vec2& position, const float radius, const engine::utils::FColor& color);
 
         void present();                                                     ///< @brief 更新屏幕，包装 SDL_RenderPresent 函数
         void clearScreen();                                                 ///< @brief 清屏，包装 SDL_RenderClear 函数

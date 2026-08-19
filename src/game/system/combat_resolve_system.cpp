@@ -73,7 +73,13 @@ namespace game::system {
                 mDispatcher.enqueue(game::defs::EnemyDeadEffectEvent{ class_name.mClassId, transform.mPosition, sprite.mSprite.mIsFlipped });
 
                 // 更新统计信息：击杀数量+1
-                mRegistry.ctx().get<game::data::GameStats&>().mEnemyKilledCount++;
+                auto& game_stats = mRegistry.ctx().get<game::data::GameStats&>();
+                game_stats.mEnemyKilledCount++;
+                // 全歼敌人时，通关成功（与敌人到达时共用同一套判定逻辑，延迟切换场景）
+                if ((game_stats.mEnemyKilledCount + game_stats.mEnemyArrivedCount) >= game_stats.mEnemyCount) {
+                    spdlog::warn("敌人全部死亡，通关成功");
+                    mDispatcher.enqueue(game::defs::LevelClearDelayedEvent{ 2.0f });
+                }
                 // 如果敌人被阻挡，减少阻挡者的阻挡计数
                 if (auto blocked_by = mRegistry.try_get<game::component::BlockedByComponent>(event.mTarget); blocked_by) {
                     auto blocker_entity = blocked_by->mEntity;

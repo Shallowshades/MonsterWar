@@ -27,6 +27,8 @@ namespace game::system {
     class EffectSystem;
     class HealthBarSystem;
     class GameRuleSystem;
+    class PlaceUnitSystem;
+    class RenderRangeSystem;
 
 }   // namespace game::system
 

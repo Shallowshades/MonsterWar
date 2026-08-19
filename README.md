@@ -74,6 +74,8 @@ main.cpp
 | TargetComponent       | `target_component.h`     | 攻击目标（锁定要攻击的实体）       |
 | ProjectileComponent   | `projectile_component.h` | 投射物（目标、伤害、弧线飞行参数） |
 | ProjectileIDComponent | `projectile_component.h` | 投射物ID，附加在远程角色上         |
+| UnitPrepComponent     | `unit_prep_component.h`  | 预备出击单位（幽灵）：角色ID/类型/范围/cost |
+| PlaceOccupiedComponent | `place_occupied_component.h` | 放置点占用（记录占用该放置点的单位） |
 
 ## ECS 系统
 
@@ -104,6 +106,8 @@ main.cpp
 | ProjectileSystem     | `projectile_system.cpp`      | 响应 EmitProjectileEvent 创建投射物实体，更新飞行弧线轨迹，到达后发出 AttackEvent |
 | EffectSystem         | `effect_system.cpp`          | 监听 EnemyDeadEffectEvent，通过实体工厂创建死亡特效                               |
 | HealthBarSystem      | `health_bar_system.cpp`      | 渲染受伤单位的血量条（按血量百分比变色）                                          |
+| PlaceUnitSystem      | `place_unit_system.cpp`      | 出击准备/放置：幽灵跟随鼠标、检测放置点、落子出兵、扣费、占用放置点、取消          |
+| RenderRangeSystem    | `render_range_system.cpp`    | 渲染预备远程单位的攻击范围圆（半透明绿色）                                        |
 
 ## 关卡加载系统（Builder 模式）
 
@@ -119,7 +123,7 @@ main.cpp
   - 逐步构建：`buildBase()` → `buildSprite()` → `buildTransform()` → `buildRender()` → `buildAnimation()` → `buildAudio()`
   - 三个 `configure()` 重载分别处理自定义形状、图片对象、瓦片层
   - 可被子类继承扩展（虚函数 `build()`）
-- **EntityBuilderMW** (`game::loader`) — MonsterWar 扩展构建器，从 Tiled 对象图层解析路径节点和起点
+- **EntityBuilderMW** (`game::loader`) — MonsterWar 扩展构建器，从 Tiled 对象图层解析路径节点和起点，并从瓦片属性识别放置区域（`buildPlace` 打 `MeleePlaceTag`/`RangedPlaceTag`）
 - 删除了旧的 `scene::LevelLoader`（逻辑耦合严重）
 
 ## Y-Sort 渲染排序系统
@@ -205,6 +209,35 @@ registry.ctx()（服务定位器）
    └── UnitsPortraitUI ── 出击面板（遮盖 / 滚动 / 点击发 PrepUnitEvent）
 ```
 
+## 出击准备与出击完成系统
+
+实现了"点击肖像 → 幽灵跟随鼠标 → 落子出兵"的完整出击流程：地图放置点识别、预备单位（幽灵）、放置交互、攻击范围圆渲染。
+
+### 放置单位流程
+
+```
+点击肖像 ── PrepUnitEvent ──┐
+                            ▼
+              PlaceUnitSystem（订阅事件 + 绑定鼠标按键）
+   ├─ onPrepUnitEvent   检查 cost → 清掉旧幽灵 → 鼠标处创建幽灵（createUnitPrep）
+   ├─ update（每帧）     幽灵跟随鼠标 → checkTargetPlace 检测合法放置点
+   │                     → 幽灵染绿（可放置）/ 染红（不可放置）
+   ├─ onPlaceUnit(左键)  幽灵有效 → 建真实单位（蓝图+等级+稀有度）
+   │                     → 放置点加 PlaceOccupiedComponent → 扣 cost
+   │                     → 幽灵标记死亡 → RemoveUIPortraitEvent → 播放置音效
+   └─ onCancelPrepUnit(右键)  幽灵标记死亡（右键穿透）
+```
+
+- **放置点实体** — `EntityBuilderMW::buildPlace()` 从 tileset 瓦片属性读 `place="melee"/"range"`，给地图对象实体打 `MeleePlaceTag` / `RangedPlaceTag`；已占用点用 `PlaceOccupiedComponent` 标记，view 用 `exclude` 跳过
+- **UnitPrepComponent** (`game::component`) — 幽灵单位预备数据（角色ID / 职业类型 / 范围 / cost），`EntityFactory::createUnitPrep()` 创建，远程类型额外带 `ShowRangeTag`
+- **PlaceUnitSystem** (`game::system`) — 放置单位系统：`mouse_left/right` 与 `PrepUnitEvent` / `RemovePlayerUnitEvent` 的注册与处理集中于此
+  - `checkTargetPlace` — 按放置点中心（左上角 + size×scale/2）距离平方 < `PLACE_RADIUS²` 判定可放
+  - 落子动作序列：建单位 → 占用放置点 → 扣 cost → 幽灵死亡 → 移除肖像 → 图层修正 → 音效
+  - `onRemoveUnitEvent` — 标记死亡 + 解除对应放置点占用（暂停清除也走此事件）
+- **RenderRangeSystem** (`game::system`) — 遍历 `ShowRangeTag + UnitPrepComponent`，用 `drawFilledCircle` 画半透明攻击范围圆（`RANGE_COLOR`）
+- **渲染变色** (`engine::render`) — `RenderComponent::mColor` + `drawSprite` 颜色参数（`SDL_SetTextureColorModFloat` 调制），幽灵绿/红即时切换；`drawFilledCircle` 复用 `UI/circle.png`
+- **击杀侧通关修复** (`combat_resolve_system.cpp:79`) — `createTestEnemy` 补上 `GameStats.mEnemyCount`（含 ctx 实例），全歼敌人触发 `LevelClearDelayedEvent`
+
 ## 战斗系统
 
 实现了基于 ECS 标签和冷却计时的自动战斗循环。
@@ -276,6 +309,9 @@ ECS 空标签（tag），用于标记实体状态，配合 view 的 `exclude` �
 | RangedUnitTag    | `tags.h` | 远程单位类型                                          |
 | OneShotRemoveTag | `tags.h` | 一次性动画实体（死亡特效），播完标记 DeadTag 自动移除 |
 | HasHealthBarTag  | `tags.h` | 需要显示血量条的实体（玩家/敌人单位）                 |
+| MeleePlaceTag    | `tags.h` | 近战放置区域（地图放置点）                            |
+| RangedPlaceTag   | `tags.h` | 远程放置区域（地图放置点）                            |
+| ShowRangeTag     | `tags.h` | 预备远程单位：显示攻击范围圆                          |
 
 ### 游戏层常量（`game::defs`）
 
@@ -285,25 +321,26 @@ ECS 空标签（tag），用于标记实体状态，配合 view 的 `exclude` �
 | UNIT_RADIUS         | `constants.h` | 角色自身半径（20.0），用于计算攻击范围（射程 + UNIT_RADIUS） |
 | HEALTH_BAR_SIZE     | `constants.h` | 血量条大小（48.0 × 8.0）                                     |
 | HEALTH_BAR_OFFSET_Y | `constants.h` | 血量条竖直方向偏移（8.0，水平方向居中）                      |
+| PLACE_RADIUS        | `constants.h` | 放置吸附半径（40.0），鼠标靠近放置点中心小于此距离即可放置   |
+| RANGE_COLOR         | `constants.h` | 攻击范围圆颜色（半透明绿 {0,1,0,0.3}）                        |
 
 ### 玩家类型枚举（`game::defs::PlayerType`）
 
-| 值     | 说明                           |
-| ------ | ------------------------------ |
-| MELEE  | 近战型，只能放置在近战区域     |
-| RANGED | 远程型，只能放置在远程区域     |
-| MIXED  | 混合型（暂不实现，未来可扩展） |
+| 值      | 说明                               |
+| ------- | ---------------------------------- |
+| UNKNOWN | 未定义（默认值）                   |
+| MELEE   | 近战型，只能放置在近战区域         |
+| RANGED  | 远程型，只能放置在远程区域         |
+| MIXED   | 混合型（暂不实现，未来可扩展）     |
 
-### 输入绑定（测试用）
+### 输入绑定（当前状态）
 
-`GameScene` 中注册了以下测试用输入绑定：
-
-| 输入       | 快捷键        | 行为                             |
-| ---------- | ------------- | -------------------------------- |
-| 鼠标左键   | `mouse_left`  | 在鼠标位置创建弓箭手（远程单位） |
-| 鼠标右键   | `mouse_right` | 在鼠标位置创建战士（近战单位）   |
-| A 键       | `move_left`   | 在鼠标位置创建女巫（治疗单位）   |
-| P / Escape | `pause`       | 清除所有已创建的玩家单位         |
+| 输入       | 快捷键         | 行为                                                           |
+| ---------- | -------------- | -------------------------------------------------------------- |
+| 鼠标左键   | `mouse_left`   | 放置幽灵单位（由 `PlaceUnitSystem` 注册，落在合法放置点才生效）|
+| 鼠标右键   | `mouse_right`  | 取消放置（移除幽灵单位，由 `PlaceUnitSystem` 注册）            |
+| A / D 键   | `move_left`/`move_right` | 出击面板左右滚动（由 `UnitsPortraitUI` 处理）      |
+| P / Escape | `pause`        | 清除所有已出击的玩家单位（`GameScene` 发 `RemovePlayerUnitEvent`） |
 
 ### 动画帧事件
 

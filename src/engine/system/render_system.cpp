@@ -17,7 +17,7 @@ namespace engine::system {
 			const auto& sprite = view.get<component::SpriteComponent>(entity);
 			auto position = transform.mPosition + sprite.mOffset;
 			auto size = sprite.mSize * transform.mScale;
-			renderer.drawSprite(camera, sprite.mSprite, position, size, transform.mRotation);
+			renderer.drawSprite(camera, sprite.mSprite, position, size, transform.mRotation, render.mColor);
 		}
 	}
 

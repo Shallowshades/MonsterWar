@@ -21,6 +21,8 @@
 #include "../system/effect_system.h"
 #include "../system/health_bar_system.h"
 #include "../system/game_rule_system.h"
+#include "../system/place_unit_system.h"
+#include "../system/render_range_system.h"
 #include "../ui/units_portrait_ui.h"
 #include "../defs/tags.h"
 #include "../../engine/component/transform_component.h"
@@ -118,6 +120,7 @@ namespace game::scene {
 		mProjectileSystem->update(delta_time);
 		mMovementSystem->update(mRegistry, delta_time);
 		mAnimationSystem->update(delta_time);
+		mPlaceUnitSystem->update(delta_time);					// 放置单位系统（跟随鼠标、检测放置位置）
 		mYsortSystem->update(mRegistry);					    // 调用顺序要在MovementSystem之后
 
 		mUnitsPortraitUI->update(delta_time);					// 肖像UI（遮盖更新、左右滚动）
@@ -132,6 +135,7 @@ namespace game::scene {
 		// 注意渲染顺序，保证正确的遮盖关系
 		mRenderSystem->update(mRegistry, renderer, camera);
 		mHealthBarSystem->update(mRegistry, renderer, camera);
+		mRenderRangeSystem->update(mRegistry, renderer, camera);   // 攻击范围圆（透明，放在最上层）
 
 		Scene::render();
 	}
@@ -141,9 +145,7 @@ namespace game::scene {
 		auto& input_manager = mContext.getInputManager();
 		// 断开所有事件连接
 		dispatcher.disconnect(this);
-		// 断开输入信号连接
-		input_manager.onAction("mouse_right"_hs).disconnect<&GameScene::onCreateTestPlayerMelee>(this);
-		input_manager.onAction("mouse_left"_hs).disconnect<&GameScene::onCreateTestPlayerRanged>(this);
+		// 断开输入信号连接（mouse_left/mouse_right 已由 PlaceUnitSystem 注册，随其析构断开）
 		input_manager.onAction("pause"_hs).disconnect<&GameScene::onClearAllPlayers>(this);
 		Scene::clean();
 	}
@@ -196,9 +198,8 @@ namespace game::scene {
 
 	bool GameScene::initInputConnections() {
 		auto& input_manager = mContext.getInputManager();
-		// NOTE: move_left/move_right 已让给肖像UI滚动（UnitsPortraitUI::update），不再用于测试建兵
-		input_manager.onAction("mouse_right"_hs).connect<&GameScene::onCreateTestPlayerMelee>(this);
-		input_manager.onAction("mouse_left"_hs).connect<&GameScene::onCreateTestPlayerRanged>(this);
+		// NOTE: mouse_left/mouse_right 已由 PlaceUnitSystem 注册（放置/取消放置单位）
+		//       move_left/move_right 已让给肖像UI滚动（UnitsPortraitUI::update）
 		input_manager.onAction("pause"_hs).connect<&GameScene::onClearAllPlayers>(this);
 		return true;
 	}
@@ -256,6 +257,8 @@ namespace game::scene {
 		mEffectSystem = std::make_unique<game::system::EffectSystem>(mRegistry, dispatcher, *mEntityFactory);
 		mHealthBarSystem = std::make_unique<game::system::HealthBarSystem>();
 		mGameRuleSystem = std::make_unique<game::system::GameRuleSystem>(mRegistry, dispatcher);
+		mPlaceUnitSystem = std::make_unique<game::system::PlaceUnitSystem>(mRegistry, *mEntityFactory, mContext);
+		mRenderRangeSystem = std::make_unique<game::system::RenderRangeSystem>();
 		spdlog::info("系统初始化完成");
 		return true;
 	}
@@ -275,6 +278,7 @@ namespace game::scene {
 
 	void GameScene::createTestEnemy() {
 		// 每个起点创建一批敌人
+		int enemy_count = 0;
 		for (auto start_index : mStartPoints) {
 			auto position = mWaypointNodes[start_index].mPosition;
 
@@ -282,35 +286,20 @@ namespace game::scene {
 			mEntityFactory->createEnemyUnit("slime"_hs, position, start_index);
 			mEntityFactory->createEnemyUnit("goblin"_hs, position, start_index);
 			mEntityFactory->createEnemyUnit("dark_witch"_hs, position, start_index);
+			enemy_count += 4;
 		}
-	}
-
-	bool GameScene::onCreateTestPlayerMelee() {
-		auto position = mContext.getInputManager().getLogicalMousePosition();
-		auto entity = mEntityFactory->createPlayerUnit("warrior"_hs, position);
-		// 让玩家处于受伤状态（治疗师不会锁定满血目标）
-		mRegistry.emplace<game::defs::InjuredTag>(entity);
-		auto& stats = mRegistry.get<game::component::StatsComponent>(entity);
-		stats.mHp = stats.mMaxHp / 2;
-		spdlog::info("创建战士: 位置: {}, {}", position.x, position.y);
-		return true;
-	}
-
-	bool GameScene::onCreateTestPlayerRanged() {
-		auto position = mContext.getInputManager().getLogicalMousePosition();
-		auto entity = mEntityFactory->createPlayerUnit("archer"_hs, position);
-		// 让玩家处于受伤状态（治疗师不会锁定满血目标）
-		mRegistry.emplace<game::defs::InjuredTag>(entity);
-		auto& stats = mRegistry.get<game::component::StatsComponent>(entity);
-		stats.mHp = stats.mMaxHp / 2;
-		spdlog::info("创建弓箭手: 位置: {}, {}", position.x, position.y);
-		return true;
+		// 记录本关敌人总数（registry.ctx() 中的 GameStats 才是各系统读取的实例）
+		mGameStats.mEnemyCount = enemy_count;
+		mRegistry.ctx().get<game::data::GameStats&>().mEnemyCount = enemy_count;
+		spdlog::info("本关敌人总数: {}", mGameStats.mEnemyCount);
 	}
 
 	bool GameScene::onClearAllPlayers() {
+		auto& dispatcher = mContext.getDispatcher();
+		// 通过移除单位事件回收（释放放置点占用、标记死亡），由 PlaceUnitSystem 处理
 		auto view = mRegistry.view<game::component::PlayerComponent>();
 		for (auto entity : view) {
-			mRegistry.destroy(entity);
+			dispatcher.enqueue(game::defs::RemovePlayerUnitEvent{ entity });
 		}
 		return true;
 	}

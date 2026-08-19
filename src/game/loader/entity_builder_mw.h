@@ -51,6 +51,7 @@ namespace game::loader {
 
     private:
         void buildPath();       ///< @brief 生成路径节点
+        void buildPlace();      ///< @brief 生成放置区域（近战/远程），如果瓦片属性中标记了place类型就添加
     };
 
 }   // namespace game::loader
