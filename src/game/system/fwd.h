@@ -29,6 +29,7 @@ namespace game::system {
     class GameRuleSystem;
     class PlaceUnitSystem;
     class RenderRangeSystem;
+    class DebugUISystem;
 
 }   // namespace game::system
 

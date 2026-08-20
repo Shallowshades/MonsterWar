@@ -40,6 +40,7 @@ main.cpp
       → render()
         → RenderSystem (按 layer+depth 排序渲染)
         → HealthBarSystem (绘制受伤单位的血量条)
+        → DebugUISystem (ImGui 调试 UI，最后渲染，盖在最上面)
     → close()
       → 逆序清理所有子系统
 ```
@@ -109,6 +110,7 @@ main.cpp
 | HealthBarSystem      | `health_bar_system.cpp`      | 渲染受伤单位的血量条（按血量百分比变色）                                          |
 | PlaceUnitSystem      | `place_unit_system.cpp`      | 出击准备/放置：幽灵跟随鼠标、检测放置点、落子出兵、扣费、占用放置点、取消          |
 | RenderRangeSystem    | `render_range_system.cpp`    | 渲染预备远程单位的攻击范围圆（半透明绿色）                                        |
+| DebugUISystem        | `debug_ui_system.cpp`        | 调试 UI：ImGui 每帧逻辑+渲染（关闭/恢复逻辑分辨率，中文测试窗口 + Demo 窗口）      |
 
 ## 关卡加载系统（Builder 模式）
 
@@ -265,6 +267,22 @@ assets/data/level_config.json  ← 关卡/波次/敌人组成（数据）
 - **shuffle** (`engine::utils::math`) — Fisher-Yates 洗牌（`std::shuffle` + thread_local mt19937）
 - **ctx 引用语义** (`game_scene.cpp`) — 新存入 `Waves&` / `waypoint_nodes&` / `start_points&` / `level_number&`（就地修改的共享状态用引用语义）；`GameStats` 保持值语义（`initLevelConfig` 先于 `initRegistryContext`，拷贝带正确的 `mEnemyCount`）
 - **初始化顺序** (`game_scene.cpp`) — `initSessionData` → `initLevelConfig`（复制当前关波次 + 设置 `mGameStats.mEnemyCount`）→ … → `initRegistryContext` → `initEnemySpawner`；`loadLevel` 地图路径改用 `mLevelConfig->getMapPath(mLevelNumber)`
+
+## ImGui 调试 UI 系统
+
+把 ImGui（调试 GUI）接入引擎的完整三件套：初始化 / 事件 / 渲染，并新增 `DebugUISystem` 每帧绘制调试窗口。用于运行时查看状态、调整参数、快速开发 UI 原型。
+
+```
+GameApp::initImGui()         ① 初始化：CreateContext → 配置/缩放/透明度 → 中文字体 → SDL3 后端
+InputManager::update()       ② 事件：SDL_PollEvent 里 ImGui_ImplSDL3_ProcessEvent + WantCaptureMouse 拦截
+DebugUISystem::update()      ③ 渲染：beginFrame → renderDemoUI → endFrame（挂在 GameScene::render 最后）
+```
+
+- **initImGui** (`engine::core`) — ImGui 初始化：`CreateContext`、键盘/手柄导航、`StyleColorsDark`、系统 DPI 缩放（`SDL_GetDisplayContentScale`）、窗口/弹窗透明度、中文字体 `VonwaonBitmap-16px.ttf`（`GetGlyphRangesChineseSimplifiedCommon`，失败回退默认字体）、`ImGui_ImplSDL3_InitForSDLRenderer` + `ImGui_ImplSDLRenderer3_Init`；在 `initSceneManager` 后、首个场景创建前调用；`close()` 里 Shutdown 三件套（在 `SDL_DestroyRenderer` 之前）
+- **逻辑分辨率开关** (`game_state.h/.cpp`) — `disableLogicalPresentation()` / `enableLogicalPresentation()`：读当前逻辑尺寸后用 `SDL_LOGICAL_PRESENTATION_DISABLED` / `LETTERBOX` 重设。ImGui 对 letterbox 支持差，画 ImGui 前临时关闭（鼠标 1:1 到物理像素）、画完恢复
+- **输入接线** (`input_manager.cpp`) — 轮询循环里 `ImGui_ImplSDL3_ProcessEvent`；`processEvent` 开头 `ImGui::GetIO().WantCaptureMouse` 拦截，ImGui 捕获鼠标时游戏不响应（调试 UI 不穿透到放置/战斗操作）
+- **DebugUISystem** (`game::system`) — 每帧 `beginFrame`（三个 NewFrame + 关逻辑分辨率）→ `renderDemoUI`（中文测试窗口：Text/按钮/音量滑条 + `ShowDemoWindow`）→ `endFrame`（`Render` + `RenderDrawData` + 恢复逻辑分辨率）；持 `mRegistry` 为后续"单位信息查看"预留
+- **渲染顺序** — 挂在 `GameScene::render()` 最后（`Scene::render()` 之后），盖在最上层，在 `present()` 前写进 SDL 渲染器
 
 ## 战斗系统
 
@@ -487,7 +505,8 @@ src/
         ├── combat_resolve_system.cpp/h     # 伤害/治疗计算与结算
         ├── projectile_system.cpp/h         # 投射物飞行与命中
         ├── effect_system.cpp/h             # 特效创建（死亡特效）
-        └── health_bar_system.cpp/h         # 血量条渲染
+        ├── health_bar_system.cpp/h         # 血量条渲染
+        └── debug_ui_system.cpp/h           # 调试 UI（ImGui 每帧逻辑+渲染）
 ```
 
 ```

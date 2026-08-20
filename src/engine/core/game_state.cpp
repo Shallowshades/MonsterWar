@@ -48,4 +48,24 @@ void GameState::setLogicalSize(glm::vec2 newSize) {
 	spdlog::trace("逻辑分辨率设置为: {}x{}", newSize.x, newSize.y);
 }
 
-} // namespace engine::core 
+bool GameState::disableLogicalPresentation() {
+	int width, height;
+	SDL_GetRenderLogicalPresentation(mRenderer, &width, &height, NULL);
+	return SDL_SetRenderLogicalPresentation(mRenderer,
+		width,
+		height,
+		SDL_LOGICAL_PRESENTATION_DISABLED
+	);
+}
+
+bool GameState::enableLogicalPresentation() {
+	int width, height;
+	SDL_GetRenderLogicalPresentation(mRenderer, &width, &height, NULL);
+	return SDL_SetRenderLogicalPresentation(mRenderer,
+		width,
+		height,
+		SDL_LOGICAL_PRESENTATION_LETTERBOX
+	);
+}
+
+} // namespace engine::core

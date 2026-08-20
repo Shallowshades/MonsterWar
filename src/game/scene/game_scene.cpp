@@ -25,6 +25,7 @@
 #include "../system/game_rule_system.h"
 #include "../system/place_unit_system.h"
 #include "../system/render_range_system.h"
+#include "../system/debug_ui_system.h"
 #include "../ui/units_portrait_ui.h"
 #include "../defs/tags.h"
 #include "../../engine/component/transform_component.h"
@@ -150,6 +151,7 @@ namespace game::scene {
 		mRenderRangeSystem->update(mRegistry, renderer, camera);   // 攻击范围圆（透明，放在最上层）
 
 		Scene::render();
+		mDebugUISystem->update();    // 调试UI的显示优先级最高，最后渲染
 	}
 
 	void GameScene::clean() {
@@ -292,6 +294,7 @@ namespace game::scene {
 		mGameRuleSystem = std::make_unique<game::system::GameRuleSystem>(mRegistry, dispatcher);
 		mPlaceUnitSystem = std::make_unique<game::system::PlaceUnitSystem>(mRegistry, *mEntityFactory, mContext);
 		mRenderRangeSystem = std::make_unique<game::system::RenderRangeSystem>();
+		mDebugUISystem = std::make_unique<game::system::DebugUISystem>(mRegistry, mContext);
 		spdlog::info("系统初始化完成");
 		return true;
 	}
