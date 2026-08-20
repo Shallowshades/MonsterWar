@@ -7,6 +7,8 @@
 #include "../loader/entity_builder_mw.h"
 #include "../data/ui_config.h"
 #include "../data/game_stats.h"
+#include "../data/level_config.h"
+#include "../spawner/enemy_spawner.h"
 #include "../system/follow_path_system.h"
 #include "../system/remove_dead_system.h"
 #include "../system/block_system.h"
@@ -63,6 +65,11 @@ namespace game::scene {
 			return;
 		}
 
+		if (!initLevelConfig()) {
+			spdlog::error("初始化关卡配置失败");
+			return;
+		}
+
 		if (!initUIConfig()) {
 			spdlog::error("初始化UI配置失败");
 			return;
@@ -97,8 +104,11 @@ namespace game::scene {
 			spdlog::error("初始化系统失败");
 			return;
 		}
+		if (!initEnemySpawner()) {
+			spdlog::error("初始化敌人生成器失败");
+			return;
+		}
 		testSessionData();
-		createTestEnemy();
 
 		Scene::init();
 	}
@@ -122,6 +132,8 @@ namespace game::scene {
 		mAnimationSystem->update(delta_time);
 		mPlaceUnitSystem->update(delta_time);					// 放置单位系统（跟随鼠标、检测放置位置）
 		mYsortSystem->update(mRegistry);					    // 调用顺序要在MovementSystem之后
+
+		mEnemySpawner->update(delta_time);						// 敌人生成器（按波次生成敌人）
 
 		mUnitsPortraitUI->update(delta_time);					// 肖像UI（遮盖更新、左右滚动）
 
@@ -163,6 +175,22 @@ namespace game::scene {
 		return true;
 	}
 
+	bool GameScene::initLevelConfig() {
+		// 关卡配置可能由多个场景共享，为空时才创建并加载
+		if (!mLevelConfig) {
+			mLevelConfig = std::make_shared<game::data::LevelConfig>();
+			if (!mLevelConfig->loadFromFile("assets/data/level_config.json")) {
+				spdlog::error("加载关卡配置失败");
+				return false;
+			}
+		}
+		// 从关卡配置复制当前关卡的波次数据与敌人总数（initRegistryContext 之前，保证 ctx 拷贝到正确的值）
+		mWaves = mLevelConfig->getWavesData(mLevelNumber);
+		mGameStats.mEnemyCount = mLevelConfig->getTotalEnemyCount(mLevelNumber);
+		spdlog::info("本关敌人总数: {}", mGameStats.mEnemyCount);
+		return true;
+	}
+
 	bool GameScene::initUIConfig() {
 		// UI配置可能由多个场景共享，为空时才创建并加载
 		if (!mUIConfig) {
@@ -184,7 +212,7 @@ namespace game::scene {
 			mWaypointNodes,
 			mStartPoints)
 		);
-		if (!level_loader.loadLevel("assets/maps/level1.tmj", this)) {
+		if (!level_loader.loadLevel(mLevelConfig->getMapPath(mLevelNumber), this)) {
 			spdlog::error("加载关卡失败");
 			return false;
 		}
@@ -226,6 +254,11 @@ namespace game::scene {
 		mRegistry.ctx().emplace<std::shared_ptr<game::factory::BlueprintManager>>(mBlueprintManager);
 		mRegistry.ctx().emplace<std::shared_ptr<game::data::SessionData>>(mSessionData);
 		mRegistry.ctx().emplace<std::shared_ptr<game::data::UIConfig>>(mUIConfig);
+		mRegistry.ctx().emplace<std::shared_ptr<game::data::LevelConfig>>(mLevelConfig);
+		mRegistry.ctx().emplace<std::unordered_map<int, game::data::WaypointNode>&>(mWaypointNodes);
+		mRegistry.ctx().emplace<std::vector<int>&>(mStartPoints);
+		mRegistry.ctx().emplace<game::data::Waves&>(mWaves);
+		mRegistry.ctx().emplace<int&>(mLevelNumber);
 		return true;
 	}
 
@@ -263,6 +296,12 @@ namespace game::scene {
 		return true;
 	}
 
+	bool GameScene::initEnemySpawner() {
+		mEnemySpawner = std::make_unique<game::spawner::EnemySpawner>(mRegistry, *mEntityFactory);
+		spdlog::info("敌人生成器初始化完成");
+		return true;
+	}
+
 	// --- 出击选择UI（已迁移至 game::ui::UnitsPortraitUI，由 initUnitsPortraitUI() 创建） ---
 
 	// --- 测试函数 ---
@@ -274,24 +313,6 @@ namespace game::scene {
 			spdlog::info("角色名: {}, 职业: {}, 等级: {}, 稀有度: {}",
 				unit.second.mName, unit.second.mClass, unit.second.mLevel, unit.second.mRarity);
 		}
-	}
-
-	void GameScene::createTestEnemy() {
-		// 每个起点创建一批敌人
-		int enemy_count = 0;
-		for (auto start_index : mStartPoints) {
-			auto position = mWaypointNodes[start_index].mPosition;
-
-			mEntityFactory->createEnemyUnit("wolf"_hs, position, start_index);
-			mEntityFactory->createEnemyUnit("slime"_hs, position, start_index);
-			mEntityFactory->createEnemyUnit("goblin"_hs, position, start_index);
-			mEntityFactory->createEnemyUnit("dark_witch"_hs, position, start_index);
-			enemy_count += 4;
-		}
-		// 记录本关敌人总数（registry.ctx() 中的 GameStats 才是各系统读取的实例）
-		mGameStats.mEnemyCount = enemy_count;
-		mRegistry.ctx().get<game::data::GameStats&>().mEnemyCount = enemy_count;
-		spdlog::info("本关敌人总数: {}", mGameStats.mEnemyCount);
 	}
 
 	bool GameScene::onClearAllPlayers() {

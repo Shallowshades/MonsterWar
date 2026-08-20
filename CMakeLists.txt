@@ -355,6 +355,7 @@ set(SOURCES
     # 游戏层源文件
     src/game/data/session_data.cpp
     src/game/data/ui_config.cpp
+    src/game/data/level_config.cpp
     src/game/loader/entity_builder_mw.cpp
     src/game/factory/blueprint_manager.cpp
     src/game/factory/entity_factory.cpp
@@ -375,6 +376,7 @@ set(SOURCES
     src/game/system/game_rule_system.cpp
     src/game/system/place_unit_system.cpp
     src/game/system/render_range_system.cpp
+    src/game/spawner/enemy_spawner.cpp
     src/game/ui/units_portrait_ui.cpp
 )
 

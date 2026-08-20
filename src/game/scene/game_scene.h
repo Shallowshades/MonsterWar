@@ -13,6 +13,7 @@
 #include "../data/session_data.h"
 #include "../data/ui_config.h"
 #include "../data/game_stats.h"
+#include "../data/level_config.h"
 #include "../defs/events.h"
 #include "../system/fwd.h"
 #include "../../engine/scene/scene.h"
@@ -27,6 +28,9 @@ namespace game::ui {
 namespace game::factory {
 	class EntityFactory;
 	class BlueprintManager;
+}
+namespace game::spawner {
+	class EnemySpawner;
 }
 namespace game::system {
 	class BlockSystem;
@@ -55,12 +59,13 @@ namespace game::scene {
 		[[nodiscard]] bool initRegistryContext();
 		[[nodiscard]] bool initUnitsPortraitUI();
 		[[nodiscard]] bool initSystems();
+		[[nodiscard]] bool initLevelConfig();
+		[[nodiscard]] bool initEnemySpawner();
 
 		// 输入回调函数
 
 		// 测试函数
 		void testSessionData();
-		void createTestEnemy();
 		[[nodiscard]] bool onClearAllPlayers();
 
 	private:
@@ -100,6 +105,10 @@ namespace game::scene {
 		std::shared_ptr<game::factory::BlueprintManager> mBlueprintManager;  // 蓝图管理器，负责管理蓝图数据
 		std::shared_ptr<game::data::SessionData> mSessionData;               // 会话数据，关卡切换时需要传递的数据
 		std::shared_ptr<game::data::UIConfig> mUIConfig;                     // UI配置，负责管理UI数据
+		std::shared_ptr<game::data::LevelConfig> mLevelConfig;               // 关卡配置，负责管理关卡数据
+
+		game::data::Waves mWaves;                                            // 当前关卡的波次数据（从关卡配置复制）
+		std::unique_ptr<game::spawner::EnemySpawner> mEnemySpawner;          // 敌人生成器，按波次生成敌人
 
 		int mLevelNumber{ 1 };    // 当前关卡号（会话数据的缓存副本）
 	};

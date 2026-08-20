@@ -36,6 +36,7 @@ main.cpp
         → MovementSystem (Velocity → Transform)
         → AnimationSystem (帧动画推进，响应 PlayAnimationEvent / AnimationFinishedEvent)
         → YSortSystem (Y 坐标排序)
+        → EnemySpawner (按波次生成敌人：波次倒计时 + 生成间隔 + 随机起点)
       → render()
         → RenderSystem (按 layer+depth 排序渲染)
         → HealthBarSystem (绘制受伤单位的血量条)
@@ -238,6 +239,33 @@ registry.ctx()（服务定位器）
 - **渲染变色** (`engine::render`) — `RenderComponent::mColor` + `drawSprite` 颜色参数（`SDL_SetTextureColorModFloat` 调制），幽灵绿/红即时切换；`drawFilledCircle` 复用 `UI/circle.png`
 - **击杀侧通关修复** (`combat_resolve_system.cpp:79`) — `createTestEnemy` 补上 `GameStats.mEnemyCount`（含 ctx 实例），全歼敌人触发 `LevelClearDelayedEvent`
 
+## 敌人生成与关卡配置系统
+
+实现了数据驱动的波次刷怪：敌人不再是测试代码硬编码，而是从 `level_config.json` 按波次、间隔、敌人组成、随机起点生成。核心是把"内容"（关卡/波次/敌人）搬进数据文件，运行时用 `LevelConfig` 解析、`EnemySpawner` 驱动。
+
+```
+assets/data/level_config.json  ← 关卡/波次/敌人组成（数据）
+        │ LevelConfig::loadFromFile() 解析
+        ▼
+  LevelConfig → vector<LevelData>（每关：地图、准备时间、波次队列、敌人等级/稀有度、总数）
+        │ 游戏启动时取当前关
+        ▼
+  Waves（关卡波次队列 + 倒计时）── 存入 registry.ctx() ──┐
+                                                        ▼
+                        EnemySpawner::update(每帧)
+    ├─ 波次倒计时走完 → 队首波弹出 → 敌人逐个进当前波队列 → shuffle 打乱
+    └─ 生成计时走完 → 弹出队首敌人类型 → 随机起点 → createEnemyUnit()
+```
+
+- **关卡数据结构** (`level_data.h`) — `Wave`（波次间隔/生成间隔/敌人类型列表）/ `Waves`（波次队列 + 倒计时）/ `LevelData`（关卡属性 + 波次数据 + 敌人总数）
+- **LevelConfig** (`game::data`) — 读取 `level_config.json` → `vector<LevelData>`；敌人名用 `entt::hashed_string` 哈希，与蓝图 `"wolf"_hs` 键对齐；解析时累加 `mTotalEnemyCount`；getters 按关卡号（-1 角标）取数据
+- **EnemySpawner** (`game::spawner`) — 双队列模型：`std::queue<Wave>` 管波间节奏（`next_wave_interval`），`std::deque<entt::id_type>` 管波内节奏（`spawn_interval`，双端队列支持 `shuffle` 洗牌）
+  - `update()` — 两段：波次倒计时走完开启新一波（灌入敌人 + 打乱）；生成计时走完 `spawnEnemy()`
+  - `spawnEnemy()` — `randomInt` 随机起点、等级/稀有度从 LevelConfig 读、`createEnemyUnit(type, pos, start_index, level, rarity)`
+- **shuffle** (`engine::utils::math`) — Fisher-Yates 洗牌（`std::shuffle` + thread_local mt19937）
+- **ctx 引用语义** (`game_scene.cpp`) — 新存入 `Waves&` / `waypoint_nodes&` / `start_points&` / `level_number&`（就地修改的共享状态用引用语义）；`GameStats` 保持值语义（`initLevelConfig` 先于 `initRegistryContext`，拷贝带正确的 `mEnemyCount`）
+- **初始化顺序** (`game_scene.cpp`) — `initSessionData` → `initLevelConfig`（复制当前关波次 + 设置 `mGameStats.mEnemyCount`）→ … → `initRegistryContext` → `initEnemySpawner`；`loadLevel` 地图路径改用 `mLevelConfig->getMapPath(mLevelNumber)`
+
 ## 战斗系统
 
 实现了基于 ECS 标签和冷却计时的自动战斗循环。
@@ -438,14 +466,15 @@ src/
 │   │   └── state/                    #   状态模式：Normal / Hover / Pressed
 │   └── utils/                        #   工具（Math, Events, Alignment）
 └── game/                             #   游戏层 — MonsterWar 游戏逻辑
-    ├── component/                    #   游戏组件（Enemy, Stats, ClassName, Player, Blocker, Target, Projectile）
-    ├── data/                         #   数据结构（WaypointNode, EntityBlueprint, SessionData）
+    ├── component/                    #   游戏组件（Enemy, Stats, ClassName, Player, Blocker, Target, Projectile, UnitPrep）
+    ├── data/                         #   数据结构（WaypointNode, EntityBlueprint, SessionData, LevelConfig, LevelData）
     ├── defs/                         #   标签与事件定义 + 常量（Tags, Events, Constants）
     ├── factory/                      #   工厂（BlueprintManager, EntityFactory）
     ├── loader/                       #   关卡扩展构建器（EntityBuilderMW）
     ├── scene/                        #   游戏场景（GameScene — 主游戏场景）
     │   └── game_scene.cpp/h
-    └── system/                       #   游戏系统（战斗、寻路、阻挡等）
+    ├── spawner/                      #   敌人生成器（EnemySpawner — 按波次生成）
+    └── system/                       #   游戏系统（战斗、寻路、阻挡、放置等）
         ├── follow_path_system.cpp/h
         ├── block_system.cpp/h
         ├── remove_dead_system.cpp/h
