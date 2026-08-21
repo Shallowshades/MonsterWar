@@ -36,11 +36,13 @@ main.cpp
         → MovementSystem (Velocity → Transform)
         → AnimationSystem (帧动画推进，响应 PlayAnimationEvent / AnimationFinishedEvent)
         → YSortSystem (Y 坐标排序)
+        → SelectionSystem (鼠标悬浮单位检测：优先玩家后敌人，写入 hovered_unit ctx)
         → EnemySpawner (按波次生成敌人：波次倒计时 + 生成间隔 + 随机起点)
       → render()
         → RenderSystem (按 layer+depth 排序渲染)
         → HealthBarSystem (绘制受伤单位的血量条)
-        → DebugUISystem (ImGui 调试 UI，最后渲染，盖在最上面)
+        → RenderRangeSystem (预备/已放置远程单位的攻击范围圆)
+        → DebugUISystem (ImGui 调试 UI：悬浮 tooltip + 选中角色状态，最后渲染盖最上面)
     → close()
       → 逆序清理所有子系统
 ```
@@ -109,8 +111,9 @@ main.cpp
 | EffectSystem         | `effect_system.cpp`          | 监听 EnemyDeadEffectEvent，通过实体工厂创建死亡特效                               |
 | HealthBarSystem      | `health_bar_system.cpp`      | 渲染受伤单位的血量条（按血量百分比变色）                                          |
 | PlaceUnitSystem      | `place_unit_system.cpp`      | 出击准备/放置：幽灵跟随鼠标、检测放置点、落子出兵、扣费、占用放置点、取消          |
-| RenderRangeSystem    | `render_range_system.cpp`    | 渲染预备远程单位的攻击范围圆（半透明绿色）                                        |
-| DebugUISystem        | `debug_ui_system.cpp`        | 调试 UI：ImGui 每帧逻辑+渲染（关闭/恢复逻辑分辨率，中文测试窗口 + Demo 窗口）      |
+| RenderRangeSystem    | `render_range_system.cpp`    | 渲染预备/已放置远程单位的攻击范围圆（半透明绿色，`ShowRangeTag`）                 |
+| DebugUISystem        | `debug_ui_system.cpp`        | 调试 UI：ImGui 每帧逻辑+渲染（悬浮单位 tooltip + 选中单位角色状态窗口）           |
+| SelectionSystem      | `selection_system.cpp`       | 选择单位：每帧悬浮检测（写 `hovered_unit` ctx）+ 左键选中玩家单位 + 右键清除选中 |
 
 ## 关卡加载系统（Builder 模式）
 
@@ -237,7 +240,7 @@ registry.ctx()（服务定位器）
   - `checkTargetPlace` — 按放置点中心（左上角 + size×scale/2）距离平方 < `PLACE_RADIUS²` 判定可放
   - 落子动作序列：建单位 → 占用放置点 → 扣 cost → 幽灵死亡 → 移除肖像 → 图层修正 → 音效
   - `onRemoveUnitEvent` — 标记死亡 + 解除对应放置点占用（暂停清除也走此事件）
-- **RenderRangeSystem** (`game::system`) — 遍历 `ShowRangeTag + UnitPrepComponent`，用 `drawFilledCircle` 画半透明攻击范围圆（`RANGE_COLOR`）
+- **RenderRangeSystem** (`game::system`) — 遍历 `ShowRangeTag + UnitPrepComponent`（预备幽灵）与 `ShowRangeTag + Transform + StatsComponent`（已放置单位），用 `drawFilledCircle` 画半透明攻击范围圆（`RANGE_COLOR`）
 - **渲染变色** (`engine::render`) — `RenderComponent::mColor` + `drawSprite` 颜色参数（`SDL_SetTextureColorModFloat` 调制），幽灵绿/红即时切换；`drawFilledCircle` 复用 `UI/circle.png`
 - **击杀侧通关修复** (`combat_resolve_system.cpp:79`) — `createTestEnemy` 补上 `GameStats.mEnemyCount`（含 ctx 实例），全歼敌人触发 `LevelClearDelayedEvent`
 
@@ -275,14 +278,39 @@ assets/data/level_config.json  ← 关卡/波次/敌人组成（数据）
 ```
 GameApp::initImGui()         ① 初始化：CreateContext → 配置/缩放/透明度 → 中文字体 → SDL3 后端
 InputManager::update()       ② 事件：SDL_PollEvent 里 ImGui_ImplSDL3_ProcessEvent + WantCaptureMouse 拦截
-DebugUISystem::update()      ③ 渲染：beginFrame → renderDemoUI → endFrame（挂在 GameScene::render 最后）
+DebugUISystem::update()      ③ 渲染：beginFrame → renderHoveredUnit → renderSelectedUnit → endFrame（挂在 GameScene::render 最后）
 ```
 
 - **initImGui** (`engine::core`) — ImGui 初始化：`CreateContext`、键盘/手柄导航、`StyleColorsDark`、系统 DPI 缩放（`SDL_GetDisplayContentScale`）、窗口/弹窗透明度、中文字体 `VonwaonBitmap-16px.ttf`（`GetGlyphRangesChineseSimplifiedCommon`，失败回退默认字体）、`ImGui_ImplSDL3_InitForSDLRenderer` + `ImGui_ImplSDLRenderer3_Init`；在 `initSceneManager` 后、首个场景创建前调用；`close()` 里 Shutdown 三件套（在 `SDL_DestroyRenderer` 之前）
 - **逻辑分辨率开关** (`game_state.h/.cpp`) — `disableLogicalPresentation()` / `enableLogicalPresentation()`：读当前逻辑尺寸后用 `SDL_LOGICAL_PRESENTATION_DISABLED` / `LETTERBOX` 重设。ImGui 对 letterbox 支持差，画 ImGui 前临时关闭（鼠标 1:1 到物理像素）、画完恢复
 - **输入接线** (`input_manager.cpp`) — 轮询循环里 `ImGui_ImplSDL3_ProcessEvent`；`processEvent` 开头 `ImGui::GetIO().WantCaptureMouse` 拦截，ImGui 捕获鼠标时游戏不响应（调试 UI 不穿透到放置/战斗操作）
-- **DebugUISystem** (`game::system`) — 每帧 `beginFrame`（三个 NewFrame + 关逻辑分辨率）→ `renderDemoUI`（中文测试窗口：Text/按钮/音量滑条 + `ShowDemoWindow`）→ `endFrame`（`Render` + `RenderDrawData` + 恢复逻辑分辨率）；持 `mRegistry` 为后续"单位信息查看"预留
+- **DebugUISystem** (`game::system`) — 每帧 `beginFrame`（三个 NewFrame + 关逻辑分辨率）→ `renderHoveredUnit`（悬浮单位 tooltip）+ `renderSelectedUnit`（左上角「角色状态」窗口）→ `endFrame`（`Render` + `RenderDrawData` + 恢复逻辑分辨率）
 - **渲染顺序** — 挂在 `GameScene::render()` 最后（`Scene::render()` 之后），盖在最上层，在 `present()` 前写进 SDL 渲染器
+
+## 单位信息显示与选择系统
+
+把上一课的调试 GUI 从"演示窗口"升级为**运行时单位侦察工具**：鼠标悬浮单位弹 tooltip、左键选中玩家单位弹「角色状态」面板并画攻击范围圆、右键清除选中。核心是新增 `SelectionSystem` 做悬浮/选中判定，并引入 **`emplace_as` 命名上下文**让场景与多个系统共享同一份"当前悬浮/选中"状态。
+
+```
+GameScene 持有 mSelectedUnit / mHoveredUnit（entt::entity）
+    │ registry.ctx().emplace_as<entt::entity&>("selected_unit"_hs, mSelectedUnit)
+    │ registry.ctx().emplace_as<entt::entity&>("hovered_unit"_hs, mHoveredUnit)
+    ▼
+SelectionSystem::update (每帧，先玩家后敌人 view)
+    │ distanceSquared(transform.mPosition, mouse) <= HOVER_RADIUS² → 写 hovered_unit ctx
+    ▼
+onMouseLeftClick  → 悬浮的是玩家单位 → 清除旧选中 + 设 selected_unit + 加 ShowRangeTag → return true
+onMouseRightClick → 清除选中 + return false（穿透，让取消放置照常响应）
+    ▼
+DebugUISystem 只读两个 ctx：hovered → BeginTooltip 显示属性；selected → 左上角「角色状态」窗口
+RenderRangeSystem 第二段 view：ShowRangeTag + Transform + Stats → 画已放置单位的范围圆
+```
+
+- **`emplace_as` 命名上下文** (`game_scene.cpp`) — `registry.ctx().emplace_as<T>("key"_hs, value)`：按 FNV-1a 哈希名注册上下文项。这里注册 `entt::entity&` 引用，让 SelectionSystem（写）与 DebugUISystem（读）通过 `ctx().get<entt::entity&>("hovered_unit"_hs)` 访问**同一份** GameScene 成员状态，跨模块解耦
+- **SelectionSystem** (`game::system`) — 构造时 `connect` 输入信号 `mouse_left`/`mouse_right`（析构 `disconnect`）；`update()` 每帧用 `distanceSquared` 检测悬浮（玩家优先，`HOVER_RADIUS` 见常量表）；左键选中玩家单位（`clearCurrentSelection` + 加 `ShowRangeTag`，返回 true 阻止其他订阅者）；右键清选（返回 false 穿透给取消放置）
+- **DebugUISystem 单位信息** (`debug_ui_system.cpp`) — `renderHoveredUnit` 用 `BeginTooltip` 显示姓名（`try_get<NameComponent>`，只有玩家有）+ 职业/等级/稀有度/生命值/攻击力/防御力/攻击范围/攻击间隔；`renderSelectedUnit` 用 `SetNextWindowPos(ImVec2(10,10))` + `Begin("角色状态", NoTitleBar)` 显示同样信息 + 阻挡数量（`try_get<BlockerComponent>`）
+- **悬浮/选中语义分离** — hovered 每帧重算（纯查询预览）；selected 只在左键点击变更（持久选择），`ShowRangeTag` 是其副作用信号，驱动范围圆绘制
+- **与 `WantCaptureMouse` 协同** — 鼠标悬停/拖动 ImGui 窗口时事件被拦截，不会误选单位；代价是调试窗口上点不到游戏（预期行为）
 
 ## 战斗系统
 
@@ -368,6 +396,7 @@ ECS 空标签（tag），用于标记实体状态，配合 view 的 `exclude` �
 | HEALTH_BAR_SIZE     | `constants.h` | 血量条大小（48.0 × 8.0）                                     |
 | HEALTH_BAR_OFFSET_Y | `constants.h` | 血量条竖直方向偏移（8.0，水平方向居中）                      |
 | PLACE_RADIUS        | `constants.h` | 放置吸附半径（40.0），鼠标靠近放置点中心小于此距离即可放置   |
+| HOVER_RADIUS        | `constants.h` | 鼠标悬浮检测半径（30.0），鼠标与单位中心距离小于此值视为悬浮 |
 | RANGE_COLOR         | `constants.h` | 攻击范围圆颜色（半透明绿 {0,1,0,0.3}）                        |
 
 ### 玩家类型枚举（`game::defs::PlayerType`）
@@ -383,8 +412,8 @@ ECS 空标签（tag），用于标记实体状态，配合 view 的 `exclude` �
 
 | 输入       | 快捷键         | 行为                                                           |
 | ---------- | -------------- | -------------------------------------------------------------- |
-| 鼠标左键   | `mouse_left`   | 放置幽灵单位（由 `PlaceUnitSystem` 注册，落在合法放置点才生效）|
-| 鼠标右键   | `mouse_right`  | 取消放置（移除幽灵单位，由 `PlaceUnitSystem` 注册）            |
+| 鼠标左键   | `mouse_left`   | 放置幽灵单位 / 选中悬浮的玩家单位（`PlaceUnitSystem` + `SelectionSystem`）|
+| 鼠标右键   | `mouse_right`  | 取消放置（移除幽灵单位）；清除单位选中（`SelectionSystem`，右键穿透）      |
 | A / D 键   | `move_left`/`move_right` | 出击面板左右滚动（由 `UnitsPortraitUI` 处理）      |
 | P / Escape | `pause`        | 清除所有已出击的玩家单位（`GameScene` 发 `RemovePlayerUnitEvent`） |
 
@@ -506,7 +535,8 @@ src/
         ├── projectile_system.cpp/h         # 投射物飞行与命中
         ├── effect_system.cpp/h             # 特效创建（死亡特效）
         ├── health_bar_system.cpp/h         # 血量条渲染
-        └── debug_ui_system.cpp/h           # 调试 UI（ImGui 每帧逻辑+渲染）
+        ├── debug_ui_system.cpp/h           # 调试 UI（ImGui 每帧逻辑+渲染，悬浮/选中单位信息）
+        └── selection_system.cpp/h          # 选择单位系统（悬浮检测 + 左键选中 + 右键清除）
 ```
 
 ```

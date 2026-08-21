@@ -21,6 +21,7 @@
 #include <memory>
 #include <unordered_map>
 #include <vector>
+#include <entt/entity/entity.hpp>
 
 namespace game::ui {
 	class UnitsPortraitUI;
@@ -93,6 +94,7 @@ namespace game::scene {
 		std::unique_ptr<game::system::PlaceUnitSystem> mPlaceUnitSystem;     // 放置单位系统（准备/放置出击单位）
 		std::unique_ptr<game::system::RenderRangeSystem> mRenderRangeSystem; // 渲染范围系统（远程攻击范围圆）
 		std::unique_ptr<game::system::DebugUISystem> mDebugUISystem;         // 调试UI系统（ImGui调试窗口）
+		std::unique_ptr<game::system::SelectionSystem> mSelectionSystem;     // 选择单位系统（鼠标悬浮/选中单位）
 
 		std::unique_ptr<game::ui::UnitsPortraitUI> mUnitsPortraitUI;         // 封装的单位肖像UI，负责管理单位肖像UI的创建、更新和排列
 
@@ -112,6 +114,8 @@ namespace game::scene {
 		std::unique_ptr<game::spawner::EnemySpawner> mEnemySpawner;          // 敌人生成器，按波次生成敌人
 
 		int mLevelNumber{ 1 };    // 当前关卡号（会话数据的缓存副本）
+		entt::entity mSelectedUnit{ entt::null };    // 游戏中鼠标选中的单位
+		entt::entity mHoveredUnit{ entt::null };     // 游戏中鼠标悬浮的单位
 	};
 
 } // game::scene

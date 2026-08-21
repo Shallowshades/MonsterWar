@@ -26,6 +26,7 @@
 #include "../system/place_unit_system.h"
 #include "../system/render_range_system.h"
 #include "../system/debug_ui_system.h"
+#include "../system/selection_system.h"
 #include "../ui/units_portrait_ui.h"
 #include "../defs/tags.h"
 #include "../../engine/component/transform_component.h"
@@ -133,6 +134,7 @@ namespace game::scene {
 		mAnimationSystem->update(delta_time);
 		mPlaceUnitSystem->update(delta_time);					// 放置单位系统（跟随鼠标、检测放置位置）
 		mYsortSystem->update(mRegistry);					    // 调用顺序要在MovementSystem之后
+		mSelectionSystem->update();							    // 选择单位系统（更新鼠标悬浮单位）
 
 		mEnemySpawner->update(delta_time);						// 敌人生成器（按波次生成敌人）
 
@@ -261,6 +263,8 @@ namespace game::scene {
 		mRegistry.ctx().emplace<std::vector<int>&>(mStartPoints);
 		mRegistry.ctx().emplace<game::data::Waves&>(mWaves);
 		mRegistry.ctx().emplace<int&>(mLevelNumber);
+		mRegistry.ctx().emplace_as<entt::entity&>("selected_unit"_hs, mSelectedUnit);
+		mRegistry.ctx().emplace_as<entt::entity&>("hovered_unit"_hs, mHoveredUnit);
 		return true;
 	}
 
@@ -295,6 +299,7 @@ namespace game::scene {
 		mPlaceUnitSystem = std::make_unique<game::system::PlaceUnitSystem>(mRegistry, *mEntityFactory, mContext);
 		mRenderRangeSystem = std::make_unique<game::system::RenderRangeSystem>();
 		mDebugUISystem = std::make_unique<game::system::DebugUISystem>(mRegistry, mContext);
+		mSelectionSystem = std::make_unique<game::system::SelectionSystem>(mRegistry, mContext);
 		spdlog::info("系统初始化完成");
 		return true;
 	}

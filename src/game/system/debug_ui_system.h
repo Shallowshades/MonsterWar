@@ -41,7 +41,8 @@ private:
     void endFrame();
 
     // 封装每个UI显示模块
-    void renderDemoUI();
+    void renderHoveredUnit();    // 显示鼠标悬浮单位的 tooltip
+    void renderSelectedUnit();   // 显示鼠标选中单位的角色状态窗口
 };
 
 }   // namespace game::system
