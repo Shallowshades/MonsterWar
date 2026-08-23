@@ -46,12 +46,14 @@ main.cpp
         → RenderSystem (按 layer+depth 排序渲染)
         → HealthBarSystem (绘制受伤单位的血量条)
         → RenderRangeSystem (预备/已放置远程单位的攻击范围圆)
-        → DebugUISystem (ImGui 调试 UI：悬浮/肖像 tooltip + 角色状态(升级/撤退/技能) + 关卡信息 + 设置工具 + 调试工具，最后渲染盖最上面)
+        → DebugUISystem (ImGui 调试 UI：悬浮/肖像 tooltip + 角色状态(升级/撤退/技能) + 关卡信息 + 设置工具 + 调试工具，最后渲染盖最上面；仅在 isPlaying()/isPaused() 时渲染——切到结算/结束场景自动停用，避免与它们各自的 ImGui 窗口重叠)
     → close()
       → 逆序清理所有子系统
 ```
 
 > **标题场景（TitleScene）循环更精简**：`Scene::update` → `AnimationSystem` → `MovementSystem` → `YSortSystem`，渲染最后挂 `DebugUISystem::updateTitle(*this)`（标题 Logo / 标题按钮 / 角色信息 / 读档面板）。两个场景切换点：**开始游戏** → 带全部共享数据（蓝图/会话/UI/关卡配置）进 `GameScene`；**返回标题** → 只传 `mContext`（丢弃未保存进度，进度走存档通道）。
+
+> **结算/结束场景（LevelClearScene / EndScene）用 push 而非 replace**：压入场景栈顶后，`SceneManager::update` 只更新栈顶（GameScene 冻结），而 `render` 渲染整条栈（GameScene 的战斗画面留在底下当背景）。胜利 → 压入 LevelClearScene（非最终关）或 EndScene（最终关）；失败（基地被毁 / GameEndEvent）→ 压入 EndScene。这些场景不渲染战斗 ImGui（GameScene 渲染门控已停用），各自挂 `updateLevelClear` / `updateEnd` 分支。
 
 ## ECS 组件系统（EnTT）
 
@@ -121,7 +123,7 @@ main.cpp
 | GameRuleSystem       | `game_rule_system.cpp`       | 游戏规则：cost 恢复、敌人到达基地扣血/胜负判定、单位升级/撤退、通关延迟切换场景     |
 | PlaceUnitSystem      | `place_unit_system.cpp`      | 出击准备/放置：幽灵跟随鼠标、检测放置点、落子出兵、扣费、占用放置点、取消          |
 | RenderRangeSystem    | `render_range_system.cpp`    | 渲染预备/已放置远程单位的攻击范围圆（半透明绿色，`ShowRangeTag`）                 |
-| DebugUISystem        | `debug_ui_system.cpp`        | 调试 UI：ImGui 每帧逻辑+渲染；`update()`（战斗分支：悬浮/肖像 tooltip + 角色状态[升级U/撤退R/技能] + 关卡信息 + 设置工具[暂停P/重开/倍速/音量] + 调试工具[加钱/通关] + 存档面板）+ `updateTitle(TitleScene&)`（标题分支：Logo + 4 按钮 + 角色信息 + 读档面板） |
+| DebugUISystem        | `debug_ui_system.cpp`        | 调试 UI：ImGui 每帧逻辑+渲染，四分支——`update()`（战斗分支：悬浮/肖像 tooltip + 角色状态[升级U/撤退R/技能] + 关卡信息 + 设置工具[暂停P/重开/倍速/音量] + 调试工具[加钱/通关] + 存档面板）+ `updateTitle(TitleScene&)`（标题分支：Logo + 4 按钮 + 角色信息 + 读档面板）+ `updateLevelClear(LevelClearScene&)`（通关结算分支：结算文本 + 统计与角色表格 + 下一关/返回标题/保存按钮）+ `updateEnd(EndScene&)`（游戏结束分支：胜利/失败大字 + 返回标题/退出按钮） |
 | SelectionSystem      | `selection_system.cpp`       | 选择单位：每帧悬浮检测（写 `hovered_unit` ctx）+ 左键选中玩家单位 + 右键清除选中 |
 | SkillSystem          | `skill_system.cpp`          | 技能系统：事件驱动三态流转（就绪/激活/持续结束），显示标识增删、Buff 乘除、被动清理 |
 
@@ -296,15 +298,17 @@ assets/data/level_config.json  ← 关卡/波次/敌人组成（数据）
 ```
 GameApp::initImGui()         ① 初始化：CreateContext → 配置/缩放/透明度 → 中文字体 → SDL3 后端
 InputManager::update()       ② 事件：SDL_PollEvent 里 ImGui_ImplSDL3_ProcessEvent + WantCaptureMouse 拦截
-DebugUISystem::update()      ③ 渲染（GameScene）：beginFrame → 战斗窗口 → 存档面板 → endFrame
-DebugUISystem::updateTitle()   渲染（TitleScene）：beginFrame → Logo → 标题按钮 → 角色信息 → 读档面板 → endFrame
+DebugUISystem::update()            ③ 渲染（GameScene）：beginFrame → 战斗窗口 → 存档面板 → endFrame（仅 isPlaying()/isPaused() 时调用）
+DebugUISystem::updateTitle()         渲染（TitleScene）：beginFrame → Logo → 标题按钮 → 角色信息 → 读档面板 → endFrame
+DebugUISystem::updateLevelClear()    渲染（LevelClearScene）：beginFrame → 结算文本 → 统计与角色表格 → 下一关/返回标题/保存 → endFrame
+DebugUISystem::updateEnd()           渲染（EndScene）：beginFrame → 胜利/失败大字 → 返回标题/退出 → endFrame
 ```
 
 - **initImGui** (`engine::core`) — ImGui 初始化：`CreateContext`、键盘/手柄导航、`StyleColorsDark`、系统 DPI 缩放（`SDL_GetDisplayContentScale`）、窗口/弹窗透明度、中文字体 `VonwaonBitmap-16px.ttf`（`GetGlyphRangesChineseSimplifiedCommon`，失败回退默认字体）、`ImGui_ImplSDL3_InitForSDLRenderer` + `ImGui_ImplSDLRenderer3_Init`；在 `initSceneManager` 后、首个场景创建前调用；`close()` 里 Shutdown 三件套（在 `SDL_DestroyRenderer` 之前）
 - **逻辑分辨率开关** (`game_state.h/.cpp`) — `disableLogicalPresentation()` / `enableLogicalPresentation()`：读当前逻辑尺寸后用 `SDL_LOGICAL_PRESENTATION_DISABLED` / `LETTERBOX` 重设。ImGui 对 letterbox 支持差，画 ImGui 前临时关闭（鼠标 1:1 到物理像素）、画完恢复
 - **输入接线** (`input_manager.cpp`) — 轮询循环里 `ImGui_ImplSDL3_ProcessEvent`；`processEvent` 开头 `ImGui::GetIO().WantCaptureMouse` 拦截，ImGui 捕获鼠标时游戏不响应（调试 UI 不穿透到放置/战斗操作）
-- **DebugUISystem** (`game::system`) — 双分支：`update()`（战斗分支，挂 `GameScene::render` 最后）每帧 `beginFrame` → `renderHoveredUnit` + `renderSelectedUnit` + 角色信息 + 设置/调试工具 + 存档面板 → `endFrame`；`updateTitle(TitleScene&)`（标题分支，挂 `TitleScene::render` 最后）→ `renderTitleLogo` + `renderTitleButtons`（4 按钮直接调 TitleScene 私有回调，`friend`）+ `renderUnitInfoUI`（14 列可排序角色表格 + 升级按钮）+ `renderLoadPanelUI`（3 个 SLOT 读档按钮）→ `endFrame`
-- **渲染顺序** — 挂在 `GameScene::render()` 最后（`Scene::render()` 之后），盖在最上层，在 `present()` 前写进 SDL 渲染器
+- **DebugUISystem** (`game::system`) — 四分支：`update()`（战斗分支，挂 `GameScene::render` 最后）每帧 `beginFrame` → `renderHoveredUnit` + `renderSelectedUnit` + 角色信息 + 设置/调试工具 + 存档面板 → `endFrame`；`updateTitle(TitleScene&)`（标题分支，挂 `TitleScene::render` 最后）→ `renderTitleLogo` + `renderTitleButtons`（4 按钮直接调 TitleScene 私有回调，`friend`）+ `renderUnitInfoUI`（14 列可排序角色表格 + 升级按钮）+ `renderLoadPanelUI`（3 个 SLOT 读档按钮）→ `endFrame`；`updateLevelClear(LevelClearScene&)`（通关结算分支）→ `renderLevelClearText`（结算大字）+ `renderLevelClearTable`（统计 + 角色表格 + 奖励点数）+ `renderLevelClearButtons`（下一关/返回标题/保存）→ `endFrame`；`updateEnd(EndScene&)`（游戏结束分支）→ `renderEndText`（胜利/失败大字）+ `renderEndButtons`（返回标题/退出）→ `endFrame`
+- **渲染门控** — 战斗分支 `update()` 仅在 `GameScene::render()` 里 `isPlaying() || isPaused()` 时调用：LevelClear/End 场景把状态切到 LevelClear/GameOver 后，战斗 ImGui 自动停用，与新场景自己的 ImGui 窗口不重叠；四个场景的 ImGui 都挂在各自 `render()` 最后（`Scene::render()` 之后），盖在最上层，在 `present()` 前写进 SDL 渲染器
 
 ## 单位信息显示与选择系统
 
@@ -423,6 +427,51 @@ GameScene(Context& context,
 - **存档/读档面板** — 各 3 个 `SLOT 1/2/3` 按钮 → `loadFromFile("assets/save/SLOT_x.json")` / `saveToFile(...)`；底部按 `isLevelClear()` 显示「下一关/当前关卡」；GameScene 的存档面板经 `ctx().emplace_as<bool&>("show_save_panel"_hs, mShowSavePanel)` 暴露给 `update()` 分支（ECS/registry 惯例），TitleScene 两个标志因 `friend` 直接读私有成员、不走 ctx
 
 详见 `docs/notes/011-title-scene.md`。
+
+## 通关场景与结束场景
+
+实现**关卡通关结算（LevelClearScene）**与**游戏结束（EndScene）**两个收尾场景：胜利进结算界面（非最终关可继续下一关、返回标题、保存），失败/全通进结束界面（返回标题/退出）；四个场景的背景音乐全部启用（标题/战斗/胜利/失败各一曲）。
+
+### 通关判定链
+
+胜利有**两个入口**，都汇入 GameRuleSystem 的通关倒计时：
+
+```
+击杀侧：CombatResolveSystem 敌人死亡 → 敌人计数归零 ┐
+                                                ├─▶ LevelClearDelayedEvent{2.0s}
+到达侧：GameRuleSystem.onEnemyArriveHome 到达基地 ──┘（敌人全到才触发，走 else 分支）
+    → mIsLevelClear + mLevelClearTimer 倒计时（GameRuleSystem::update 推进）
+    → 倒计时结束 → LevelClearEvent
+    → GameScene::onLevelClear（本课新增的监听接线）
+        奖励 point = mEnemyKilledCount + mHomeHp * 5
+        setLevelClear(true) + addPoint(point)
+        最终关 → requestPushScene(EndScene{is_win=true})
+        非最终关 → requestPushScene(LevelClearScene)
+```
+
+### push 与渲染门控
+
+- **结算/结束场景用 `requestPushScene` 压栈**：SceneManager 的 `update` 只更新栈顶（GameScene 冻结——不再推进战斗/计时/刷怪），`render` 渲染整条栈（GameScene 的战斗画面留在底下当静态背景）
+- **GameScene 渲染门控**：`render()` 里 `isPlaying() || isPaused()` 才调 `mDebugUISystem->update()`。LevelClear/End 场景 `setState(LevelClear/GameOver)` 后，战斗 ImGui 自动停用，避免两套 ImGui 窗口重叠
+- **BGM 启用**：TitleScene `playMusic("title_bgm")`、GameScene `playMusic("battle_bgm")`、LevelClearScene/EndScene(胜) `playMusic("win", 0)`、EndScene(败) `playMusic("lose", 0)`；`win/lose` 第二参 `loops=0` 播一次，四个音轨由 resource_mapping.json 预载
+
+### LevelClearScene（通关结算）
+
+- **6 参 DI 构造器** `(Context&, BlueprintManager, UIConfig, LevelConfig, SessionData, GameStats&)`——`GameStats&` 是**引用成员**（`LevelClearScene.h:44`），指向 GameScene 的 `mGameStats`（push 冻结后读安全），`init()` 里用它渲染击杀/到达/基地血量统计与奖励点数
+- **init()** — 校验 4 份共享数据非空 → `setState(LevelClear)` → 把 SessionData/BlueprintManager/UIConfig **重注入自己的 registry.ctx()**（这样共享的 `renderUnitTable()` / `renderSavePanelUI()` 能直接取用）→ `playMusic("win", 0)`
+- **三按钮**（DebugUI `friend` 直调私有回调）— 下一关：`addOneLevel() + setLevelClear(false)` → `requestReplaceScene(GameScene)`（带全部共享数据）；返回标题：`requestReplaceScene(TitleScene)`；保存：toggle 存档面板（`mShowSavePanel`）
+- **渲染** — `Scene::render()` → `mDebugUISystem->updateLevelClear(*this)`：结算大字 + 统计表（剩余基地血量 / 击杀数 / 敌人总数）+ 奖励点数（`mEnemyKilledCount + mHomeHp * 5`）+ 可排序角色表格 + 存档面板
+
+### EndScene（游戏结束）
+
+- **2 参构造器** `(Context&, bool is_win = false)`——按胜败选 BGM（win/lose）并 `setState(GameOver)`；`render()` 挂 `updateEnd(*this)`：`renderEndText` 用 `SetWindowFontScale(5.0f)` 画大字「胜利/失败」，`renderEndButtons` 提供返回标题 / 退出
+- **GameEndEvent 接线**（`game_scene.cpp`）— 监听器改为 `onGameEndEvent(const GameEndEvent&)`（带参才能读 `event.mIsWin`），`requestPushScene(EndScene{event.mIsWin})`；GameRuleSystem 基地被毁发 `GameEndEvent{false}`
+
+### 本课新增接线（其余全就绪）
+
+`LevelClearEvent → GameScene::onLevelClear` 监听接线、`GameEndEvent` 处理器签名带参、两个新场景文件 + CMakeLists 条目、GameState 加 `State::LevelClear`。判定链两侧（击杀侧/到达侧）、延迟计时、奖励公式所需的 GameStats/SessionData API 本地早已就绪。
+
+详见 `docs/notes/012-level-clear-end-scene.md`。
 
 ## 战斗系统
 
@@ -608,7 +657,7 @@ ECS 空标签（tag），用于标记实体状态，配合 view 的 `exclude` �
 - **Config** (`engine::core`) — 基于 JSON 的配置系统，自动创建默认配置
 - **Context** (`engine::core`) — 依赖注入容器，持有所有引擎模块引用（Renderer、Camera、ResourceManager 等）
 - **Time** (`engine::core`) — 高性能时间管理，提供 delta time 和时间缩放功能
-- **GameState** (`engine::core`) — 游戏状态枚举（运行/暂停），封装 SDL_Window 和 SDL_Renderer
+- **GameState** (`engine::core`) — 游戏状态枚举（Title/Playing/Paused/GameOver/LevelClear）与 `isXxx()` 访问器，封装 SDL_Window 和 SDL_Renderer
 - **Renderer** (`engine::render`) — SDL3 渲染封装，支持纹理绘制、世界坐标矩形（填充/边框）绘制、混合模式和 alpha 调制
 - **Camera** (`engine::render`) — 相机位置、视口管理、世界坐标与屏幕坐标转换
 - **TextRenderer** (`engine::render`) — 字体加载与文本渲染（基于 SDL_ttf）
@@ -644,9 +693,11 @@ src/
     ├── defs/                         #   标签与事件定义 + 常量（Tags, Events, Constants）
     ├── factory/                      #   工厂（BlueprintManager, EntityFactory）
     ├── loader/                       #   关卡扩展构建器（EntityBuilderMW）
-    ├── scene/                        #   游戏场景（GameScene — 主游戏场景；TitleScene — 标题场景）
+    ├── scene/                        #   游戏场景（GameScene — 主游戏；TitleScene — 标题；LevelClearScene — 通关结算；EndScene — 游戏结束）
     │   ├── game_scene.cpp/h
-    │   └── title_scene.cpp/h
+    │   ├── title_scene.cpp/h
+    │   ├── level_clear_scene.cpp/h
+    │   └── end_scene.cpp/h
     ├── spawner/                      #   敌人生成器（EnemySpawner — 按波次生成）
     └── system/                       #   游戏系统（战斗、寻路、阻挡、放置等）
         ├── follow_path_system.cpp/h
@@ -663,7 +714,7 @@ src/
         ├── effect_system.cpp/h             # 特效创建（通用特效 + 死亡特效）
         ├── health_bar_system.cpp/h         # 血量条渲染
         ├── game_rule_system.cpp/h          # 游戏规则（cost 恢复、基地血量/胜负判定、升级/撤退、通关延迟切换）
-        ├── debug_ui_system.cpp/h           # 调试 UI（ImGui 每帧逻辑+渲染，update 战斗分支 + updateTitle 标题分支）
+        ├── debug_ui_system.cpp/h           # 调试 UI（ImGui 每帧逻辑+渲染，四分支：update 战斗 / updateTitle 标题 / updateLevelClear 结算 / updateEnd 结束）
         ├── selection_system.cpp/h          # 选择单位系统（悬浮检测 + 左键选中 + 右键清除）
         └── skill_system.cpp/h              # 技能系统（三态流转 + 显示标识 + Buff 管理）
 ```

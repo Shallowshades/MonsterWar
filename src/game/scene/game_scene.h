@@ -86,8 +86,8 @@ namespace game::scene {
 		void onRestart();           // 重新开始当前关卡
 		void onBackToTitle();       // 返回标题场景
 		void onSave();              // 保存游戏
-		void onLevelClear();        // 关卡通关
-		void onGameEnd();           // 游戏结束（胜利/失败）
+		void onLevelClear();        // 关卡通关（奖励积分 + 切换到结算/结束场景）
+		void onGameEndEvent(const game::defs::GameEndEvent& event);  // 游戏结束（胜利/失败）
 
 	private:
 		// 引擎系统

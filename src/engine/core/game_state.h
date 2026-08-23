@@ -28,6 +28,7 @@ enum class State {
     Playing,        ///< @brief 正常游戏进行中
     Paused,         ///< @brief 游戏暂停（通常覆盖菜单界面）
     GameOver,       ///< @brief 游戏结束界面
+    LevelClear,     ///< @brief 关卡过关界面
     // 可以根据需要添加更多状态，如 Cutscene, SettingsMenu 等
 };
 
@@ -63,6 +64,7 @@ public:
     bool isPlaying() const { return mCurrentState == State::Playing; }
     bool isPaused() const { return mCurrentState == State::Paused; }
     bool isGameOver() const { return mCurrentState == State::GameOver; }
+    bool isLevelClear() const { return mCurrentState == State::LevelClear; }
 
 private:
 	SDL_Window* mWindow = nullptr;              ///< @brief SDL窗口，用于获取窗口大小

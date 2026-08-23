@@ -1,5 +1,7 @@
 #include "game_scene.h"
 #include "title_scene.h"
+#include "level_clear_scene.h"
+#include "end_scene.h"
 #include "../factory/entity_factory.h"
 #include "../factory/blueprint_manager.h"
 #include "../loader/entity_builder_mw.h"
@@ -34,6 +36,7 @@
 #include "../../engine/component/render_component.h"
 #include "../../engine/core/context.h"
 #include "../../engine/core/game_state.h"
+#include "../../engine/audio/audio_player.h"
 #include "../../engine/input/input_manager.h"
 #include "../../engine/render/camera.h"
 #include "../../engine/system/render_system.h"
@@ -121,6 +124,7 @@ namespace game::scene {
 
 		// 场景初始化完成后进入正常游戏状态（用于暂停系统的状态机）
 		mContext.getGameState().setState(engine::core::State::Playing);
+		mContext.getAudioPlayer().playMusic("battle_bgm"_hs);    // 设置战斗场景背景音乐
 		Scene::init();
 	}
 
@@ -172,7 +176,10 @@ namespace game::scene {
 		mRenderRangeSystem->update(mRegistry, renderer, camera);   // 攻击范围圆（透明，放在最上层）
 
 		Scene::render();
-		mDebugUISystem->update();    // 调试UI的显示优先级最高，最后渲染
+		// 当场景栈中只有GameScene时才渲染调试UI，否则上层有其它场景（通关结算/结束）时两套窗口叠加会冲突
+		if (mContext.getGameState().isPlaying() || mContext.getGameState().isPaused()) {
+			mDebugUISystem->update();    // 调试UI的显示优先级最高，最后渲染
+		}
 	}
 
 	void GameScene::clean() {
@@ -246,9 +253,10 @@ namespace game::scene {
 		dispatcher.sink<game::defs::RestartEvent>().connect<&GameScene::onRestart>(this);
 		dispatcher.sink<game::defs::BackToTitleEvent>().connect<&GameScene::onBackToTitle>(this);
 		dispatcher.sink<game::defs::SaveEvent>().connect<&GameScene::onSave>(this);
+		dispatcher.sink<game::defs::LevelClearEvent>().connect<&GameScene::onLevelClear>(this);
 		// 连接 GameEndEvent 使 EnTT 在启动时就为其创建 handler 节点：
 		// 否则运行期在 dispatcher::update() 迭代中首次 enqueue GameEndEvent 会触发容器重分配，导致迭代器失效崩溃
-		dispatcher.sink<game::defs::GameEndEvent>().connect<&GameScene::onGameEnd>(this);
+		dispatcher.sink<game::defs::GameEndEvent>().connect<&GameScene::onGameEndEvent>(this);
 		return true;
 	}
 
@@ -370,13 +378,24 @@ namespace game::scene {
 	}
 
 	void GameScene::onLevelClear() {
-		spdlog::info("关卡通关");
-		// TODO: 通关场景切换（后续课实现）
+		spdlog::info("关卡通关成功");
+		// 奖励点数 = 击杀数 + 基地血量 * 5
+		const auto point = mGameStats.mEnemyKilledCount + mGameStats.mHomeHp * 5;
+		mSessionData->setLevelClear(true);
+		mSessionData->addPoint(point);
+
+		// 如果当前关卡是最后一关，则进入结束场景（胜利）；否则进入通关结算场景
+		if (mLevelConfig->isFinalLevel(mLevelNumber)) {
+			requestPushScene(std::make_unique<game::scene::EndScene>(mContext, true));
+		} else {
+			requestPushScene(std::make_unique<game::scene::LevelClearScene>(mContext,
+				mBlueprintManager, mUIConfig, mLevelConfig, mSessionData, mGameStats));
+		}
 	}
 
-	void GameScene::onGameEnd() {
+	void GameScene::onGameEndEvent(const game::defs::GameEndEvent& event) {
 		spdlog::info("游戏结束");
-		// TODO: 结算场景切换（后续课实现）
+		requestPushScene(std::make_unique<game::scene::EndScene>(mContext, event.mIsWin));
 	}
 
 } // namespace game::scene

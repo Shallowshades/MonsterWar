@@ -19,6 +19,8 @@ namespace engine::core {
 }
 namespace game::scene {
     class TitleScene;
+    class LevelClearScene;
+    class EndScene;
 }
 
 namespace game::system {
@@ -45,6 +47,12 @@ public:
     // 标题场景的ImGui更新（直接操作TitleScene的私有成员变量及回调）
     void updateTitle(game::scene::TitleScene& title_scene);
 
+    // 通关结算场景的ImGui更新
+    void updateLevelClear(game::scene::LevelClearScene& level_clear_scene);
+
+    // 游戏结束场景的ImGui更新
+    void updateEnd(game::scene::EndScene& end_scene);
+
 private:
     // 封装开始、结束帧的方法
     void beginFrame();
@@ -65,6 +73,15 @@ private:
     void renderLoadPanelUI(bool& show_load_panel);        // 显示读档选择窗口
     void renderSavePanelUI(bool& show_save_panel);        // 显示存档选择窗口
     void renderUnitTable();                               // 显示角色信息表格（可排序）
+
+    // 通关结算场景的UI显示模块
+    void renderLevelClearText();                                          // 显示通关结算文本
+    void renderLevelClearTable(game::scene::LevelClearScene& level_clear_scene);  // 显示通关结算统计与角色表格
+    void renderLevelClearButtons(game::scene::LevelClearScene& level_clear_scene);  // 显示通关结算按钮
+
+    // 游戏结束场景的UI显示模块
+    void renderEndText(game::scene::EndScene& end_scene);                // 显示游戏结束文本
+    void renderEndButtons(game::scene::EndScene& end_scene);             // 显示游戏结束按钮
 
     // 肖像悬浮事件回调
     void onUIPortraitHoverEnterEvent(const game::defs::UIPortraitHoverEnterEvent& event);

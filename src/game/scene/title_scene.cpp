@@ -163,8 +163,8 @@ namespace game::scene {
 		auto window_size = mContext.getGameState().getLogicalSize();
 		if (!mUIManager->init(window_size)) return false;
 
-		// 设置背景音乐（BGM资源待后续补充）
-		// mContext.getAudioPlayer().playMusic("title_bgm"_hs);
+		// 设置标题场景背景音乐
+		mContext.getAudioPlayer().playMusic("title_bgm"_hs);
 
 		/* 先用ImGui实现UI，未来再使用游戏内UI */
 		return true;
