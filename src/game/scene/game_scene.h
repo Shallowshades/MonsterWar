@@ -42,7 +42,21 @@ namespace game::scene {
 
 	class GameScene final : public engine::scene::Scene {
 	public:
-		GameScene(engine::core::Context& context);
+		/**
+		 * @brief 构造函数.
+		 * @note 蓝图/会话/UI/关卡配置由外部传入（共享数据可在场景重开时复用），
+		 *       传 nullptr 时场景内部会懒创建。
+		 * @param context 对 Context 实例的引用
+		 * @param blueprint_manager 蓝图管理器（可为空，空则内部创建）
+		 * @param session_data 会话数据（可为空，空则内部创建）
+		 * @param ui_config UI配置（可为空，空则内部创建）
+		 * @param level_config 关卡配置（可为空，空则内部创建）
+		 */
+		GameScene(engine::core::Context& context,
+			std::shared_ptr<game::factory::BlueprintManager> blueprint_manager = nullptr,
+			std::shared_ptr<game::data::SessionData> session_data = nullptr,
+			std::shared_ptr<game::data::UIConfig> ui_config = nullptr,
+			std::shared_ptr<game::data::LevelConfig> level_config = nullptr);
 		~GameScene();
 
 		void init() override;
@@ -67,7 +81,13 @@ namespace game::scene {
 
 		// 测试函数
 		void testSessionData();
-		[[nodiscard]] bool onClearAllPlayers();
+
+		// 场景回调（通过事件触发）
+		void onRestart();           // 重新开始当前关卡
+		void onBackToTitle();       // 返回标题场景
+		void onSave();              // 保存游戏
+		void onLevelClear();        // 关卡通关
+		void onGameEnd();           // 游戏结束（胜利/失败）
 
 	private:
 		// 引擎系统

@@ -65,7 +65,8 @@ namespace game::system {
                 dispatcher.enqueue(engine::utils::PlayAnimationEvent{ player_entity, "attack"_hs, false });
             }
             registry.remove<game::defs::AttackReadyTag>(player_entity);
-            /* 玩家静止不动，不需要添加动作锁定标签 */
+            // 添加“动作锁定”标签，确保攻击动画执行完毕再进行其他动作
+            registry.emplace_or_replace<game::defs::ActionLockTag>(player_entity);
         }
     }
 

@@ -33,6 +33,7 @@ namespace engine::audio {
 
 namespace engine::core {
 	class GameState;
+	class Time;
 /**
  * brief 持有对核心引擎模块引用的上下文对象.
  * 
@@ -51,6 +52,7 @@ public:
 	 * @param resourceManager 对 ResourceManager 实例的引用
 	 * @param audioPlayer 对 AudioPlayer 实例的引用
 	 * @param gameState 对 GameState 实例的引用
+	 * @param time 对 Time 实例的引用
 	 */
 	Context(entt::dispatcher& dispatcher,
 		engine::input::InputManager& inputManager,
@@ -59,7 +61,8 @@ public:
 		engine::render::TextRenderer& textRenderer,
 		engine::resource::ResourceManager& resourceManager,
 		engine::audio::AudioPlayer& audioPlayer,
-		engine::core::GameState& gameState);
+		engine::core::GameState& gameState,
+		engine::core::Time& time);
 
 	// 禁用拷贝和移动语义
 	Context(const Context&) = delete;										///< @brief 删除拷贝构造
@@ -75,6 +78,7 @@ public:
 	engine::resource::ResourceManager& getResourceManager() const;			///< @brief 获取资源管理器
 	engine::audio::AudioPlayer& getAudioPlayer() const;						///< @brief 获取音频播放器
 	engine::core::GameState& getGameState() const;							///< @brief 获取游戏状态
+	engine::core::Time& getTime() const;									///< @brief 获取时间管理器
 private:
 	// 引用, 确保每个模块都有效, 使用时不需要检查指针是否为空
 	entt::dispatcher& mDispatcher;
@@ -85,6 +89,7 @@ private:
 	engine::resource::ResourceManager& mResourceManager;					///< @brief 资源管理器
 	engine::audio::AudioPlayer& mAudioPlayer;								///< @brief 音频播放器
 	engine::core::GameState& mGameState;									///< @brief 游戏状态
+	engine::core::Time& mTime;												///< @brief 时间管理器
 };
 }
 

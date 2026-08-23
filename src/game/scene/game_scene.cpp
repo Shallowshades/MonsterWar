@@ -1,7 +1,4 @@
 #include "game_scene.h"
-#include "../component/enemy_component.h"
-#include "../component/player_component.h"
-#include "../component/stats_component.h"
 #include "../factory/entity_factory.h"
 #include "../factory/blueprint_manager.h"
 #include "../loader/entity_builder_mw.h"
@@ -54,8 +51,16 @@ using namespace entt::literals;
 
 namespace game::scene {
 
-	GameScene::GameScene(engine::core::Context& context)
-		: engine::scene::Scene("GameScene", context) {
+	GameScene::GameScene(engine::core::Context& context,
+		std::shared_ptr<game::factory::BlueprintManager> blueprint_manager,
+		std::shared_ptr<game::data::SessionData> session_data,
+		std::shared_ptr<game::data::UIConfig> ui_config,
+		std::shared_ptr<game::data::LevelConfig> level_config)
+		: engine::scene::Scene("GameScene", context)
+		, mBlueprintManager(blueprint_manager)
+		, mSessionData(session_data)
+		, mUIConfig(ui_config)
+		, mLevelConfig(level_config) {
 		spdlog::info("GameScene 构造完成");
 	}
 
@@ -113,6 +118,8 @@ namespace game::scene {
 		}
 		testSessionData();
 
+		// 场景初始化完成后进入正常游戏状态（用于暂停系统的状态机）
+		mContext.getGameState().setState(engine::core::State::Playing);
 		Scene::init();
 	}
 
@@ -121,6 +128,16 @@ namespace game::scene {
 
 		// 每一帧最先清理死亡实体（要在dispatcher处理完事件后再清理，因此放在下一帧开头）
 		mRemoveDeadSystem->update(mRegistry);
+
+		// 暂停状态下，部分功能依然正常运行（鼠标放置/悬浮/选中/肖像滚动），战斗/计时/寻路全冻结
+		if (mContext.getGameState().isPaused()) {
+			mPlaceUnitSystem->update(delta_time);
+			mYsortSystem->update(mRegistry);
+			mSelectionSystem->update();
+			mUnitsPortraitUI->update(delta_time);
+			Scene::update(delta_time);
+			return;
+		}
 
 		// 注意系统更新的顺序
 		mTimerSystem->update(delta_time);
@@ -159,11 +176,8 @@ namespace game::scene {
 
 	void GameScene::clean() {
 		auto& dispatcher = mContext.getDispatcher();
-		auto& input_manager = mContext.getInputManager();
-		// 断开所有事件连接
+		// 断开所有事件连接（mouse_left/mouse_right 已由 PlaceUnitSystem 注册，随其析构断开）
 		dispatcher.disconnect(this);
-		// 断开输入信号连接（mouse_left/mouse_right 已由 PlaceUnitSystem 注册，随其析构断开）
-		input_manager.onAction("pause"_hs).disconnect<&GameScene::onClearAllPlayers>(this);
 		Scene::clean();
 	}
 
@@ -226,14 +240,21 @@ namespace game::scene {
 
 	bool GameScene::initEventConnections() {
 		// 本场景直接处理的事件已迁移到各系统（如敌人到达基地 → GameRuleSystem）
+		// 这里连接场景自身的事件回调
+		auto& dispatcher = mContext.getDispatcher();
+		dispatcher.sink<game::defs::RestartEvent>().connect<&GameScene::onRestart>(this);
+		dispatcher.sink<game::defs::BackToTitleEvent>().connect<&GameScene::onBackToTitle>(this);
+		dispatcher.sink<game::defs::SaveEvent>().connect<&GameScene::onSave>(this);
+		// 连接 GameEndEvent 使 EnTT 在启动时就为其创建 handler 节点：
+		// 否则运行期在 dispatcher::update() 迭代中首次 enqueue GameEndEvent 会触发容器重分配，导致迭代器失效崩溃
+		dispatcher.sink<game::defs::GameEndEvent>().connect<&GameScene::onGameEnd>(this);
 		return true;
 	}
 
 	bool GameScene::initInputConnections() {
-		auto& input_manager = mContext.getInputManager();
 		// NOTE: mouse_left/mouse_right 已由 PlaceUnitSystem 注册（放置/取消放置单位）
 		//       move_left/move_right 已让给肖像UI滚动（UnitsPortraitUI::update）
-		input_manager.onAction("pause"_hs).connect<&GameScene::onClearAllPlayers>(this);
+		//       pause 键(P) 已让给 DebugUI 的暂停/继续按钮
 		return true;
 	}
 
@@ -327,14 +348,31 @@ namespace game::scene {
 		}
 	}
 
-	bool GameScene::onClearAllPlayers() {
-		auto& dispatcher = mContext.getDispatcher();
-		// 通过移除单位事件回收（释放放置点占用、标记死亡），由 PlaceUnitSystem 处理
-		auto view = mRegistry.view<game::component::PlayerComponent>();
-		for (auto entity : view) {
-			dispatcher.enqueue(game::defs::RemovePlayerUnitEvent{ entity });
-		}
-		return true;
+	void GameScene::onRestart() {
+		spdlog::info("重新开始关卡");
+		// 用共享的蓝图/会话/UI/关卡配置构造新场景，复用同一份数据
+		requestReplaceScene(std::make_unique<game::scene::GameScene>(mContext,
+			mBlueprintManager, mSessionData, mUIConfig, mLevelConfig));
+	}
+
+	void GameScene::onBackToTitle() {
+		spdlog::info("返回标题");
+		// TODO: 返回标题场景（后续课实现）
+	}
+
+	void GameScene::onSave() {
+		spdlog::info("保存");
+		// TODO: 保存游戏（后续课实现）
+	}
+
+	void GameScene::onLevelClear() {
+		spdlog::info("关卡通关");
+		// TODO: 通关场景切换（后续课实现）
+	}
+
+	void GameScene::onGameEnd() {
+		spdlog::info("游戏结束");
+		// TODO: 结算场景切换（后续课实现）
 	}
 
 } // namespace game::scene

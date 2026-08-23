@@ -26,7 +26,9 @@ main.cpp
       → handleEvents (SDL 事件 → InputManager → dispatcher)
       → update(delta)
         → RemoveDeadSystem (清理死亡实体)
+        → [暂停分支] 若 isPaused()：仅跑 PlaceUnit(幽灵跟随鼠标) + YSort + Selection + UnitsPortraitUI(肖像滚动) + 场景基础更新，战斗/计时/寻路全冻结并 return
         → TimerSystem (推进攻击冷却 + 技能冷却/持续计时器，冷却结束添加对应就绪标签)
+        → GameRuleSystem (cost 恢复 + 通关延迟计时)
         → SetTargetSystem (为无目标角色寻找/刷新攻击目标)
         → OrientationSystem (根据目标/移动方向翻转精灵朝向)
         → FollowPathSystem (敌人路径跟随，触发 EnemyArriveHomeEvent)
@@ -35,14 +37,16 @@ main.cpp
         → ProjectileSystem (投射物飞行弧线更新，到达后发出 AttackEvent)
         → MovementSystem (Velocity → Transform)
         → AnimationSystem (帧动画推进，响应 PlayAnimationEvent / AnimationFinishedEvent)
+        → PlaceUnitSystem (出击准备/放置：幽灵跟随鼠标、检测放置点、落子出兵)
         → YSortSystem (Y 坐标排序)
         → SelectionSystem (鼠标悬浮单位检测：优先玩家后敌人，写入 hovered_unit ctx)
         → EnemySpawner (按波次生成敌人：波次倒计时 + 生成间隔 + 随机起点)
+        → UnitsPortraitUI (肖像遮盖刷新、左右滚动)
       → render()
         → RenderSystem (按 layer+depth 排序渲染)
         → HealthBarSystem (绘制受伤单位的血量条)
         → RenderRangeSystem (预备/已放置远程单位的攻击范围圆)
-        → DebugUISystem (ImGui 调试 UI：悬浮 tooltip + 选中角色状态 + 技能施放面板，最后渲染盖最上面)
+        → DebugUISystem (ImGui 调试 UI：悬浮/肖像 tooltip + 角色状态(升级/撤退/技能) + 关卡信息 + 设置工具 + 调试工具，最后渲染盖最上面)
     → close()
       → 逆序清理所有子系统
 ```
@@ -112,9 +116,10 @@ main.cpp
 | ProjectileSystem     | `projectile_system.cpp`      | 响应 EmitProjectileEvent 创建投射物实体，更新飞行弧线轨迹，到达后发出 AttackEvent |
 | EffectSystem         | `effect_system.cpp`          | 监听 EnemyDeadEffectEvent / EffectEvent，通过实体工厂创建死亡/通用特效            |
 | HealthBarSystem      | `health_bar_system.cpp`      | 渲染受伤单位的血量条（按血量百分比变色）                                          |
+| GameRuleSystem       | `game_rule_system.cpp`       | 游戏规则：cost 恢复、敌人到达基地扣血/胜负判定、单位升级/撤退、通关延迟切换场景     |
 | PlaceUnitSystem      | `place_unit_system.cpp`      | 出击准备/放置：幽灵跟随鼠标、检测放置点、落子出兵、扣费、占用放置点、取消          |
 | RenderRangeSystem    | `render_range_system.cpp`    | 渲染预备/已放置远程单位的攻击范围圆（半透明绿色，`ShowRangeTag`）                 |
-| DebugUISystem        | `debug_ui_system.cpp`        | 调试 UI：ImGui 每帧逻辑+渲染（悬浮单位 tooltip + 选中单位角色状态窗口）           |
+| DebugUISystem        | `debug_ui_system.cpp`        | 调试 UI：ImGui 每帧逻辑+渲染（悬浮/肖像 tooltip + 角色状态[升级U/撤退R/技能] + 关卡信息 + 设置工具[暂停P/重开/倍速/音量] + 调试工具[加钱/通关]） |
 | SelectionSystem      | `selection_system.cpp`       | 选择单位：每帧悬浮检测（写 `hovered_unit` ctx）+ 左键选中玩家单位 + 右键清除选中 |
 | SkillSystem          | `skill_system.cpp`          | 技能系统：事件驱动三态流转（就绪/激活/持续结束），显示标识增删、Buff 乘除、被动清理 |
 
@@ -353,6 +358,55 @@ DebugUISystem 选中面板技能区块
 - **EnTT remove vs erase** — TimerSystem 和 SkillSystem 都 remove 过 `SkillActiveTag`：`registry.remove<T>` 缺失返回 0 不抛（`erase` 才抛），双重移除安全
 - **技能数据** (`skill_data.json`) — 盾御(shield)/威能(power_up)/疾速(speed_up) 主动技能 + 休整(rest) 被动回 COST
 
+## 主场景完善
+
+把 GameScene 从"测试向"完善为"可玩向"：引入**暂停系统**、**场景重开/返回/保存事件**、**GameScene 构造器依赖注入**（重开复用同一份共享数据）、**DebugUI 四大窗口**、**升级/撤退按钮**与**盾御守卫动画**。
+
+### 暂停系统：引擎存状态，游戏层执行
+
+- **GameState**（`engine::core`）只存状态枚举（Playing/Paused）与 `isPaused()` / `setState()`，本课前就绪、零改动
+- **GameScene::update** 才是暂停的执行者——`mRemoveDeadSystem` 之后加暂停分支：`isPaused()` 时仅跑 `PlaceUnitSystem`（幽灵跟随鼠标）+ `YSortSystem` + `SelectionSystem` + `UnitsPortraitUI`（肖像滚动）+ `Scene::update`，战斗/计时/寻路/刷怪全冻结并 `return`；渲染照常跑（ImGui 设置窗口要能操作）
+- `init()` 末尾显式 `setState(Playing)` 进入运行态
+
+### GameScene 构造器依赖注入（DI）
+
+数据从"init 内部懒创建"改为**构造传入 + 空则兜底**，为场景重开铺路：
+
+```cpp
+GameScene(Context& context,
+    shared_ptr<BlueprintManager> = nullptr,
+    shared_ptr<SessionData> = nullptr,
+    shared_ptr<UIConfig> = nullptr,
+    shared_ptr<LevelConfig> = nullptr);
+```
+
+- **场景控制事件**：`RestartEvent`（重新开始当前关卡）/ `BackToTitleEvent`（返回标题）/ `SaveEvent`（保存）——本课新增三个事件，由设置工具按钮发出
+- **onRestart**：用同一份共享数据 `requestReplaceScene(make_unique<GameScene>(mContext, mBlueprintManager, mSessionData, mUIConfig, mLevelConfig))` 重开，会话/蓝图/关卡配置复用，仅战斗实体重建
+- **共享语义**：蓝图/会话/UI/关卡配置是"跨场景存活"的数据用 shared_ptr；`GameStats` 是"关卡内临时状态"用值语义存 ctx
+
+### DebugUI 四大窗口
+
+| 窗口 | 内容 |
+|------|------|
+| 悬浮 tooltip（原） | 场上悬浮单位属性（玩家/敌人实体） |
+| 肖像 tooltip（新） | 出击面板肖像悬浮 → `getUnitData(name_id)` + 蓝图 `statModify` 重算属性（角色档案，非场上实体） |
+| 角色状态 + 升级/撤退（新） | 升级 U：扣 `player.mCost`、COST 不足 `BeginDisabled` 置灰；撤退 R：返还 `cost * 0.5` |
+| 关卡信息（新） | 基地血量 / COST / 剩余波次 / 下一波倒计时 / 击杀 / 当前关卡 |
+| 设置工具（新） | 暂停/继续（P 键）、重新开始 / 返回标题 / 保存、游戏倍速（0.5/1/2 按钮 + SliderFloat → `Time::setTimeScale`）、音乐/音效音量、显示调试工具开关 |
+| 调试工具（新） | COST+10 / COST+100、通关（发 `LevelClearEvent`），由设置工具勾选控制显隐 |
+
+- **Context 增加 Time 引用**（`getTime()`，`game_app.cpp` 传 `*mTime` 实参）——设置工具倍速需要访问 Time
+- **SessionData 增加 `getUnitData(name_id)`**——肖像 tooltip 按角色名哈希查数据（`operator[]` 不存在则默认构造）
+- **P 键语义变更**：原"pause"输入（清空所有玩家单位）移除，P 改由设置工具 `SetNextItemShortcut(ImGuiKey_P)` 暂停/继续；单位回收靠撤退按钮 R
+
+### 盾御守卫动画
+
+盾御（shield）激活时角色摆守卫姿态，三处配合闭环：
+
+- `skill_system.cpp` — 盾御激活时（且未锁动作）enqueue `guard`；持续结束时（且未锁动作）enqueue `idle`
+- `attack_starter_system.cpp:updatePlayer` — 玩家攻击时 `emplace_or_replace<ActionLockTag>`（守卫/攻击动画期间锁定行动，不被硬直打断）
+- `animation_state_system.cpp` — 玩家动画结束时按 `SkillComponent.mSkillId == "shield" && SkillActiveTag` 特判回 `guard`，否则回 `idle`，随后 `remove<ActionLockTag>` 解除硬直
+
 ## 战斗系统
 
 实现了基于 ECS 标签和冷却计时的自动战斗循环。
@@ -460,7 +514,9 @@ ECS 空标签（tag），用于标记实体状态，配合 view 的 `exclude` �
 | 鼠标左键   | `mouse_left`   | 放置幽灵单位 / 选中悬浮的玩家单位（`PlaceUnitSystem` + `SelectionSystem`）|
 | 鼠标右键   | `mouse_right`  | 取消放置（移除幽灵单位）；清除单位选中（`SelectionSystem`，右键穿透）      |
 | A / D 键   | `move_left`/`move_right` | 出击面板左右滚动（由 `UnitsPortraitUI` 处理）      |
-| P / Escape | `pause`        | 清除所有已出击的玩家单位（`GameScene` 发 `RemovePlayerUnitEvent`） |
+| P 键       | `ImGui`        | 暂停 / 继续游戏（`DebugUISystem` 设置工具 `SetNextItemShortcut`） |
+| U 键       | `ImGui`        | 升级选中单位（`DebugUISystem` 选中面板 `SetNextItemShortcut`）     |
+| R 键       | `ImGui`        | 撤退选中单位，返还 50% COST（`DebugUISystem` 选中面板 `SetNextItemShortcut`） |
 | S 键       | `ImGui`        | 施放选中单位的技能（`DebugUISystem` 选中面板 `SetNextItemShortcut`） |
 
 ### 动画帧事件
@@ -522,6 +578,9 @@ ECS 空标签（tag），用于标记实体状态，配合 view 的 `exclude` �
 | LevelClearEvent           | 关卡通关（延迟计时结束，用于切场景）            |
 | LevelClearDelayedEvent    | 关卡通关延迟（进入通关倒计时）                  |
 | GameEndEvent              | 游戏结束（是否胜利）                            |
+| RestartEvent              | 重新开始当前关卡                                |
+| BackToTitleEvent          | 返回标题场景                                    |
+| SaveEvent                 | 保存游戏                                        |
 | SkillReadyEvent           | 技能冷却结束（实体）                            |
 | SkillActiveEvent          | 技能激活/施放（实体，玩家按 S 或被动落子触发）  |
 | SkillDurationEndEvent     | 技能持续时间结束（实体）                        |
@@ -585,7 +644,8 @@ src/
         ├── projectile_system.cpp/h         # 投射物飞行与命中
         ├── effect_system.cpp/h             # 特效创建（通用特效 + 死亡特效）
         ├── health_bar_system.cpp/h         # 血量条渲染
-        ├── debug_ui_system.cpp/h           # 调试 UI（ImGui 每帧逻辑+渲染，悬浮/选中单位信息 + 技能面板）
+        ├── game_rule_system.cpp/h          # 游戏规则（cost 恢复、基地血量/胜负判定、升级/撤退、通关延迟切换）
+        ├── debug_ui_system.cpp/h           # 调试 UI（ImGui 每帧逻辑+渲染，悬浮/肖像 tooltip + 角色状态[升级/撤退/技能] + 关卡信息 + 设置工具 + 调试工具）
         ├── selection_system.cpp/h          # 选择单位系统（悬浮检测 + 左键选中 + 右键清除）
         └── skill_system.cpp/h              # 技能系统（三态流转 + 显示标识 + Buff 管理）
 ```

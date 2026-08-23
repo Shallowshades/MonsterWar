@@ -297,7 +297,7 @@ bool engine::core::GameApp::initGameState() {
 
 bool engine::core::GameApp::initContext() {
 	try {
-		mContext = std::make_unique<engine::core::Context>(*mDispatcher, *mInputManager, *mRenderer, *mCamera, *mTextRenderer, *mResourceManager, *mAudioPlayer, *mGameState);
+		mContext = std::make_unique<engine::core::Context>(*mDispatcher, *mInputManager, *mRenderer, *mCamera, *mTextRenderer, *mResourceManager, *mAudioPlayer, *mGameState, *mTime);
 	}
 	catch (const std::exception& e) {
 		spdlog::error("{} 初始化上下文失败: {}", mLogTag.data(), e.what());

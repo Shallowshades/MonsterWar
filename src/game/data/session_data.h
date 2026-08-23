@@ -60,6 +60,7 @@ namespace game::data {
 
         // --- getters ---
         [[nodiscard]] std::unordered_map<entt::id_type, UnitData>& getUnitMap() { return mUnitMap; }
+        [[nodiscard]] game::data::UnitData& getUnitData(entt::id_type name_id) { return mUnitMap[name_id]; }   ///< @brief 按角色名哈希获取角色数据
         [[nodiscard]] int getLevelNumber() const { return mLevelNumber; }
         [[nodiscard]] int getPoint() const { return mPoint; }
         [[nodiscard]] bool isLevelClear() const { return mLevelClear; }

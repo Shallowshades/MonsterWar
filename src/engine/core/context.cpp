@@ -5,11 +5,13 @@
 #include "../render/text_renderer.h"
 #include "../resource/resource_manager.h"
 #include "../audio/audio_player.h"
+#include "game_state.h"
+#include "time.h"
 #include <spdlog/spdlog.h>
 #include <entt/signal/dispatcher.hpp>
 
 namespace engine::core {
-engine::core::Context::Context(entt::dispatcher& dispatcher, engine::input::InputManager& inputManager, engine::render::Renderer& renderer, engine::render::Camera& camera, engine::render::TextRenderer& textRenderer, engine::resource::ResourceManager& resourceManager, engine::audio::AudioPlayer& audioPlayer, engine::core::GameState& gameState)
+engine::core::Context::Context(entt::dispatcher& dispatcher, engine::input::InputManager& inputManager, engine::render::Renderer& renderer, engine::render::Camera& camera, engine::render::TextRenderer& textRenderer, engine::resource::ResourceManager& resourceManager, engine::audio::AudioPlayer& audioPlayer, engine::core::GameState& gameState, engine::core::Time& time)
 	: mDispatcher(dispatcher)
 	, mInputManager(inputManager)
 	, mRenderer(renderer)
@@ -18,6 +20,7 @@ engine::core::Context::Context(entt::dispatcher& dispatcher, engine::input::Inpu
 	, mResourceManager(resourceManager)
 	, mAudioPlayer(audioPlayer)
 	, mGameState(gameState)
+	, mTime(time)
 {
 	spdlog::trace("上下文创建并初始化, 包含输入管理器,渲染器,相机和资源管理器.");
 }
@@ -52,5 +55,9 @@ engine::audio::AudioPlayer& Context::getAudioPlayer() const {
 
 engine::core::GameState& Context::getGameState() const {
 	return mGameState;
+}
+
+engine::core::Time& Context::getTime() const {
+	return mTime;
 }
 }

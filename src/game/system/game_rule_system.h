@@ -29,6 +29,7 @@ class GameRuleSystem {
 
     bool mIsLevelClear{ false };        ///< @brief 是否关卡通关
     float mLevelClearTimer{ 0.0f };     ///< @brief 关卡通关计时器(实现延迟切换场景)
+    bool mIsGameOver{ false };          ///< @brief 是否游戏结束（基地被摧毁）
 
 public:
     GameRuleSystem(entt::registry& registry, entt::dispatcher& dispatcher);

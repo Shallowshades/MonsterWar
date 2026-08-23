@@ -120,6 +120,15 @@ namespace game::defs {
         bool mIsWin{ false };                   ///< @brief 是否胜利
     };
 
+    /// @brief 重新开始当前关卡事件
+    struct RestartEvent {};
+
+    /// @brief 返回标题场景事件
+    struct BackToTitleEvent {};
+
+    /// @brief 保存游戏事件
+    struct SaveEvent {};
+
 }   // namespace game::defs
 
 #endif // GAME_EVENTS_H

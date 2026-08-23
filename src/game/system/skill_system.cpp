@@ -6,6 +6,7 @@
 #include "../component/cost_regen_component.h"
 #include "../component/stats_component.h"
 #include "../../engine/component/transform_component.h"
+#include "../../engine/utils/events.h"
 #include <entt/entity/registry.hpp>
 #include <entt/signal/dispatcher.hpp>
 #include <entt/core/hashed_string.hpp>
@@ -60,6 +61,11 @@ namespace game::system {
         mRegistry.remove<game::defs::SkillReadyTag>(event.mEntity);
         mRegistry.emplace<game::defs::SkillActiveTag>(event.mEntity);
 
+        // 如果技能是盾御，且动作未锁定，则播放guard动画
+        if (skill.mSkillId == "shield"_hs && !mRegistry.any_of<game::defs::ActionLockTag>(event.mEntity)) {
+            mDispatcher.enqueue(engine::utils::PlayAnimationEvent{ event.mEntity, "guard"_hs, true });
+        }
+
         // 添加Buff
         addBuff(event.mEntity, skill.mSkillId);
     }
@@ -74,6 +80,12 @@ namespace game::system {
         }
         // 移除技能激活标签（TimerSystem 可能已移除，EnTT remove 缺失返回 0 不抛，安全）
         mRegistry.remove<game::defs::SkillActiveTag>(event.mEntity);
+
+        // 如果技能是盾御，且动作未锁定，则播放idle动画
+        if (skill.mSkillId == "shield"_hs && !mRegistry.any_of<game::defs::ActionLockTag>(event.mEntity)) {
+            mDispatcher.enqueue(engine::utils::PlayAnimationEvent{ event.mEntity, "idle"_hs, true });
+        }
+
         // 移除Buff
         removeBuff(event.mEntity, skill.mSkillId);
     }

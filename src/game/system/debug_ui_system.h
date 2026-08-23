@@ -11,7 +11,8 @@
 #ifndef DEBUG_UI_SYSTEM_H
 #define DEBUG_UI_SYSTEM_H
 
-#include <entt/entity/fwd.hpp>
+#include <entt/entity/entity.hpp>
+#include "../defs/events.h"
 
 namespace engine::core {
     class Context;
@@ -28,9 +29,12 @@ namespace game::system {
 class DebugUISystem {
     entt::registry& mRegistry;              ///< @brief ECS注册表（预留：后续课程用其查看实体信息）
     engine::core::Context& mContext;        ///< @brief 上下文，用于获取渲染器/游戏状态
+    entt::id_type mHoveredPortrait{ entt::null };   ///< @brief 鼠标悬浮的肖像角色名哈希
+    bool mShowDebugUI{ true };              ///< @brief 是否显示调试工具窗口
 
 public:
     DebugUISystem(entt::registry& registry, engine::core::Context& context);
+    ~DebugUISystem();
 
     // ImGui 步骤3: 一轮循环内，ImGui 需要做的操作（逻辑+渲染）
     void update();
@@ -41,8 +45,16 @@ private:
     void endFrame();
 
     // 封装每个UI显示模块
-    void renderHoveredUnit();    // 显示鼠标悬浮单位的 tooltip
-    void renderSelectedUnit();   // 显示鼠标选中单位的角色状态窗口
+    void renderHoveredUnit();     // 显示鼠标悬浮单位的 tooltip
+    void renderSelectedUnit();    // 显示鼠标选中单位的角色状态窗口
+    void renderHoveredPortrait(); // 显示鼠标悬浮肖像的 tooltip
+    void renderInfoUI();          // 显示关卡信息窗口
+    void renderSettingUI();       // 显示设置工具窗口
+    void renderDebugUI();         // 显示调试工具窗口
+
+    // 肖像悬浮事件回调
+    void onUIPortraitHoverEnterEvent(const game::defs::UIPortraitHoverEnterEvent& event);
+    void onUIPortraitHoverLeaveEvent(const game::defs::UIPortraitHoverLeaveEvent& event);
 };
 
 }   // namespace game::system

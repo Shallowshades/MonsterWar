@@ -51,12 +51,16 @@ namespace game::system {
     }
 
     void GameRuleSystem::onEnemyArriveHome(const game::defs::EnemyArriveHomeEvent&) {
+        // 游戏已结束（基地被摧毁）后忽略后续到达的敌人，避免基地血量变负数、重复触发结束事件
+        if (mIsGameOver) return;
+
         spdlog::info("敌人到达基地");
         auto& game_stats = mRegistry.ctx().get<game::data::GameStats&>();
         game_stats.mEnemyArrivedCount++;      // 敌人到达数量+1
         game_stats.mHomeHp -= 1;              // 基地血量-1
         if (game_stats.mHomeHp <= 0) {
             spdlog::warn("基地被摧毁");
+            mIsGameOver = true;               // 标记游戏结束，忽略后续到达
             // 游戏失败
             mDispatcher.enqueue(game::defs::GameEndEvent{ false });
         }
