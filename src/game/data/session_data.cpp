@@ -10,6 +10,7 @@
 #include "session_data.h"
 #include <fstream>
 #include <filesystem>
+#include <algorithm>
 #include <spdlog/spdlog.h>
 #include <nlohmann/json.hpp>
 #include <entt/core/hashed_string.hpp>
@@ -49,7 +50,14 @@ namespace game::data {
             spdlog::error("加载Session data失败: {}", e.what());
             return false;
         }
+        // map数据加载完毕后，再将角色数据指针插入到 mUnitDataList 中
+        mapUnitDataList();
         return true;
+    }
+
+    bool SessionData::loadFromFile(std::string_view path) {
+        // 读档与加载默认数据走同一套逻辑（loadDefaultData 已支持任意路径）
+        return loadDefaultData(path);
     }
 
     bool SessionData::saveToFile(std::string_view path) {
@@ -85,16 +93,29 @@ namespace game::data {
         return true;
     }
 
+    void SessionData::mapUnitDataList() {
+        mUnitDataList.clear();
+        mUnitDataList.reserve(mUnitMap.size());
+        for (auto& [id, data] : mUnitMap) {
+            mUnitDataList.push_back(&data);
+        }
+    }
+
     void SessionData::addUnit(std::string_view name, std::string_view class_str, int level, int rarity) {
         // 传长度避免依赖 data() 的 NUL 结尾
         entt::id_type name_id = entt::hashed_string(name.data(), name.size());
         entt::id_type class_id = entt::hashed_string(class_str.data(), class_str.size());
         mUnitMap.emplace(name_id,
             UnitData{ name_id, class_id, std::string(name), std::string(class_str), level, rarity });
+        // 将角色数据指针同步插入到 mUnitDataList 中（用于排序遍历）
+        mUnitDataList.push_back(&mUnitMap[name_id]);
     }
 
     void SessionData::removeUnit(entt::id_type name_id) {
         if (auto it = mUnitMap.find(name_id); it != mUnitMap.end()) {
+            // 先从 mUnitDataList 中移除该角色数据指针（此时指针仍有效）
+            mUnitDataList.erase(std::remove(mUnitDataList.begin(), mUnitDataList.end(), &it->second),
+                mUnitDataList.end());
             mUnitMap.erase(it);
         } else {
             spdlog::error("未找到该角色: {}", name_id);
@@ -119,6 +140,7 @@ namespace game::data {
 
     void SessionData::clearUnits() {
         mUnitMap.clear();
+        mUnitDataList.clear();
     }
 
     void SessionData::clear() {
@@ -126,6 +148,7 @@ namespace game::data {
         mPoint = 0;
         mLevelClear = false;
         mUnitMap.clear();
+        mUnitDataList.clear();
     }
 
 }   // namespace game::data

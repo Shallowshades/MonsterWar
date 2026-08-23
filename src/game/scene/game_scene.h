@@ -137,6 +137,7 @@ namespace game::scene {
 		int mLevelNumber{ 1 };    // 当前关卡号（会话数据的缓存副本）
 		entt::entity mSelectedUnit{ entt::null };    // 游戏中鼠标选中的单位
 		entt::entity mHoveredUnit{ entt::null };     // 游戏中鼠标悬浮的单位
+		bool mShowSavePanel{ false };                // 是否显示存档面板（经 ctx 暴露给调试UI）
 	};
 
 } // game::scene

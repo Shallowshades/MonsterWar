@@ -14,6 +14,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <vector>
 #include <entt/entity/entity.hpp>
 
 namespace game::data {
@@ -39,13 +40,17 @@ namespace game::data {
         int mPoint{ 0 };            ///< @brief 积分
         bool mLevelClear{ false };  ///< @brief 是否通关
         std::unordered_map<entt::id_type, UnitData> mUnitMap;   ///< @brief 玩家角色池（角色名哈希 : 角色数据）
+        std::vector<UnitData*> mUnitDataList;                   ///< @brief 角色数据指针列表（与 mUnitMap 同步更新，用于排序遍历）
 
     public:
         SessionData() = default;
         ~SessionData() = default;
 
         bool loadDefaultData(std::string_view path = "assets/data/default_session_data.json");  ///< @brief 从默认数据文件加载，成功返回true
+        bool loadFromFile(std::string_view path);                                               ///< @brief 加载文件数据(读档)
         bool saveToFile(std::string_view path);                                                 ///< @brief 保存到存档文件，成功返回true
+
+        void mapUnitDataList();                                                                 ///< @brief 将 mUnitMap 中的数据映射到 mUnitDataList 中
 
         void addUnit(std::string_view name, std::string_view class_str, int level, int rarity); ///< @brief 添加角色
         void removeUnit(entt::id_type name_id);                                                 ///< @brief 删除角色
@@ -60,6 +65,7 @@ namespace game::data {
 
         // --- getters ---
         [[nodiscard]] std::unordered_map<entt::id_type, UnitData>& getUnitMap() { return mUnitMap; }
+        [[nodiscard]] std::vector<UnitData*>& getUnitDataList() { return mUnitDataList; }                       ///< @brief 获取角色数据指针列表（用于排序遍历）
         [[nodiscard]] game::data::UnitData& getUnitData(entt::id_type name_id) { return mUnitMap[name_id]; }   ///< @brief 按角色名哈希获取角色数据
         [[nodiscard]] int getLevelNumber() const { return mLevelNumber; }
         [[nodiscard]] int getPoint() const { return mPoint; }

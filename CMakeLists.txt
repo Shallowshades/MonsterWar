@@ -360,6 +360,7 @@ set(SOURCES
     src/game/factory/blueprint_manager.cpp
     src/game/factory/entity_factory.cpp
     src/game/scene/game_scene.cpp
+    src/game/scene/title_scene.cpp
     src/game/system/follow_path_system.cpp
     src/game/system/remove_dead_system.cpp
     src/game/system/block_system.cpp

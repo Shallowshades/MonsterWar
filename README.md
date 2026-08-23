@@ -21,7 +21,7 @@ main.cpp
     → init()
       → initDispatcher → Config → SDL → GameState → Time → ResourceManager
       → AudioPlayer → Renderer → TextRenderer → Camera → InputManager
-      → Context → SceneManager (PushSceneEvent → GameScene)
+      → Context → SceneManager (PushSceneEvent → TitleScene)
     → loop:
       → handleEvents (SDL 事件 → InputManager → dispatcher)
       → update(delta)
@@ -50,6 +50,8 @@ main.cpp
     → close()
       → 逆序清理所有子系统
 ```
+
+> **标题场景（TitleScene）循环更精简**：`Scene::update` → `AnimationSystem` → `MovementSystem` → `YSortSystem`，渲染最后挂 `DebugUISystem::updateTitle(*this)`（标题 Logo / 标题按钮 / 角色信息 / 读档面板）。两个场景切换点：**开始游戏** → 带全部共享数据（蓝图/会话/UI/关卡配置）进 `GameScene`；**返回标题** → 只传 `mContext`（丢弃未保存进度，进度走存档通道）。
 
 ## ECS 组件系统（EnTT）
 
@@ -119,7 +121,7 @@ main.cpp
 | GameRuleSystem       | `game_rule_system.cpp`       | 游戏规则：cost 恢复、敌人到达基地扣血/胜负判定、单位升级/撤退、通关延迟切换场景     |
 | PlaceUnitSystem      | `place_unit_system.cpp`      | 出击准备/放置：幽灵跟随鼠标、检测放置点、落子出兵、扣费、占用放置点、取消          |
 | RenderRangeSystem    | `render_range_system.cpp`    | 渲染预备/已放置远程单位的攻击范围圆（半透明绿色，`ShowRangeTag`）                 |
-| DebugUISystem        | `debug_ui_system.cpp`        | 调试 UI：ImGui 每帧逻辑+渲染（悬浮/肖像 tooltip + 角色状态[升级U/撤退R/技能] + 关卡信息 + 设置工具[暂停P/重开/倍速/音量] + 调试工具[加钱/通关]） |
+| DebugUISystem        | `debug_ui_system.cpp`        | 调试 UI：ImGui 每帧逻辑+渲染；`update()`（战斗分支：悬浮/肖像 tooltip + 角色状态[升级U/撤退R/技能] + 关卡信息 + 设置工具[暂停P/重开/倍速/音量] + 调试工具[加钱/通关] + 存档面板）+ `updateTitle(TitleScene&)`（标题分支：Logo + 4 按钮 + 角色信息 + 读档面板） |
 | SelectionSystem      | `selection_system.cpp`       | 选择单位：每帧悬浮检测（写 `hovered_unit` ctx）+ 左键选中玩家单位 + 右键清除选中 |
 | SkillSystem          | `skill_system.cpp`          | 技能系统：事件驱动三态流转（就绪/激活/持续结束），显示标识增删、Buff 乘除、被动清理 |
 
@@ -192,8 +194,10 @@ main.cpp
 
 - **SessionData** (`game::data`) — 会话数据类，持有游戏进度，用 `shared_ptr` 供多个场景共享
   - 关卡信息：`mLevelNumber`（当前关卡）/ `mPoint`（积分）/ `mLevelClear`（是否通关）
-  - 角色池：`mUnitMap`（角色名哈希 → UnitData）
+  - 角色池：`mUnitMap`（角色名哈希 → UnitData）+ `mUnitDataList`（`vector<UnitData*>`，与 map 平行的可排序迭代列表，addUnit/removeUnit/clearUnits/clear 四路同步维护）
+  - `mapUnitDataList()` — 用 `mUnitMap` 重建 `mUnitDataList`（load 后调用）
   - `loadDefaultData()` — 从 `assets/data/default_session_data.json` 加载默认进度
+  - `loadFromFile(path)` — 从存档文件加载（内部别名到 `loadDefaultData(path)`，解析失败不破坏旧数据）
   - `saveToFile()` — 序列化为 JSON 存档（自动创建父目录、4 空格缩进）
   - 角色操作：`addUnit()` / `removeUnit()` / `addUnitLevel()` / `addUnitRarity()` / `clearUnits()`
   - 进度操作：`addPoint()` / `addOneLevel()` / `setLevelClear()` / `clear()`
@@ -292,13 +296,14 @@ assets/data/level_config.json  ← 关卡/波次/敌人组成（数据）
 ```
 GameApp::initImGui()         ① 初始化：CreateContext → 配置/缩放/透明度 → 中文字体 → SDL3 后端
 InputManager::update()       ② 事件：SDL_PollEvent 里 ImGui_ImplSDL3_ProcessEvent + WantCaptureMouse 拦截
-DebugUISystem::update()      ③ 渲染：beginFrame → renderHoveredUnit → renderSelectedUnit → endFrame（挂在 GameScene::render 最后）
+DebugUISystem::update()      ③ 渲染（GameScene）：beginFrame → 战斗窗口 → 存档面板 → endFrame
+DebugUISystem::updateTitle()   渲染（TitleScene）：beginFrame → Logo → 标题按钮 → 角色信息 → 读档面板 → endFrame
 ```
 
 - **initImGui** (`engine::core`) — ImGui 初始化：`CreateContext`、键盘/手柄导航、`StyleColorsDark`、系统 DPI 缩放（`SDL_GetDisplayContentScale`）、窗口/弹窗透明度、中文字体 `VonwaonBitmap-16px.ttf`（`GetGlyphRangesChineseSimplifiedCommon`，失败回退默认字体）、`ImGui_ImplSDL3_InitForSDLRenderer` + `ImGui_ImplSDLRenderer3_Init`；在 `initSceneManager` 后、首个场景创建前调用；`close()` 里 Shutdown 三件套（在 `SDL_DestroyRenderer` 之前）
 - **逻辑分辨率开关** (`game_state.h/.cpp`) — `disableLogicalPresentation()` / `enableLogicalPresentation()`：读当前逻辑尺寸后用 `SDL_LOGICAL_PRESENTATION_DISABLED` / `LETTERBOX` 重设。ImGui 对 letterbox 支持差，画 ImGui 前临时关闭（鼠标 1:1 到物理像素）、画完恢复
 - **输入接线** (`input_manager.cpp`) — 轮询循环里 `ImGui_ImplSDL3_ProcessEvent`；`processEvent` 开头 `ImGui::GetIO().WantCaptureMouse` 拦截，ImGui 捕获鼠标时游戏不响应（调试 UI 不穿透到放置/战斗操作）
-- **DebugUISystem** (`game::system`) — 每帧 `beginFrame`（三个 NewFrame + 关逻辑分辨率）→ `renderHoveredUnit`（悬浮单位 tooltip）+ `renderSelectedUnit`（左上角「角色状态」窗口）→ `endFrame`（`Render` + `RenderDrawData` + 恢复逻辑分辨率）
+- **DebugUISystem** (`game::system`) — 双分支：`update()`（战斗分支，挂 `GameScene::render` 最后）每帧 `beginFrame` → `renderHoveredUnit` + `renderSelectedUnit` + 角色信息 + 设置/调试工具 + 存档面板 → `endFrame`；`updateTitle(TitleScene&)`（标题分支，挂 `TitleScene::render` 最后）→ `renderTitleLogo` + `renderTitleButtons`（4 按钮直接调 TitleScene 私有回调，`friend`）+ `renderUnitInfoUI`（14 列可排序角色表格 + 升级按钮）+ `renderLoadPanelUI`（3 个 SLOT 读档按钮）→ `endFrame`
 - **渲染顺序** — 挂在 `GameScene::render()` 最后（`Scene::render()` 之后），盖在最上层，在 `present()` 前写进 SDL 渲染器
 
 ## 单位信息显示与选择系统
@@ -406,6 +411,18 @@ GameScene(Context& context,
 - `skill_system.cpp` — 盾御激活时（且未锁动作）enqueue `guard`；持续结束时（且未锁动作）enqueue `idle`
 - `attack_starter_system.cpp:updatePlayer` — 玩家攻击时 `emplace_or_replace<ActionLockTag>`（守卫/攻击动画期间锁定行动，不被硬直打断）
 - `animation_state_system.cpp` — 玩家动画结束时按 `SkillComponent.mSkillId == "shield" && SkillActiveTag` 特判回 `guard`，否则回 `idle`，随后 `remove<ActionLockTag>` 解除硬直
+
+## 标题场景
+
+实现**标题场景（TitleScene）**：开始游戏 / 确认角色 / 载入游戏 / 退出游戏四流程，`main.cpp` 初始场景由 GameScene 改为 TitleScene，应用启动先进标题画面。
+
+- **TitleScene**（`game::scene`）— 与 GameScene 对称的 5 参数 DI 构造器 `(Context&, shared_ptr<BlueprintManager/SessionData/UIConfig/LevelConfig> = nullptr)`；`friend class DebugUISystem`（ImGui 系统直接访问私有成员与回调）；`init()` 顺序 `initSessionData → initLevelConfig → initBlueprintManager → initUIConfig → loadTitleLevel`（title.tmj 用默认 BasicEntityBuilder）`→ initSystems → initRegistryContext → initUI`，末尾 `setState(Title)` + `setTimeScale(1.0f)`（从战斗倍速回来也重置）
+- **四按钮回调** — `onStartGameClick`（`isLevelClear()` 则 `setLevelClear(false)+addOneLevel()` 进下一关 → 带全部共享数据 `requestReplaceScene(GameScene)`）/ `onConfirmRoleClick`（toggle 角色信息面板）/ `onLoadGameClick`（toggle 读档面板）/ `onQuitClick`（`quit()` 关窗口）
+- **场景切换数据语义** — 标题 → 游戏传全部 4 份共享数据（把进度带进战斗）；游戏 → 标题只传 `mContext`（丢弃未保存进度——本课起有存档系统，进度走 save/load 通道，这是刻意设计）
+- **可排序角色表格**（`renderUnitTable`）— 14 列（姓名/职业/类型/等级/稀有度/COST/生命值/攻击力/防御力/攻击范围/攻击间隔/阻挡数量/技能/升级），`ImGuiTableFlags_Sortable` + `SpecsDirty` 脏标识模式（排序后必须置 false 防重复排序）驱动 `std::stable_sort` 于 `mUnitDataList`；数值列用 `statModify` 重算、`static_cast<int>(round)` 防 float 相等比较问题；升级按钮 `PushID(unit->mName.c_str())` 保证按钮 ID 唯一、COST 不足 `BeginDisabled` 置灰
+- **存档/读档面板** — 各 3 个 `SLOT 1/2/3` 按钮 → `loadFromFile("assets/save/SLOT_x.json")` / `saveToFile(...)`；底部按 `isLevelClear()` 显示「下一关/当前关卡」；GameScene 的存档面板经 `ctx().emplace_as<bool&>("show_save_panel"_hs, mShowSavePanel)` 暴露给 `update()` 分支（ECS/registry 惯例），TitleScene 两个标志因 `friend` 直接读私有成员、不走 ctx
+
+详见 `docs/notes/011-title-scene.md`。
 
 ## 战斗系统
 
@@ -607,7 +624,7 @@ ECS 空标签（tag），用于标记实体状态，配合 view 的 `exclude` �
 
 ```
 src/
-├── main.cpp                          #   入口：初始化 spdlog → 创建 GameApp → 注册 GameScene → 运行
+├── main.cpp                          #   入口：初始化 spdlog → 创建 GameApp → 注册 TitleScene → 运行
 ├── engine/                           #   引擎层 — 通用 2D 游戏引擎
 │   ├── core/                         #   核心（GameApp, Config, Context, Time, GameState）
 │   ├── component/                    #   ECS 组件定义（9 个组件）
@@ -627,8 +644,9 @@ src/
     ├── defs/                         #   标签与事件定义 + 常量（Tags, Events, Constants）
     ├── factory/                      #   工厂（BlueprintManager, EntityFactory）
     ├── loader/                       #   关卡扩展构建器（EntityBuilderMW）
-    ├── scene/                        #   游戏场景（GameScene — 主游戏场景）
-    │   └── game_scene.cpp/h
+    ├── scene/                        #   游戏场景（GameScene — 主游戏场景；TitleScene — 标题场景）
+    │   ├── game_scene.cpp/h
+    │   └── title_scene.cpp/h
     ├── spawner/                      #   敌人生成器（EnemySpawner — 按波次生成）
     └── system/                       #   游戏系统（战斗、寻路、阻挡、放置等）
         ├── follow_path_system.cpp/h
@@ -645,7 +663,7 @@ src/
         ├── effect_system.cpp/h             # 特效创建（通用特效 + 死亡特效）
         ├── health_bar_system.cpp/h         # 血量条渲染
         ├── game_rule_system.cpp/h          # 游戏规则（cost 恢复、基地血量/胜负判定、升级/撤退、通关延迟切换）
-        ├── debug_ui_system.cpp/h           # 调试 UI（ImGui 每帧逻辑+渲染，悬浮/肖像 tooltip + 角色状态[升级/撤退/技能] + 关卡信息 + 设置工具 + 调试工具）
+        ├── debug_ui_system.cpp/h           # 调试 UI（ImGui 每帧逻辑+渲染，update 战斗分支 + updateTitle 标题分支）
         ├── selection_system.cpp/h          # 选择单位系统（悬浮检测 + 左键选中 + 右键清除）
         └── skill_system.cpp/h              # 技能系统（三态流转 + 显示标识 + Buff 管理）
 ```

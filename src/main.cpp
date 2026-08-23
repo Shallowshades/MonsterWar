@@ -6,16 +6,16 @@
 #include "engine/core/game_app.h"
 #include "engine/core/context.h"
 #include "engine/utils/events.h"
-#include "game/scene/game_scene.h"
+#include "game/scene/title_scene.h"
 
 int main(int, char**) {
 
 	spdlog::set_level(spdlog::level::trace);
 	engine::core::GameApp app;
 	app.registerSceneSetup([](engine::core::Context& context) {
-		// GameApp 在调用 run 方法之前, 先创建并设置初始场景
-		auto gameScene = std::make_unique<game::scene::GameScene>(context);
-		context.getDispatcher().trigger<engine::utils::PushSceneEvent>(engine::utils::PushSceneEvent{ std::move(gameScene) });
+		// GameApp 在调用 run 方法之前, 先创建并设置初始场景（标题场景）
+		auto titleScene = std::make_unique<game::scene::TitleScene>(context);
+		context.getDispatcher().trigger<engine::utils::PushSceneEvent>(engine::utils::PushSceneEvent{ std::move(titleScene) });
 	});
 	app.run();
 

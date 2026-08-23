@@ -1,4 +1,5 @@
 #include "game_scene.h"
+#include "title_scene.h"
 #include "../factory/entity_factory.h"
 #include "../factory/blueprint_manager.h"
 #include "../loader/entity_builder_mw.h"
@@ -289,6 +290,7 @@ namespace game::scene {
 		mRegistry.ctx().emplace<int&>(mLevelNumber);
 		mRegistry.ctx().emplace_as<entt::entity&>("selected_unit"_hs, mSelectedUnit);
 		mRegistry.ctx().emplace_as<entt::entity&>("hovered_unit"_hs, mHoveredUnit);
+		mRegistry.ctx().emplace_as<bool&>("show_save_panel"_hs, mShowSavePanel);
 		return true;
 	}
 
@@ -357,12 +359,14 @@ namespace game::scene {
 
 	void GameScene::onBackToTitle() {
 		spdlog::info("返回标题");
-		// TODO: 返回标题场景（后续课实现）
+		// 只传 mContext，丢弃共享数据——本课起有存档系统，未保存进度走 save/load 通道
+		requestReplaceScene(std::make_unique<game::scene::TitleScene>(mContext));
 	}
 
 	void GameScene::onSave() {
 		spdlog::info("保存");
-		// TODO: 保存游戏（后续课实现）
+		// 切换存档面板的显示状态（DebugUISystem 通过 ctx 读取标志并渲染）
+		mShowSavePanel = !mShowSavePanel;
 	}
 
 	void GameScene::onLevelClear() {
