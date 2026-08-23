@@ -48,6 +48,13 @@ namespace game::defs {
         bool mIsFlipped{ false };               ///< @brief 是否翻转
     };
 
+    /// @brief (通用)特效事件
+    struct EffectEvent {
+        entt::id_type mNameId{ entt::null };    ///< @brief 特效ID
+        glm::vec2 mPosition{};                  ///< @brief 位置
+        bool mIsFlipped{ false };               ///< @brief 是否翻转
+    };
+
     /// @brief 预备出击事件（点击肖像时发送，用于下一课的出击布阵）
     struct PrepUnitEvent {
         entt::id_type mNameId{ entt::null };    ///< @brief 角色名ID

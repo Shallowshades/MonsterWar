@@ -37,6 +37,7 @@ namespace game::factory {
         std::unordered_map<entt::id_type, data::PlayerClassBlueprint> mPlayerClassBlueprints; ///< @brief 玩家职业蓝图
         std::unordered_map<entt::id_type, data::EnemyClassBlueprint> mEnemyClassBlueprints;   ///< @brief 敌人类型蓝图容器
         std::unordered_map<entt::id_type, data::ProjectileBlueprint> mProjectileBlueprints;    ///< @brief 投射物蓝图
+        std::unordered_map<entt::id_type, data::EffectBlueprint> mEffectBlueprints;            ///< @brief 特效蓝图
         // TODO: 未来添加其他蓝图容器
 
     public:
@@ -45,11 +46,13 @@ namespace game::factory {
         [[nodiscard]] bool loadPlayerClassBlueprints(std::string_view player_json_path);    ///< @brief 加载玩家职业蓝图, 返回是否成功
         [[nodiscard]] bool loadEnemyClassBlueprints(std::string_view enemy_json_path);      ///< @brief 加载敌人类型蓝图, 返回是否成功
         [[nodiscard]] bool loadProjectileBlueprints(std::string_view projectile_json_path); ///< @brief 加载投射物蓝图, 返回是否成功
+        [[nodiscard]] bool loadEffectBlueprints(std::string_view effect_json_path);         ///< @brief 加载特效蓝图, 返回是否成功
         // TODO: 未来添加其他蓝图加载函数
 
         const data::PlayerClassBlueprint& getPlayerClassBlueprint(entt::id_type id) const;  ///< @brief 获取指定ID的玩家职业蓝图
         const data::EnemyClassBlueprint& getEnemyClassBlueprint(entt::id_type id) const;    ///< @brief 获取指定ID的敌人类型蓝图
         const data::ProjectileBlueprint& getProjectileBlueprint(entt::id_type id) const;    ///< @brief 获取指定ID的投射物蓝图
+        const data::EffectBlueprint& getEffectBlueprint(entt::id_type id) const;            ///< @brief 获取指定ID的特效蓝图
         // TODO: 未来添加其他蓝图获取函数
 
     private:
@@ -58,6 +61,7 @@ namespace game::factory {
         [[nodiscard]] data::StatsBlueprint parseStats(const nlohmann::json& json);
         [[nodiscard]] data::SpriteBlueprint parseSprite(const nlohmann::json& json);
         [[nodiscard]] std::unordered_map<entt::id_type, data::AnimationBlueprint> parseAnimationsMap(const nlohmann::json& json);
+        [[nodiscard]] data::AnimationBlueprint parseOneAnimation(const nlohmann::json& json);   ///< @brief 解析单个动画（特效只有单个动画）
         [[nodiscard]] data::SoundBlueprint parseSound(const nlohmann::json& json);
         [[nodiscard]] data::PlayerBlueprint parsePlayer(const nlohmann::json& json);
         [[nodiscard]] data::EnemyBlueprint parseEnemy(const nlohmann::json& json);

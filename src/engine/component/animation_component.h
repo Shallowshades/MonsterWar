@@ -39,7 +39,7 @@ namespace engine::component {
 	 */
 	struct Animation {
 		std::vector<AnimationFrame> mFrames;                            ///< @brief 动画帧
-		std::unordered_map<int, entt::id_type> mEvents;				///< @brief 动画事件，键为帧索引，值为事件ID
+		std::unordered_map<int, entt::id_type> mEvents;					///< @brief 动画事件，键为帧索引，值为事件ID
 		float mTotalDuration_ms{};                                      ///< @brief 动画总时长（毫秒）
 		bool mLoop{ true };                                             ///< @brief 是否循环
 

@@ -108,7 +108,7 @@ main.cpp
 | AnimationEventSystem | `animation_event_system.cpp` | 监听 AnimationEvent（动画帧事件），发出 AttackEvent / HealEvent / PlaySoundEvent  |
 | CombatResolveSystem  | `combat_resolve_system.cpp`  | 监听 AttackEvent / HealEvent，计算伤害/治疗量，处理死亡和阻挡计数                 |
 | ProjectileSystem     | `projectile_system.cpp`      | 响应 EmitProjectileEvent 创建投射物实体，更新飞行弧线轨迹，到达后发出 AttackEvent |
-| EffectSystem         | `effect_system.cpp`          | 监听 EnemyDeadEffectEvent，通过实体工厂创建死亡特效                               |
+| EffectSystem         | `effect_system.cpp`          | 监听 EnemyDeadEffectEvent / EffectEvent，通过实体工厂创建死亡/通用特效            |
 | HealthBarSystem      | `health_bar_system.cpp`      | 渲染受伤单位的血量条（按血量百分比变色）                                          |
 | PlaceUnitSystem      | `place_unit_system.cpp`      | 出击准备/放置：幽灵跟随鼠标、检测放置点、落子出兵、扣费、占用放置点、取消          |
 | RenderRangeSystem    | `render_range_system.cpp`    | 渲染预备/已放置远程单位的攻击范围圆（半透明绿色，`ShowRangeTag`）                 |
@@ -155,13 +155,14 @@ main.cpp
 
 实现了蓝图驱动的实体创建机制，将实体数据定义与创建逻辑解耦。
 
-- **BlueprintManager** (`game::factory`) — 从 JSON 加载敌人/玩家蓝图数据并解析为结构化蓝图
-  - 支持子蓝图分别解析：Stats、Sprite、Animation、Sound、Enemy、Player、DisplayInfo
-  - 提供 `getEnemyClassBlueprint()` / `getPlayerClassBlueprint()` 按 ID 查询蓝图
+- **BlueprintManager** (`game::factory`) — 从 JSON 加载敌人/玩家/投射物/特效蓝图数据并解析为结构化蓝图
+  - 支持子蓝图分别解析：Stats、Sprite、Animation（map）、Sound、Enemy、Player、DisplayInfo、单个 Animation
+  - 提供 `getEnemyClassBlueprint()` / `getPlayerClassBlueprint()` / `getProjectileBlueprint()` / `getEffectBlueprint()` 按 ID 查询蓝图
 - **EntityFactory** (`game::factory`) — 根据蓝图数据创建 ECS 实体并组装组件
   - `createEnemyUnit()` — 按蓝图自动添加 Transform、Sprite、Animation、Stats、Enemy 等组件
   - `createPlayerUnit()` — 按蓝图创建玩家单位，添加 Player、Blocker 等组件
   - `createEnemyDeadEffect()` — 根据敌人蓝图创建死亡特效实体（复用 "damage" 动画，播完自动移除）
+  - `createEffect()` — 根据特效蓝图创建通用特效实体（Transform + Sprite + 单动画 + 上层渲染 + 播完移除）
   - `addOneAnimationComponent()` — 创建只含单个动画的组件（`loop=false`），用于特效实体
   - 提供独立的 `addXxxComponent()` 方法供子类扩展
 - **蓝图数据结构** (`entity_blueprint.h`) — 定义了一系列子蓝图结构体
@@ -169,6 +170,7 @@ main.cpp
   - `PlayerClassBlueprint` — 玩家职业蓝图，包含 `PlayerBlueprint`（类型、技能、阻挡、消耗）
   - `PlayerBlueprint` 通过 `PlayerType` 枚举（MELEE / RANGED / MIXED）区分单位类型
   - `ProjectileBlueprint` — 投射物蓝图（弧线高度、飞行时间、精灵、音效）
+  - `EffectBlueprint` — 特效蓝图（精灵 + 单个动画），由通用 `EffectEvent` 触发
   - `PlayerClassBlueprint` / `EnemyClassBlueprint` 包含 `mProjectileId` 字段，关联远程单位的投射物类型
 - **玩家单位组件**：`PlayerComponent`（出击消耗）、`BlockerComponent`（阻挡计数）、`BlockedByComponent`（被阻挡引用）
 
@@ -349,10 +351,10 @@ ProjectileSystem (投射物飞行)
 CombatResolveSystem (战斗结算)
     → AttackEvent: damage = atk - def (最小 10% atk)，扣血 → 死亡 DeadTag 或受伤 InjuredTag
     → 敌人死亡 → 减少阻挡者 BlockerComponent.mCurrentCount + 发出 EnemyDeadEffectEvent
-    → HealEvent: 回血 → 满血移除 InjuredTag
+    → HealEvent: 回血 → 满血移除 InjuredTag + 发 EffectEvent 治疗特效
 EffectSystem (特效)
-    → 监听 EnemyDeadEffectEvent
-    → createEnemyDeadEffect：复用敌人蓝图的 "damage" 动画创建一次性特效实体
+    → 监听 EnemyDeadEffectEvent：createEnemyDeadEffect（复用敌人蓝图的 "damage" 动画）
+    → 监听 EffectEvent：createEffect（按 effect_data.json 特效蓝图创建通用特效实体）
 AudioSystem (音效播放)
     → 监听 PlaySoundEvent，通过 AudioPlayer 播放
 AnimationStateSystem (动画状态恢复)
@@ -381,7 +383,7 @@ ECS 空标签（tag），用于标记实体状态，配合 view 的 `exclude` �
 | HealerTag        | `tags.h` | 治疗单位类型                                          |
 | MeleeUnitTag     | `tags.h` | 近战单位类型                                          |
 | RangedUnitTag    | `tags.h` | 远程单位类型                                          |
-| OneShotRemoveTag | `tags.h` | 一次性动画实体（死亡特效），播完标记 DeadTag 自动移除 |
+| OneShotRemoveTag | `tags.h` | 一次性动画实体（特效/死亡特效），播完标记 DeadTag 自动移除 |
 | HasHealthBarTag  | `tags.h` | 需要显示血量条的实体（玩家/敌人单位）                 |
 | MeleePlaceTag    | `tags.h` | 近战放置区域（地图放置点）                            |
 | RangedPlaceTag   | `tags.h` | 远程放置区域（地图放置点）                            |
@@ -465,6 +467,7 @@ ECS 空标签（tag），用于标记实体状态，配合 view 的 `exclude` �
 | HealEvent                 | 治疗命中（治疗者 + 目标 + 治疗量）              |
 | EmitProjectileEvent       | 发射投射物（投射物ID + 目标 + 起止位置 + 伤害） |
 | EnemyDeadEffectEvent      | 敌人死亡特效（敌人ID + 位置 + 翻转标志）        |
+| EffectEvent               | (通用)特效（特效ID + 位置 + 翻转标志）          |
 | PrepUnitEvent             | 预备出击（角色名ID + 职业ID + 费用）            |
 | UIPortraitHoverEnterEvent | 单位肖像悬停进入（角色名ID）                    |
 | UIPortraitHoverLeaveEvent | 单位肖像悬停离开                                |
@@ -533,7 +536,7 @@ src/
         ├── animation_event_system.cpp/h    # 动画帧事件
         ├── combat_resolve_system.cpp/h     # 伤害/治疗计算与结算
         ├── projectile_system.cpp/h         # 投射物飞行与命中
-        ├── effect_system.cpp/h             # 特效创建（死亡特效）
+        ├── effect_system.cpp/h             # 特效创建（通用特效 + 死亡特效）
         ├── health_bar_system.cpp/h         # 血量条渲染
         ├── debug_ui_system.cpp/h           # 调试 UI（ImGui 每帧逻辑+渲染，悬浮/选中单位信息）
         └── selection_system.cpp/h          # 选择单位系统（悬浮检测 + 左键选中 + 右键清除）

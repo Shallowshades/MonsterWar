@@ -110,7 +110,9 @@ namespace game::system {
             target_stats.mHp = target_stats.mMaxHp;
             mRegistry.remove<game::defs::InjuredTag>(event.mTarget);
         }
-        // TODO: 添加治疗特效
+        // 添加治疗特效
+        const auto& transform = mRegistry.get<engine::component::TransformComponent>(event.mTarget);
+        mDispatcher.enqueue(game::defs::EffectEvent{ "heal"_hs, transform.mPosition, false });
     }
 
     // --- 辅助函数 ---

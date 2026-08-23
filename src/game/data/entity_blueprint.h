@@ -124,6 +124,14 @@ namespace game::data {
         SoundBlueprint mSounds{};
     };
 
+    /// @brief 特效蓝图, 生成特效实体时使用
+    struct EffectBlueprint {
+        entt::id_type mId{ entt::null };
+        std::string mName;
+        SpriteBlueprint mSprite{};
+        AnimationBlueprint mAnimation{};        ///< @brief 单个动画（特效只有一个动画）
+    };
+
 }   // namespace game::data
 
 #endif // ENTITY_BLUEPRINT_H

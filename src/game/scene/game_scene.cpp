@@ -242,7 +242,8 @@ namespace game::scene {
 			mBlueprintManager = std::make_shared<game::factory::BlueprintManager>(mContext.getResourceManager());
 			if (!mBlueprintManager->loadEnemyClassBlueprints("assets/data/enemy_data.json") ||
 				!mBlueprintManager->loadPlayerClassBlueprints("assets/data/player_data.json") ||
-				!mBlueprintManager->loadProjectileBlueprints("assets/data/projectile_data.json")) {
+				!mBlueprintManager->loadProjectileBlueprints("assets/data/projectile_data.json") ||
+				!mBlueprintManager->loadEffectBlueprints("assets/data/effect_data.json")) {
 				spdlog::error("加载蓝图失败");
 				return false;
 			}
