@@ -26,7 +26,7 @@ main.cpp
       → handleEvents (SDL 事件 → InputManager → dispatcher)
       → update(delta)
         → RemoveDeadSystem (清理死亡实体)
-        → TimerSystem (推进攻击冷却计时器，冷却结束添加 AttackReadyTag)
+        → TimerSystem (推进攻击冷却 + 技能冷却/持续计时器，冷却结束添加对应就绪标签)
         → SetTargetSystem (为无目标角色寻找/刷新攻击目标)
         → OrientationSystem (根据目标/移动方向翻转精灵朝向)
         → FollowPathSystem (敌人路径跟随，触发 EnemyArriveHomeEvent)
@@ -42,7 +42,7 @@ main.cpp
         → RenderSystem (按 layer+depth 排序渲染)
         → HealthBarSystem (绘制受伤单位的血量条)
         → RenderRangeSystem (预备/已放置远程单位的攻击范围圆)
-        → DebugUISystem (ImGui 调试 UI：悬浮 tooltip + 选中角色状态，最后渲染盖最上面)
+        → DebugUISystem (ImGui 调试 UI：悬浮 tooltip + 选中角色状态 + 技能施放面板，最后渲染盖最上面)
     → close()
       → 逆序清理所有子系统
 ```
@@ -80,6 +80,8 @@ main.cpp
 | ProjectileIDComponent | `projectile_component.h` | 投射物ID，附加在远程角色上         |
 | UnitPrepComponent     | `unit_prep_component.h`  | 预备出击单位（幽灵）：角色ID/类型/范围/cost |
 | PlaceOccupiedComponent | `place_occupied_component.h` | 放置点占用（记录占用该放置点的单位） |
+| SkillComponent        | `skill_component.h`        | 技能（技能ID、显示特效实体、名称/描述、冷却/持续、两个计时器） |
+| CostRegenComponent    | `cost_regen_component.h`   | COST 恢复速率（被动技能等额外回 COST） |
 
 ## ECS 系统
 
@@ -100,7 +102,7 @@ main.cpp
 | FollowPathSystem     | `follow_path_system.cpp`     | 敌人沿路径节点移动，到达终点触发 EnemyArriveHomeEvent                             |
 | RemoveDeadSystem     | `remove_dead_system.cpp`     | 延迟清理标记 DeadTag 的死亡实体                                                   |
 | BlockSystem          | `block_system.cpp`           | 检测阻挡距离，设置敌人速度为 0 并切换阻挡动画                                     |
-| TimerSystem          | `timer_system.cpp`           | 推进攻击冷却计时器，冷却结束添加 AttackReadyTag                                   |
+| TimerSystem          | `timer_system.cpp`           | 推进攻击冷却 + 技能冷却/持续计时器，冷却结束添加对应就绪标签、发技能事件          |
 | SetTargetSystem      | `set_target_system.cpp`      | 为无目标角色寻找目标（玩家找敌人、远程敌人找玩家、治疗者找低血量盟友）            |
 | AttackStarterSystem  | `attack_starter_system.cpp`  | AttackReadyTag 实体触发攻击动画，添加 ActionLockTag                               |
 | OrientationSystem    | `orientation_system.cpp`     | 根据目标位置/阻挡者/移动方向翻转精灵朝向                                          |
@@ -114,6 +116,7 @@ main.cpp
 | RenderRangeSystem    | `render_range_system.cpp`    | 渲染预备/已放置远程单位的攻击范围圆（半透明绿色，`ShowRangeTag`）                 |
 | DebugUISystem        | `debug_ui_system.cpp`        | 调试 UI：ImGui 每帧逻辑+渲染（悬浮单位 tooltip + 选中单位角色状态窗口）           |
 | SelectionSystem      | `selection_system.cpp`       | 选择单位：每帧悬浮检测（写 `hovered_unit` ctx）+ 左键选中玩家单位 + 右键清除选中 |
+| SkillSystem          | `skill_system.cpp`          | 技能系统：事件驱动三态流转（就绪/激活/持续结束），显示标识增删、Buff 乘除、被动清理 |
 
 ## 关卡加载系统（Builder 模式）
 
@@ -155,15 +158,17 @@ main.cpp
 
 实现了蓝图驱动的实体创建机制，将实体数据定义与创建逻辑解耦。
 
-- **BlueprintManager** (`game::factory`) — 从 JSON 加载敌人/玩家/投射物/特效蓝图数据并解析为结构化蓝图
-  - 支持子蓝图分别解析：Stats、Sprite、Animation（map）、Sound、Enemy、Player、DisplayInfo、单个 Animation
-  - 提供 `getEnemyClassBlueprint()` / `getPlayerClassBlueprint()` / `getProjectileBlueprint()` / `getEffectBlueprint()` 按 ID 查询蓝图
+- **BlueprintManager** (`game::factory`) — 从 JSON 加载敌人/玩家/投射物/特效/技能蓝图数据并解析为结构化蓝图
+  - 支持子蓝图分别解析：Stats、Sprite、Animation（map）、Sound、Enemy、Player、DisplayInfo、单个 Animation、Buff
+  - 提供 `getEnemyClassBlueprint()` / `getPlayerClassBlueprint()` / `getProjectileBlueprint()` / `getEffectBlueprint()` / `getSkillBlueprint()` 按 ID 查询蓝图
 - **EntityFactory** (`game::factory`) — 根据蓝图数据创建 ECS 实体并组装组件
   - `createEnemyUnit()` — 按蓝图自动添加 Transform、Sprite、Animation、Stats、Enemy 等组件
-  - `createPlayerUnit()` — 按蓝图创建玩家单位，添加 Player、Blocker 等组件
+  - `createPlayerUnit()` — 按蓝图创建玩家单位，添加 Player、Blocker、Skill 等组件
   - `createEnemyDeadEffect()` — 根据敌人蓝图创建死亡特效实体（复用 "damage" 动画，播完自动移除）
   - `createEffect()` — 根据特效蓝图创建通用特效实体（Transform + Sprite + 单动画 + 上层渲染 + 播完移除）
-  - `addOneAnimationComponent()` — 创建只含单个动画的组件（`loop=false`），用于特效实体
+  - `createSkillDisplay()` — 创建技能显示标识实体（循环动画 + `MAIN_LAYER+20`，不加移除标签，由 SkillSystem 打 `DeadTag` 回收）
+  - `addSkillComponent()` — 给玩家单位挂技能组件（初始冷却 = 冷却时间一半；被动技能直接打 `PassiveSkillTag` + `SkillReadyTag` 落子即放）
+  - `addOneAnimationComponent()` — 创建只含单个动画的组件（`loop=false` 用于特效 / `loop=true` 用于技能标识），用于特效实体
   - 提供独立的 `addXxxComponent()` 方法供子类扩展
 - **蓝图数据结构** (`entity_blueprint.h`) — 定义了一系列子蓝图结构体
   - `EnemyClassBlueprint` — 聚合所有子蓝图，作为完整敌人类型定义
@@ -171,6 +176,8 @@ main.cpp
   - `PlayerBlueprint` 通过 `PlayerType` 枚举（MELEE / RANGED / MIXED）区分单位类型
   - `ProjectileBlueprint` — 投射物蓝图（弧线高度、飞行时间、精灵、音效）
   - `EffectBlueprint` — 特效蓝图（精灵 + 单个动画），由通用 `EffectEvent` 触发
+  - `BuffBlueprint` — 增益蓝图（HP/ATK/DEF/射程/攻速倍率 + COST 恢复），技能激活时给角色加 Buff
+  - `SkillBlueprint` — 技能蓝图（名称/描述/是否被动/冷却/持续 + Buff），数据驱动技能数值
   - `PlayerClassBlueprint` / `EnemyClassBlueprint` 包含 `mProjectileId` 字段，关联远程单位的投射物类型
 - **玩家单位组件**：`PlayerComponent`（出击消耗）、`BlockerComponent`（阻挡计数）、`BlockedByComponent`（被阻挡引用）
 
@@ -314,6 +321,38 @@ RenderRangeSystem 第二段 view：ShowRangeTag + Transform + Stats → 画已�
 - **悬浮/选中语义分离** — hovered 每帧重算（纯查询预览）；selected 只在左键点击变更（持久选择），`ShowRangeTag` 是其副作用信号，驱动范围圆绘制
 - **与 `WantCaptureMouse` 协同** — 鼠标悬停/拖动 ImGui 窗口时事件被拦截，不会误选单位；代价是调试窗口上点不到游戏（预期行为）
 
+## 技能系统
+
+实现了数据驱动的技能三态机：每个玩家职业配一个技能（蓝图数据驱动），技能在**冷却 → 就绪 → 激活 → 持续结束**间流转，激活时给角色加 Buff（攻/防/射程/攻速倍率、被动回 COST），角色头顶用循环特效标识当前状态，通过 ImGui 选中面板 + 快捷键 S 施放。
+
+```
+TimerSystem (计时)
+    → 技能冷却够了 → SkillReadyTag + enqueue SkillReadyEvent
+    → 技能持续够了 → remove SkillActiveTag + enqueue SkillDurationEndEvent
+SkillSystem (事件驱动三态流转，订阅 4 事件)
+    → SkillReadyEvent      → 显示 skill_ready 标识（循环特效，头顶 +SKILL_DISPLAY_OFFSET）
+    → SkillActiveEvent     → 删就绪标识 → 建 skill_active 标识 → SkillActiveTag → addBuff
+                            （要求 SkillReadyTag，冷却中收到直接忽略；被动落子即放）
+    → SkillDurationEndEvent → 删激活标识 → removeBuff
+    → RemovePlayerUnitEvent → 清理显示标识（单位死亡兜底）
+addBuff/removeBuff (乘除对称)
+    → Stats.mHp/mAtk/mDef/mRange/mAtkInterval *= /= 倍率
+    → mCostRegen > 0 → emplace_or_replace / remove CostRegenComponent（GameRuleSystem 已有每帧回 COST 循环）
+DebugUISystem 选中面板技能区块
+    → BeginDisabled(!SkillReadyTag) + 按钮(技能名) + SetNextItemShortcut(S) → enqueue SkillActiveEvent
+    → 激活中：被动 → "被动技能激活中"；否则 "激活中，剩余时间: %.1f 秒"
+    → 冷却中：SkillReadyTag → "技能准备就绪"；否则 ProgressBar(cooldownTimer / cooldown)
+    → TextWrapped 技能描述
+```
+
+- **技能组件** (`skill_component.h`) — `SkillComponent`：技能ID、显示特效实体ID、名称/描述、冷却/持续、`mCooldownTimer`/`mDurationTimer` 两个计时器
+- **技能/增益蓝图** (`entity_blueprint.h`) — `SkillBlueprint`（名称/描述/被动/冷却/持续/Buff）+ `BuffBlueprint`（六个倍率字段，`mCostRegen` 是绝对值非倍率），解析见 `BlueprintManager::loadSkillBlueprints()` / `getSkillBlueprint()` / `parseBuff()`
+- **挂技能** (`entity_factory.cpp:addSkillComponent`) — 创建时初始冷却 = 冷却时间一半（免等满整个冷却）；被动技能直接打 `PassiveSkillTag` + `SkillReadyTag`
+- **被动技能** — 落子即放（`PlaceUnitSystem::onPlaceUnit` 检测 `PassiveSkillTag` → enqueue `SkillActiveEvent`）；永不过期（TimerSystem 持续计时排除 `PassiveSkillTag`，`SkillDurationEndEvent` 永不发出）
+- **显示标识** (`entity_factory.cpp:createSkillDisplay`) — 复用第 8 课 `skill_ready`/`skill_active` 特效蓝图，`loop=true` 循环动画、`MAIN_LAYER+20`、**不加** `OneShotRemoveTag`；由 SkillSystem 状态切换时打 `DeadTag` 回收
+- **EnTT remove vs erase** — TimerSystem 和 SkillSystem 都 remove 过 `SkillActiveTag`：`registry.remove<T>` 缺失返回 0 不抛（`erase` 才抛），双重移除安全
+- **技能数据** (`skill_data.json`) — 盾御(shield)/威能(power_up)/疾速(speed_up) 主动技能 + 休整(rest) 被动回 COST
+
 ## 战斗系统
 
 实现了基于 ECS 标签和冷却计时的自动战斗循环。
@@ -388,6 +427,9 @@ ECS 空标签（tag），用于标记实体状态，配合 view 的 `exclude` �
 | MeleePlaceTag    | `tags.h` | 近战放置区域（地图放置点）                            |
 | RangedPlaceTag   | `tags.h` | 远程放置区域（地图放置点）                            |
 | ShowRangeTag     | `tags.h` | 预备远程单位：显示攻击范围圆                          |
+| SkillReadyTag    | `tags.h` | 技能冷却结束，可以施放                                 |
+| SkillActiveTag   | `tags.h` | 技能激活中（施放后到持续时间结束）                     |
+| PassiveSkillTag  | `tags.h` | 被动技能（落子即放、永不过期，计时器排除）            |
 
 ### 游戏层常量（`game::defs`）
 
@@ -400,6 +442,7 @@ ECS 空标签（tag），用于标记实体状态，配合 view 的 `exclude` �
 | PLACE_RADIUS        | `constants.h` | 放置吸附半径（40.0），鼠标靠近放置点中心小于此距离即可放置   |
 | HOVER_RADIUS        | `constants.h` | 鼠标悬浮检测半径（30.0），鼠标与单位中心距离小于此值视为悬浮 |
 | RANGE_COLOR         | `constants.h` | 攻击范围圆颜色（半透明绿 {0,1,0,0.3}）                        |
+| SKILL_DISPLAY_OFFSET | `constants.h` | 技能显示标识相对角色的偏移（{0,-96}，角色头顶上方）           |
 
 ### 玩家类型枚举（`game::defs::PlayerType`）
 
@@ -418,6 +461,7 @@ ECS 空标签（tag），用于标记实体状态，配合 view 的 `exclude` �
 | 鼠标右键   | `mouse_right`  | 取消放置（移除幽灵单位）；清除单位选中（`SelectionSystem`，右键穿透）      |
 | A / D 键   | `move_left`/`move_right` | 出击面板左右滚动（由 `UnitsPortraitUI` 处理）      |
 | P / Escape | `pause`        | 清除所有已出击的玩家单位（`GameScene` 发 `RemovePlayerUnitEvent`） |
+| S 键       | `ImGui`        | 施放选中单位的技能（`DebugUISystem` 选中面板 `SetNextItemShortcut`） |
 
 ### 动画帧事件
 
@@ -478,6 +522,9 @@ ECS 空标签（tag），用于标记实体状态，配合 view 的 `exclude` �
 | LevelClearEvent           | 关卡通关（延迟计时结束，用于切场景）            |
 | LevelClearDelayedEvent    | 关卡通关延迟（进入通关倒计时）                  |
 | GameEndEvent              | 游戏结束（是否胜利）                            |
+| SkillReadyEvent           | 技能冷却结束（实体）                            |
+| SkillActiveEvent          | 技能激活/施放（实体，玩家按 S 或被动落子触发）  |
+| SkillDurationEndEvent     | 技能持续时间结束（实体）                        |
 
 ## 引擎基础设施
 
@@ -516,7 +563,7 @@ src/
 │   │   └── state/                    #   状态模式：Normal / Hover / Pressed
 │   └── utils/                        #   工具（Math, Events, Alignment）
 └── game/                             #   游戏层 — MonsterWar 游戏逻辑
-    ├── component/                    #   游戏组件（Enemy, Stats, ClassName, Player, Blocker, Target, Projectile, UnitPrep）
+    ├── component/                    #   游戏组件（Enemy, Stats, ClassName, Player, Blocker, Target, Projectile, UnitPrep, Skill, CostRegen）
     ├── data/                         #   数据结构（WaypointNode, EntityBlueprint, SessionData, LevelConfig, LevelData）
     ├── defs/                         #   标签与事件定义 + 常量（Tags, Events, Constants）
     ├── factory/                      #   工厂（BlueprintManager, EntityFactory）
@@ -538,8 +585,9 @@ src/
         ├── projectile_system.cpp/h         # 投射物飞行与命中
         ├── effect_system.cpp/h             # 特效创建（通用特效 + 死亡特效）
         ├── health_bar_system.cpp/h         # 血量条渲染
-        ├── debug_ui_system.cpp/h           # 调试 UI（ImGui 每帧逻辑+渲染，悬浮/选中单位信息）
-        └── selection_system.cpp/h          # 选择单位系统（悬浮检测 + 左键选中 + 右键清除）
+        ├── debug_ui_system.cpp/h           # 调试 UI（ImGui 每帧逻辑+渲染，悬浮/选中单位信息 + 技能面板）
+        ├── selection_system.cpp/h          # 选择单位系统（悬浮检测 + 左键选中 + 右键清除）
+        └── skill_system.cpp/h              # 技能系统（三态流转 + 显示标识 + Buff 管理）
 ```
 
 ```

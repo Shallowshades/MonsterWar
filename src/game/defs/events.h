@@ -80,6 +80,21 @@ namespace game::defs {
         entt::entity mEntity{ entt::null };     ///< @brief 玩家单位实体
     };
 
+    /// @brief 技能准备就绪事件
+    struct SkillReadyEvent {
+        entt::entity mEntity{ entt::null };     ///< @brief 单位实体
+    };
+
+    /// @brief 技能激活事件
+    struct SkillActiveEvent {
+        entt::entity mEntity{ entt::null };     ///< @brief 单位实体
+    };
+
+    /// @brief 技能持续结束事件
+    struct SkillDurationEndEvent {
+        entt::entity mEntity{ entt::null };     ///< @brief 单位实体
+    };
+
     /// @brief 单位升级事件
     struct UpgradeUnitEvent {
         entt::entity mEntity{ entt::null };     ///< @brief 升级的单位实体

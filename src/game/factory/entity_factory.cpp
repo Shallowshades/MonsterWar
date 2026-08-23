@@ -25,6 +25,7 @@
 #include "../component/blocker_component.h"
 #include "../component/projectile_component.h"
 #include "../component/unit_prep_component.h"
+#include "../component/skill_component.h"
 #include <entt/entity/registry.hpp>
 #include <entt/core/hashed_string.hpp>
 #include <spdlog/spdlog.h>
@@ -51,6 +52,7 @@ namespace game::factory {
         addStatsComponent(entity, blueprint.mStats, level, rarity);
         addPlayerComponent(entity, blueprint.mPlayer, rarity);
         addProjectileIDComponent(entity, blueprint.mProjectileId);
+        addSkillComponent(entity, blueprint.mPlayer.mSkillId);
 
         // 补充其他必要组件
         mRegistry.emplace<game::component::ClassNameComponent>(entity, class_id, blueprint.mDisplayInfo.mName);
@@ -155,6 +157,20 @@ namespace game::factory {
         // 补充其他必要组件（特效盖在单位上层）
         mRegistry.emplace<engine::component::RenderComponent>(entity, engine::component::RenderComponent::MAIN_LAYER + 10);
         mRegistry.emplace<game::defs::OneShotRemoveTag>(entity);
+        return entity;
+    }
+
+    entt::entity EntityFactory::createSkillDisplay(entt::id_type effect_id, const glm::vec2& position) {
+        auto entity = mRegistry.create();
+        const auto& effect_blueprint = mBlueprintManager.getEffectBlueprint(effect_id);
+        // 添加Transform组件
+        addTransformComponent(entity, position);
+        // 添加Sprite组件
+        addSpriteComponent(entity, effect_blueprint.mSprite);
+        // 添加Animation组件 (角色上方的技能标识，循环播放)
+        addOneAnimationComponent(entity, effect_blueprint.mAnimation, effect_blueprint.mSprite, effect_id, true);
+        // 补充其他必要组件（技能标识渲染层级最高，且不加 OneShotRemoveTag，由 SkillSystem 回收）
+        mRegistry.emplace<engine::component::RenderComponent>(entity, engine::component::RenderComponent::MAIN_LAYER + 20);
         return entity;
     }
 
@@ -278,6 +294,24 @@ namespace game::factory {
     void EntityFactory::addProjectileIDComponent(entt::entity entity, entt::id_type id) {
         if (id == entt::null) return;
         mRegistry.emplace<game::component::ProjectileIDComponent>(entity, id);
+    }
+
+    void EntityFactory::addSkillComponent(entt::entity entity, entt::id_type skill_id) {
+        const auto& skill = mBlueprintManager.getSkillBlueprint(skill_id);
+        mRegistry.emplace<game::component::SkillComponent>(entity,
+            skill_id,
+            entt::null,
+            skill.mName,
+            skill.mDescription,
+            skill.mCooldown,
+            skill.mDuration,
+            skill.mCooldown / 2.0f,    // 初始技能冷却时间为技能冷却时间的一半
+            0.0f);
+        // 如果是被动技能，则添加 PassiveSkillTag 与 SkillReadyTag（落子即放）
+        if (skill.mPassive) {
+            mRegistry.emplace<game::defs::PassiveSkillTag>(entity);
+            mRegistry.emplace<game::defs::SkillReadyTag>(entity);
+        }
     }
 
 }   // namespace game::factory

@@ -95,6 +95,7 @@ namespace game::scene {
 		std::unique_ptr<game::system::RenderRangeSystem> mRenderRangeSystem; // 渲染范围系统（远程攻击范围圆）
 		std::unique_ptr<game::system::DebugUISystem> mDebugUISystem;         // 调试UI系统（ImGui调试窗口）
 		std::unique_ptr<game::system::SelectionSystem> mSelectionSystem;     // 选择单位系统（鼠标悬浮/选中单位）
+		std::unique_ptr<game::system::SkillSystem> mSkillSystem;             // 技能系统（技能施放/显示、Buff管理）
 
 		std::unique_ptr<game::ui::UnitsPortraitUI> mUnitsPortraitUI;         // 封装的单位肖像UI，负责管理单位肖像UI的创建、更新和排列
 

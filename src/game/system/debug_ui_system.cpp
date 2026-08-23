@@ -11,6 +11,9 @@
 #include "../component/stats_component.h"
 #include "../component/class_name_component.h"
 #include "../component/blocker_component.h"
+#include "../component/skill_component.h"
+#include "../defs/tags.h"
+#include "../defs/events.h"
 #include "../../engine/component/name_component.h"
 #include "../../engine/core/context.h"
 #include "../../engine/core/game_state.h"
@@ -21,6 +24,7 @@
 #include <cmath>
 #include <spdlog/spdlog.h>
 #include <entt/entity/registry.hpp>
+#include <entt/signal/dispatcher.hpp>
 #include <entt/core/hashed_string.hpp>
 
 using namespace entt::literals;
@@ -127,7 +131,40 @@ namespace game::system {
         if (blocker) {
             ImGui::Text("阻挡数量: %d/%d", blocker->mCurrentCount, blocker->mMaxCount);
         }
-        // TODO: 技能相关按钮与信息
+        // 技能显示与交互
+        if (auto skill = mRegistry.try_get<game::component::SkillComponent>(entity); skill) {
+            // 如果技能准备就绪，则按钮可用（激活技能），否则按钮不可用
+            auto ready = mRegistry.all_of<game::defs::SkillReadyTag>(entity);
+            ImGui::BeginDisabled(!ready);
+            // 设置快捷键 S 激活技能
+            ImGui::SetNextItemShortcut(ImGuiKey_S, ImGuiInputFlags_RouteAlways | ImGuiInputFlags_Tooltip);
+            if (ImGui::Button(skill->mName.c_str())) {
+                // 激活技能
+                mContext.getDispatcher().enqueue<game::defs::SkillActiveEvent>(entity);
+            }
+            ImGui::EndDisabled();
+            ImGui::SameLine();
+            // 如果技能激活中，则显示"剩余时间"或"被动技能激活中"
+            if (mRegistry.all_of<game::defs::SkillActiveTag>(entity)) {
+                if (mRegistry.all_of<game::defs::PassiveSkillTag>(entity)) {
+                    ImGui::Text("被动技能激活中");
+                } else {
+                    ImGui::Text("激活中，剩余时间: %.1f 秒", skill->mDuration - skill->mDurationTimer);
+                }
+                // 否则显示冷却时间
+            } else {
+                ImGui::Text("快捷键 S: ");
+                ImGui::SameLine();
+                if (mRegistry.all_of<game::defs::SkillReadyTag>(entity)) {
+                    ImGui::Text("技能准备就绪");
+                } else {
+                    // 用进度条显示冷却时间百分比
+                    ImGui::ProgressBar(skill->mCooldownTimer / skill->mCooldown);
+                }
+            }
+            // 显示技能描述
+            ImGui::TextWrapped("%s", skill->mDescription.c_str());
+        }
         ImGui::End();
     }
 

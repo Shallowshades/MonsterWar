@@ -32,6 +32,10 @@ namespace game::defs {
     struct MeleePlaceTag {};        ///< @brief 近战可放置区域标签（标记地图上的近战放置点）
     struct RangedPlaceTag {};       ///< @brief 远程可放置区域标签（标记地图上的远程放置点）
     struct ShowRangeTag {};         ///< @brief 显示攻击范围标签，标记实体需要绘制攻击范围圆
+
+    struct SkillReadyTag {};        ///< @brief 技能准备标签，标记实体技能准备完毕（可以施放）
+    struct SkillActiveTag {};       ///< @brief 技能激活标签，标记实体技能激活（技能施放中）
+    struct PassiveSkillTag {};      ///< @brief 被动技能标签，标记实体被动技能
 }   // namespace game::defs
 
 #endif // GAME_TAGS_H

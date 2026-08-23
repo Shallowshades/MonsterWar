@@ -1,5 +1,18 @@
+/*****************************************************************//**
+ * @file   timer_system.h
+ * @brief  计时器系统
+ * @version 1.0
+ *
+ * @author Shallowshades
+ * @date   2026.07.22
+ *********************************************************************/
+
 #pragma once
+#ifndef GAME_TIMER_SYSTEM_H
+#define GAME_TIMER_SYSTEM_H
+
 #include <entt/entity/fwd.hpp>
+#include <entt/signal/fwd.hpp>
 
 namespace game::system {
 
@@ -8,13 +21,21 @@ namespace game::system {
      * 并在满足条件时添加必要的标签，（如攻击冷却完成后，添加“可攻击”标签）。
      */
     class TimerSystem {
+        entt::registry& mRegistry;
+        entt::dispatcher& mDispatcher;
+
     public:
-        void update(entt::registry& registry, float delta_time);
+        TimerSystem(entt::registry& registry, entt::dispatcher& dispatcher);
+        void update(float delta_time);
 
     private:
         // 拆分逻辑的函数，在update中调用
-        void updateAttackTimer(entt::registry& registry, float delta_time); ///< @brief 处理攻击计时器
+        void updateAttackTimer(float delta_time);         ///< @brief 处理攻击计时器
+        void updateSkillCooldownTimer(float delta_time);  ///< @brief 处理技能冷却计时器
+        void updateSkillDurationTimer(float delta_time);  ///< @brief 处理技能持续计时器
         // TODO: 处理其他计时器
     };
 
-}
+}   // namespace game::system
+
+#endif // GAME_TIMER_SYSTEM_H

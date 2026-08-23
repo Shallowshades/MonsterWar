@@ -180,6 +180,11 @@ namespace game::system {
                 auto& render_player = mRegistry.get<engine::component::RenderComponent>(unit_entity);
                 render_player.mLayer = render_place.mLayer + 1;
             }
+
+            // 如果拥有被动技能，则立刻释放技能
+            if (mRegistry.all_of<game::defs::PassiveSkillTag>(unit_entity)) {
+                mContext.getDispatcher().enqueue(game::defs::SkillActiveEvent{ unit_entity });
+            }
         }
         // 播放放置音效
         mContext.getAudioPlayer().playSound("unit_placed"_hs);

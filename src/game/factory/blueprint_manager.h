@@ -38,6 +38,7 @@ namespace game::factory {
         std::unordered_map<entt::id_type, data::EnemyClassBlueprint> mEnemyClassBlueprints;   ///< @brief 敌人类型蓝图容器
         std::unordered_map<entt::id_type, data::ProjectileBlueprint> mProjectileBlueprints;    ///< @brief 投射物蓝图
         std::unordered_map<entt::id_type, data::EffectBlueprint> mEffectBlueprints;            ///< @brief 特效蓝图
+        std::unordered_map<entt::id_type, data::SkillBlueprint> mSkillBlueprints;              ///< @brief 技能蓝图
         // TODO: 未来添加其他蓝图容器
 
     public:
@@ -47,12 +48,14 @@ namespace game::factory {
         [[nodiscard]] bool loadEnemyClassBlueprints(std::string_view enemy_json_path);      ///< @brief 加载敌人类型蓝图, 返回是否成功
         [[nodiscard]] bool loadProjectileBlueprints(std::string_view projectile_json_path); ///< @brief 加载投射物蓝图, 返回是否成功
         [[nodiscard]] bool loadEffectBlueprints(std::string_view effect_json_path);         ///< @brief 加载特效蓝图, 返回是否成功
+        [[nodiscard]] bool loadSkillBlueprints(std::string_view skill_json_path);           ///< @brief 加载技能蓝图, 返回是否成功
         // TODO: 未来添加其他蓝图加载函数
 
         const data::PlayerClassBlueprint& getPlayerClassBlueprint(entt::id_type id) const;  ///< @brief 获取指定ID的玩家职业蓝图
         const data::EnemyClassBlueprint& getEnemyClassBlueprint(entt::id_type id) const;    ///< @brief 获取指定ID的敌人类型蓝图
         const data::ProjectileBlueprint& getProjectileBlueprint(entt::id_type id) const;    ///< @brief 获取指定ID的投射物蓝图
         const data::EffectBlueprint& getEffectBlueprint(entt::id_type id) const;            ///< @brief 获取指定ID的特效蓝图
+        const data::SkillBlueprint& getSkillBlueprint(entt::id_type id) const;              ///< @brief 获取指定ID的技能蓝图
         // TODO: 未来添加其他蓝图获取函数
 
     private:
@@ -66,6 +69,7 @@ namespace game::factory {
         [[nodiscard]] data::PlayerBlueprint parsePlayer(const nlohmann::json& json);
         [[nodiscard]] data::EnemyBlueprint parseEnemy(const nlohmann::json& json);
         [[nodiscard]] data::DisplayInfoBlueprint parseDisplayInfo(const nlohmann::json& json);
+        [[nodiscard]] data::BuffBlueprint parseBuff(const nlohmann::json& json);
     };
 
 }   // namespace game::factory

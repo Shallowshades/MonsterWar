@@ -132,6 +132,27 @@ namespace game::data {
         AnimationBlueprint mAnimation{};        ///< @brief 单个动画（特效只有一个动画）
     };
 
+    /// @brief 增益蓝图, 用于给角色添加Buff
+    struct BuffBlueprint {
+        float mHpMultiplier{ 1.0f };
+        float mAtkMultiplier{ 1.0f };
+        float mDefMultiplier{ 1.0f };
+        float mRangeMultiplier{ 1.0f };
+        float mAtkIntervalMultiplier{ 1.0f };
+        float mCostRegen{ 0.0f };
+    };
+
+    /// @brief 技能蓝图, 用于创建技能组件
+    struct SkillBlueprint {
+        entt::id_type mId{ entt::null };
+        std::string mName;
+        std::string mDescription;
+        bool mPassive{ false };
+        float mCooldown{ 0.0f };
+        float mDuration{ 0.0f };
+        BuffBlueprint mBuff{};
+    };
+
 }   // namespace game::data
 
 #endif // ENTITY_BLUEPRINT_H
