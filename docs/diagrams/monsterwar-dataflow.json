@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "事件总线 + 资源/蓝图管线",
+    "subtitle": "双通道：事件流 + 数据驱动实体构建",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "viewBox": [1080, 620],
+    "views": [
+      {
+        "id": "v-events",
+        "label": "事件通道",
+        "focus": ["input", "dispatcher", "consumers", "registry", "effects", "render"],
+        "note": "UI enqueue → 总线派发 → 消费 → 改写 Registry → 特效/渲染输出"
+      },
+      {
+        "id": "v-pipeline",
+        "label": "资源 / 蓝图",
+        "focus": ["json", "bp", "factory", "tiled", "lvl", "registry", "res", "render"],
+        "note": "JSON / Tiled 数据驱动实体构建，蓝图→实体进入 Registry"
+      },
+      {
+        "id": "v-fallback",
+        "label": "缓存与回退",
+        "focus": ["bp", "factory", "res", "render"],
+        "note": "资源缓存命中直取，蓝图未命中时默认回退"
+      }
+    ]
+  },
+  "stages": [
+    { "label": "输入 / 生产者" },
+    { "label": "总线 / 加载" },
+    { "label": "消费 / 构建" },
+    { "label": "Registry / 实体" },
+    { "label": "输出 / 消费" }
+  ],
+  "nodes": [
+    { "id": "input", "type": "frontend", "label": "输入 / UI", "sublabel": "DebugUI · 键盘", "stage": 0, "row": 0, "tag": "事件源" },
+    { "id": "json", "type": "database", "label": "JSON 配置", "sublabel": "单位 / 技能数据", "stage": 0, "row": 1, "tag": "数据" },
+    { "id": "tiled", "type": "database", "label": "Tiled 关卡", "sublabel": ".tmj / .tsj", "stage": 0, "row": 2, "tag": "数据" },
+    { "id": "dispatcher", "type": "messagebus", "label": "事件总线", "sublabel": "entt::dispatcher", "stage": 1, "row": 0, "tag": "触发 / 派发" },
+    { "id": "bp", "type": "database", "label": "蓝图管理器", "sublabel": "BlueprintManager", "stage": 1, "row": 1, "tag": "映射表" },
+    { "id": "lvl", "type": "backend", "label": "关卡加载", "sublabel": "Loader + Builder", "stage": 1, "row": 2, "tag": "解析" },
+    { "id": "res", "type": "database", "label": "资源管理器", "sublabel": "ResourceManager", "stage": 1, "row": 3, "tag": "预载缓存" },
+    { "id": "consumers", "type": "backend", "label": "事件消费者", "sublabel": "各 System 回调", "stage": 2, "row": 0, "tag": "消费" },
+    { "id": "factory", "type": "backend", "label": "实体工厂", "sublabel": "EntityFactory", "stage": 2, "row": 1, "tag": "构建" },
+    { "id": "registry", "type": "database", "label": "实体注册表", "sublabel": "EnTT Registry", "stage": 3, "row": 0, "tag": "存储" },
+    { "id": "effects", "type": "frontend", "label": "特效 / UI", "sublabel": "动画 · 血条 · 音效", "stage": 4, "row": 0, "tag": "展示" },
+    { "id": "render", "type": "backend", "label": "渲染 / 音频", "sublabel": "Renderer · Audio", "stage": 4, "row": 3, "tag": "输出" }
+  ],
+  "flows": [
+    { "id": "input-dispatch", "from": "input", "to": "dispatcher", "label": "事件 enqueue", "classification": "UI / 输入", "variant": "emphasis", "route": "straight", "labelAt": [207, 145] },
+    { "id": "json-bp", "from": "json", "to": "bp", "label": "JSON 配置预载", "classification": "配置", "variant": "default", "route": "straight", "labelAt": [207, 259] },
+    { "id": "tiled-lvl", "from": "tiled", "to": "lvl", "label": "解析 .tmj / .tsj", "classification": "关卡", "variant": "default", "route": "straight", "labelAt": [207, 373] },
+    { "id": "dispatch-consume", "from": "dispatcher", "to": "consumers", "label": "trigger 同步回调", "classification": "派发", "variant": "emphasis", "route": "straight", "labelAt": [422, 145] },
+    { "id": "consume-write", "from": "consumers", "to": "registry", "label": "改写组件 / 实体", "classification": "写入", "variant": "emphasis", "route": "straight", "labelAt": [637, 145] },
+    { "id": "re-enqueue", "from": "consumers", "to": "dispatcher", "label": "消费后再 enqueue", "classification": "反馈闭环", "variant": "dashed", "fromSide": "top", "toSide": "top", "route": "top-channel", "channelY": 110, "labelAt": [422, 98] },
+    { "id": "bp-factory", "from": "bp", "to": "factory", "label": "按类取蓝图", "classification": "蓝图", "variant": "emphasis", "route": "straight", "labelAt": [422, 259] },
+    { "id": "factory-registry", "from": "factory", "to": "registry", "label": "create 实体", "classification": "构建", "variant": "emphasis", "fromSide": "right", "toSide": "bottom", "via": [[745, 271], [745, 186]], "labelAt": [665, 259] },
+    { "id": "lvl-registry", "from": "lvl", "to": "registry", "label": "构建实体 / 路径点", "classification": "构建", "variant": "default", "fromSide": "right", "toSide": "right", "via": [[820, 385], [820, 157]], "labelAt": [560, 373] },
+    { "id": "bp-fallback", "from": "bp", "to": "factory", "label": "未命中→默认 + error", "classification": "回退", "variant": "security", "fromSide": "bottom", "toSide": "bottom", "route": "bottom-channel", "channelY": 330, "labelAt": [430, 348] },
+    { "id": "res-render", "from": "res", "to": "render", "label": "缓存命中", "classification": "资源", "variant": "emphasis", "route": "straight", "labelAt": [640, 487] },
+    { "id": "effects-render", "from": "effects", "to": "render", "label": "特效实体绘制", "classification": "绘制", "variant": "default", "fromSide": "bottom", "toSide": "top", "route": "straight", "labelAt": [970, 320] }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "事件总线双通道",
+      "items": [
+        "trigger 即时回调 + enqueue 帧末派发 (events.h:21-54)",
+        "系统亦 enqueue; 帧末统一派发 (game_app.cpp:45)"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "资源 / 蓝图管线",
+      "items": [
+        "JSON→map 预载; 蓝图→实体 (blueprint_manager.cpp:24)",
+        "Tiled→路径点/瓦片 → Builder (level_loader.cpp:28)"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "失败与回退",
+      "items": [
+        "蓝图未命中→默认蓝图 + error (blueprint_manager.cpp:205)",
+        "纹理惰性加载; 无 DLQ / 重放 (texture_manager.cpp:49-64)"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "放置与经济循环",
+    "subtitle": "选择单位 → 校验 → 落子扣费 · 收入与撤退返还",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "visual_preset": "signal-flow",
+    "animation": "trace",
+    "viewBox": [1145, 652],
+    "views": [
+      {
+        "id": "v-main",
+        "label": "成功主路径",
+        "focus": ["select", "cost-check", "prep", "place-check", "place", "passive"],
+        "note": "从选择肖像到被动落子的完整放置主路径"
+      },
+      {
+        "id": "v-gate",
+        "label": "校验与拒绝",
+        "focus": ["cost-check", "place-check", "reject", "prep", "place"],
+        "note": "金币 / 放置点双门控, 任一无效即拒绝"
+      },
+      {
+        "id": "v-economy",
+        "label": "经济循环",
+        "focus": ["income", "select", "retreat", "battle"],
+        "note": "基础回费补充 mCost + 撤退返还 50%"
+      }
+    ]
+  },
+  "lanes": [
+    { "id": "player", "label": "玩家操作" },
+    { "id": "gate", "label": "校验门控", "variant": "exception" },
+    { "id": "logic", "label": "放置 / 经济" },
+    { "id": "fx", "label": "战场 / 技能" }
+  ],
+  "phases": [
+    { "id": "choose", "label": "选择与校验", "fromCol": 0, "toCol": 1 },
+    { "id": "resolve", "label": "放置与落子", "fromCol": 2, "toCol": 4, "variant": "emphasis" },
+    { "id": "battlefield", "label": "技能与战场", "fromCol": 5, "toCol": 5 }
+  ],
+  "mainPath": ["select", "cost-check", "prep", "place-check", "place", "passive"],
+  "nodes": [
+    { "id": "select", "lane": "player", "col": 0, "type": "frontend", "label": "选择单位", "sublabel": "肖像按钮 → PrepUnitEvent", "width": 132 },
+    { "id": "income", "lane": "logic", "col": 0, "type": "backend", "label": "经济收入", "sublabel": "基础 1/s + CostRegen Buff", "width": 132 },
+    { "id": "cost-check", "lane": "gate", "col": 1, "type": "security", "label": "金币预检", "sublabel": "mCost ≥ 出击费", "width": 132 },
+    { "id": "prep", "lane": "logic", "col": 2, "type": "backend", "label": "准备实体跟随", "sublabel": "createUnitPrep · 可放置", "width": 132 },
+    { "id": "place-check", "lane": "gate", "col": 3, "type": "security", "label": "放置点校验", "sublabel": "排除占用 + 类型/距离", "width": 132 },
+    { "id": "place", "lane": "logic", "col": 4, "type": "backend", "label": "落子执行", "sublabel": "createPlayerUnit + 扣费", "width": 132 },
+    { "id": "passive", "lane": "fx", "col": 5, "type": "backend", "label": "被动技能落子即放", "sublabel": "触发 SkillActiveEvent", "width": 132 },
+    { "id": "battle", "lane": "logic", "col": 5, "type": "backend", "label": "单位入战场", "sublabel": "寻路 · 攻击 · 阻挡", "width": 132 },
+    { "id": "reject", "lane": "gate", "col": 5, "type": "security", "label": "拒绝放置", "sublabel": "灰罩 · 无提示", "width": 132 },
+    { "id": "retreat", "lane": "player", "col": 5, "type": "frontend", "label": "撤退返还", "sublabel": "返还 50% cost", "width": 132 }
+  ],
+  "edges": [
+    { "id": "select-cost", "from": "select", "to": "cost-check", "label": "PrepUnitEvent", "variant": "emphasis", "role": "main" },
+    { "id": "cost-prep", "from": "cost-check", "to": "prep", "label": "足够", "variant": "emphasis", "role": "main" },
+    { "id": "prep-placecheck", "from": "prep", "to": "place-check", "label": "跟随 + 校验", "variant": "emphasis", "role": "main" },
+    { "id": "placecheck-place", "from": "place-check", "to": "place", "label": "有效", "variant": "emphasis", "role": "main" },
+    { "id": "place-passive", "from": "place", "to": "passive", "label": "落子即放", "variant": "emphasis", "role": "main" },
+    { "id": "passive-battle", "from": "passive", "to": "battle", "label": "入战场", "variant": "default" },
+    { "id": "battle-retreat", "from": "battle", "to": "retreat", "label": "R 键 / 撤退", "variant": "dashed", "role": "branch" },
+    { "id": "cost-reject", "from": "cost-check", "to": "reject", "label": "不足", "variant": "security", "role": "error" },
+    { "id": "placecheck-reject", "from": "place-check", "to": "reject", "label": "无有效点", "variant": "security", "role": "error" },
+    { "id": "income-select", "from": "income", "to": "select", "label": "补充 mCost", "variant": "dashed", "role": "branch" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "放置校验链", "items": [
+      "金币不足 → 灰罩静默拒绝 (units_portrait_ui.cpp:63)",
+      "排除占用 + 类型/距离 (place_unit_system.cpp:84-113)"
+    ] },
+    { "dot": "emerald", "title": "落子与被动", "items": [
+      "createPlayerUnit + 占位 + 扣费 (place_unit_system.cpp:163-170)",
+      "被动落子即放 SkillActiveEvent (place_unit_system.cpp:184)"
+    ] },
+    { "dot": "rose", "title": "经济循环", "items": [
+      "基础 1/s + CostRegen Buff (game_rule_system.cpp:33-41)",
+      "撤退返还 50% → RemovePlayerUnit (game_rule_system.cpp:94-101)"
+    ] }
+  ]
+}

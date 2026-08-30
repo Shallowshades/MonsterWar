@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "主循环一帧",
+    "subtitle": "输入 → 逻辑 → 渲染 → 事件分发",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "column_fit": "spread",
+    "viewBox": [1080, 670]
+  },
+  "participants": [
+    { "id": "sdl", "type": "external", "label": "SDL3", "sublabel": "事件 + present" },
+    { "id": "input", "type": "frontend", "label": "InputManager", "sublabel": "SDL → action 信号" },
+    { "id": "app", "type": "backend", "label": "GameApp", "sublabel": "主循环编排" },
+    { "id": "smgr", "type": "backend", "label": "SceneManager", "sublabel": "场景栈管理" },
+    { "id": "scene", "type": "backend", "label": "GameScene", "sublabel": "系统编排" },
+    { "id": "systems", "type": "backend", "label": "ECS 系统链", "sublabel": "engine + game" },
+    { "id": "render", "type": "backend", "label": "Renderer", "sublabel": "Camera + 绘制" },
+    { "id": "disp", "type": "messagebus", "label": "Dispatcher", "sublabel": "entt 事件总线" }
+  ],
+  "segments": [
+    { "from": 168, "to": 222, "label": "输入" },
+    { "from": 238, "to": 376, "label": "逻辑更新" },
+    { "from": 386, "to": 518, "label": "渲染" },
+    { "from": 526, "to": 584, "label": "事件分发" }
+  ],
+  "messages": [
+    { "id": "poll", "from": "sdl", "to": "input", "y": 178, "label": "SDL 事件轮询", "variant": "default", "note": "SDL_PollEvent → action 状态" },
+    { "id": "input-done", "from": "input", "to": "app", "y": 208, "label": "输入已处理", "variant": "return" },
+    { "id": "update-call", "from": "app", "to": "smgr", "y": 248, "label": "update(delta)", "variant": "emphasis" },
+    { "id": "top-scene", "from": "smgr", "to": "scene", "y": 276, "label": "栈顶 update", "variant": "default" },
+    { "id": "run-systems", "from": "scene", "to": "systems", "y": 306, "label": "运行系统链", "variant": "emphasis", "note": "Timer→GameRule→Block→SetTarget→FollowPath→AttackStarter→Projectile→Movement→Animation→PlaceUnit→Ysort→Selection" },
+    { "id": "enqueue", "from": "systems", "to": "disp", "y": 336, "label": "enqueue 事件", "variant": "dashed", "note": "Attack / SkillReady / PlayAnimation / PlaySound" },
+    { "id": "update-return", "from": "scene", "to": "smgr", "y": 364, "label": "update 返回", "variant": "return" },
+    { "id": "render-call", "from": "app", "to": "smgr", "y": 394, "label": "render()", "variant": "emphasis" },
+    { "id": "render-stack", "from": "smgr", "to": "scene", "y": 422, "label": "render 栈", "variant": "default" },
+    { "id": "render-sys", "from": "scene", "to": "systems", "y": 450, "label": "渲染系统链", "variant": "default", "note": "RenderSystem → HealthBar → DebugUI" },
+    { "id": "draw-cmd", "from": "systems", "to": "render", "y": 478, "label": "绘制指令", "variant": "emphasis" },
+    { "id": "present", "from": "render", "to": "sdl", "y": 506, "label": "present", "variant": "emphasis" },
+    { "id": "dispatch", "from": "app", "to": "disp", "y": 534, "label": "dispatcher 派发", "variant": "emphasis", "note": "帧末 dispatcher::update() 派发本帧 enqueue 的事件" },
+    { "id": "callback", "from": "disp", "to": "systems", "y": 564, "label": "同步回调", "variant": "default", "note": "Attack→CombatResolve / PlaySound→Audio / SkillActive→SkillSystem" }
+  ],
+  "activations": [
+    { "participant": "input", "from": 174, "to": 214, "type": "frontend" },
+    { "participant": "app", "from": 246, "to": 580, "type": "backend" },
+    { "participant": "smgr", "from": 248, "to": 434, "type": "backend" },
+    { "participant": "scene", "from": 276, "to": 372, "type": "backend" },
+    { "participant": "scene", "from": 424, "to": 460, "type": "backend" },
+    { "participant": "systems", "from": 306, "to": 344, "type": "backend" },
+    { "participant": "systems", "from": 450, "to": 486, "type": "backend" },
+    { "participant": "render", "from": 482, "to": 510, "type": "backend" },
+    { "participant": "disp", "from": 532, "to": 580, "type": "messagebus" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "主循环四段式", "items": [
+      "handleEvents → update(delta) → render → dispatcher::update (game_app.cpp:37-48)",
+      "事件分发放在渲染之后：新创建的实体先更新再渲染 (game_app.cpp:45)"
+    ] },
+    { "dot": "cyan", "title": "输入与场景栈", "items": [
+      "InputManager 轮询 SDL + 按键映射为 action 信号 (input_manager.cpp:36-68)",
+      "SceneManager 只 update 栈顶, render 叠加整个栈 (scene_manager.cpp:33-50)"
+    ] },
+    { "dot": "rose", "title": "异步事件闭环", "items": [
+      "系统 enqueue 事件 → 帧末 dispatcher::update() 同步派发",
+      "trigger 事件(Quit/Push/Pop/Replace)即时派发, 与 enqueue 并存"
+    ] }
+  ]
+}

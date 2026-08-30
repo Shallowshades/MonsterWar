@@ -1,0 +1,78 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "敌人波次生成",
+    "subtitle": "倒计时 → 开波 → 逐个生成 → 通关判定",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "visual_preset": "signal-flow",
+    "animation": "trace",
+    "viewBox": [1145, 652],
+    "views": [
+      {
+        "id": "v-main",
+        "label": "生成主路径",
+        "focus": ["countdown", "open-wave", "interval", "spawn", "enemy"],
+        "note": "波次倒计时到点 → 开新波 → 按间隔逐个生成"
+      },
+      {
+        "id": "v-gate",
+        "label": "节奏门控",
+        "focus": ["countdown", "interval", "spawn", "wave-done"],
+        "note": "波次倒计时与波内生成间隔双重门控"
+      },
+      {
+        "id": "v-clear",
+        "label": "波次与判定",
+        "focus": ["wave-done", "clear", "enemy", "countdown"],
+        "note": "波次清空后衔接下一波或全场通关判定"
+      }
+    ]
+  },
+  "lanes": [
+    { "id": "gate", "label": "节奏门控", "variant": "exception" },
+    { "id": "spawn", "label": "生成逻辑" },
+    { "id": "out", "label": "战场输出" },
+    { "id": "result", "label": "结算判定" }
+  ],
+  "phases": [
+    { "id": "prep", "label": "准备与开波", "fromCol": 0, "toCol": 1 },
+    { "id": "spawning", "label": "波内生成", "fromCol": 2, "toCol": 4, "variant": "emphasis" },
+    { "id": "verdict", "label": "波次与判定", "fromCol": 5, "toCol": 5 }
+  ],
+  "mainPath": ["countdown", "open-wave", "interval", "spawn", "enemy"],
+  "nodes": [
+    { "id": "countdown", "lane": "gate", "col": 0, "type": "security", "label": "波次倒计时", "sublabel": "首波 prep / 后续 interval", "width": 132 },
+    { "id": "open-wave", "lane": "spawn", "col": 1, "type": "backend", "label": "开新波", "sublabel": "展开类型队列 + shuffle", "width": 132 },
+    { "id": "interval", "lane": "gate", "col": 2, "type": "security", "label": "生成间隔到点", "sublabel": "spawnTimer ≥ interval", "width": 132 },
+    { "id": "spawn", "lane": "spawn", "col": 3, "type": "backend", "label": "生成敌人", "sublabel": "spawnEnemy · 随机起点", "width": 132 },
+    { "id": "enemy", "lane": "out", "col": 4, "type": "backend", "label": "敌人实体入战场", "sublabel": "createEnemyUnit → 路径点", "width": 132 },
+    { "id": "wave-done", "lane": "gate", "col": 4, "type": "security", "label": "波次清空", "sublabel": "mEnemyTypes.empty()", "width": 132 },
+    { "id": "clear", "lane": "result", "col": 5, "type": "backend", "label": "全场敌人判定", "sublabel": "击杀+到达 ≥ 总数 → 通关", "width": 132 }
+  ],
+  "edges": [
+    { "id": "countdown-open", "from": "countdown", "to": "open-wave", "label": "到点开波", "variant": "emphasis", "role": "main" },
+    { "id": "open-interval", "from": "open-wave", "to": "interval", "label": "载入波次", "variant": "emphasis", "role": "main" },
+    { "id": "interval-spawn", "from": "interval", "to": "spawn", "label": "到点生成", "variant": "emphasis", "role": "main" },
+    { "id": "spawn-enemy", "from": "spawn", "to": "enemy", "label": "createEnemyUnit", "variant": "emphasis", "role": "main" },
+    { "id": "enemy-interval", "from": "enemy", "to": "interval", "label": "继续本波", "variant": "dashed", "role": "branch" },
+    { "id": "enemy-wavedone", "from": "enemy", "to": "wave-done", "label": "队列耗尽", "variant": "dashed", "role": "branch" },
+    { "id": "wavedone-countdown", "from": "wave-done", "to": "countdown", "label": "下一波间隔已预置", "variant": "dashed", "role": "branch", "fromSide": "top", "toSide": "top", "route": "up-channel", "channelY": 80 },
+    { "id": "wavedone-clear", "from": "wave-done", "to": "clear", "label": "全部波次完成", "variant": "default" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "波次数据结构", "items": [
+      "Wave: 间隔 + 类型队列 (level_data.h:26-30)",
+      "首波倒计时 = prep_time (level_config.cpp:68)"
+    ] },
+    { "dot": "emerald", "title": "生成主路径", "items": [
+      "倒计时→开波→间隔→spawnEnemy (enemy_spawner.cpp:29-66)",
+      "随机起点 + 等级/稀有度 (enemy_spawner.cpp:76-89)"
+    ] },
+    { "dot": "rose", "title": "与通关解耦", "items": [
+      "波次无结束事件; 全清判定在战斗系统",
+      "击杀+到达≥总数 → LevelClearDelayed (game_rule_system.cpp:67-69)"
+    ] }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "技能施放流程",
+    "subtitle": "冷却门控 → 激活 → Buff 结算",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "visual_preset": "signal-flow",
+    "animation": "trace",
+    "viewBox": [1145, 652],
+    "views": [
+      {
+        "id": "v-main",
+        "label": "成功主路径",
+        "focus": ["cast", "ready-check", "activate", "buff", "duration", "unbuff"],
+        "note": "从点击施放到 Buff 结算的完整主路径"
+      },
+      {
+        "id": "v-gate",
+        "label": "冷却与门控",
+        "focus": ["cast", "timer", "ready-evt", "ready-check", "blocked"],
+        "note": "冷却计时驱动 ReadyTag, 就绪门控放行"
+      },
+      {
+        "id": "v-passive",
+        "label": "被动分支",
+        "focus": ["passive", "activate", "buff"],
+        "note": "被动技能落子即放, 跳过冷却与门控"
+      }
+    ]
+  },
+  "lanes": [
+    { "id": "player", "label": "玩家操作" },
+    { "id": "gate", "label": "策略门控", "variant": "exception" },
+    { "id": "logic", "label": "游戏逻辑" },
+    { "id": "fx", "label": "结算 + 特效" }
+  ],
+  "phases": [
+    { "id": "prep", "label": "准备与门控", "fromCol": 0, "toCol": 2 },
+    { "id": "resolve", "label": "施放与结算", "fromCol": 3, "toCol": 5, "variant": "emphasis" }
+  ],
+  "mainPath": ["cast", "ready-check", "activate", "buff", "duration", "unbuff"],
+  "nodes": [
+    { "id": "cast", "lane": "player", "col": 0, "type": "frontend", "label": "点击施放", "sublabel": "DebugUI 按钮 / S 键", "width": 132 },
+    { "id": "passive", "lane": "player", "col": 2, "type": "external", "label": "被动技能", "sublabel": "落子即放", "width": 132 },
+    { "id": "blocked", "lane": "gate", "col": 0, "type": "security", "label": "未就绪", "sublabel": "等待冷却", "width": 132 },
+    { "id": "ready-check", "lane": "gate", "col": 1, "type": "security", "label": "就绪判定", "sublabel": "存在 SkillReadyTag?", "width": 132 },
+    { "id": "timer", "lane": "logic", "col": 0, "type": "backend", "label": "冷却计时推进", "sublabel": "CooldownTimer", "width": 132 },
+    { "id": "ready-evt", "lane": "logic", "col": 1, "type": "messagebus", "label": "SkillReadyEvent", "sublabel": "enqueue 就绪信号", "width": 132 },
+    { "id": "activate", "lane": "logic", "col": 2, "type": "backend", "label": "技能激活", "sublabel": "二次检查 ReadyTag", "width": 132 },
+    { "id": "buff", "lane": "fx", "col": 3, "type": "backend", "label": "施加 Buff", "sublabel": "addBuff 乘区", "width": 132 },
+    { "id": "duration", "lane": "fx", "col": 4, "type": "messagebus", "label": "DurationEnd", "sublabel": "持续计时结束", "width": 132 },
+    { "id": "unbuff", "lane": "fx", "col": 5, "type": "backend", "label": "移除 Buff", "sublabel": "removeBuff 除回", "width": 132 }
+  ],
+  "edges": [
+    { "id": "cast-check", "from": "cast", "to": "ready-check", "label": "点击 / S 键", "variant": "emphasis", "role": "main" },
+    { "id": "check-activate", "from": "ready-check", "to": "activate", "label": "就绪放行", "variant": "emphasis", "role": "main" },
+    { "id": "activate-buff", "from": "activate", "to": "buff", "label": "addBuff", "variant": "emphasis", "role": "main" },
+    { "id": "buff-duration", "from": "buff", "to": "duration", "label": "持续计时", "variant": "default" },
+    { "id": "duration-unbuff", "from": "duration", "to": "unbuff", "label": "removeBuff", "variant": "emphasis", "role": "main" },
+    { "id": "check-blocked", "from": "ready-check", "to": "blocked", "label": "未就绪", "variant": "security", "role": "error" },
+    { "id": "blocked-timer", "from": "blocked", "to": "timer", "label": "冷却后重试", "variant": "dashed", "role": "branch" },
+    { "id": "timer-ready", "from": "timer", "to": "ready-evt", "label": "冷却完毕", "variant": "default" },
+    { "id": "ready-check-edge", "from": "ready-evt", "to": "ready-check", "label": "加回 ReadyTag", "variant": "default" },
+    { "id": "passive-activate", "from": "passive", "to": "activate", "label": "落子即放", "variant": "dashed", "role": "branch" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "成功主路径", "items": [
+      "点击 → 就绪 → 激活 → addBuff → 持续 → removeBuff",
+      "二次检查 ReadyTag, 缺失 return (skill_system.cpp:48)"
+    ] },
+    { "dot": "emerald", "title": "冷却与就绪门控", "items": [
+      "冷却满 → 加回 ReadyTag + enqueue (timer_system.cpp:44)",
+      "按钮 !ready 禁用 / S 键 → enqueue (debug_ui_system.cpp:256)"
+    ] },
+    { "dot": "rose", "title": "被动与结算证据", "items": [
+      "被动落子即 enqueue (place_unit_system.cpp:185)",
+      "addBuff 乘区 / DurationEnd → removeBuff (skill_system.cpp:105)"
+    ] }
+  ]
+}

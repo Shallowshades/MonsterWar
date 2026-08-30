@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "场景流转",
+    "subtitle": "SceneManager 栈式切换 · 标题→战斗→结算/结束",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "viewBox": [1080, 640]
+  },
+  "lanes": [
+    { "id": "main", "label": "主流程" },
+    { "id": "overlay", "label": "压栈 · 结算层" },
+    { "id": "terminal", "label": "终态" }
+  ],
+  "states": [
+    { "id": "title", "type": "start", "label": "标题场景", "sublabel": "TitleScene", "lane": "main", "col": 0, "step": "01", "tag": "入口" },
+    { "id": "game", "type": "active", "label": "主场景", "sublabel": "GameScene · 战斗", "lane": "main", "col": 3, "step": "02", "tag": "战斗" },
+    { "id": "levelclear", "type": "neutral", "label": "通关结算", "sublabel": "LevelClearScene", "lane": "overlay", "col": 1, "step": "03", "tag": "压栈" },
+    { "id": "end", "type": "decision", "label": "结束场景", "sublabel": "EndScene · 胜/负", "lane": "overlay", "col": 2, "step": "04", "tag": "终局" },
+    { "id": "quit", "type": "external", "label": "退出游戏", "sublabel": "QuitEvent", "lane": "terminal", "col": 2, "tag": "终态" }
+  ],
+  "transitions": [
+    { "id": "title-game", "from": "title", "to": "game", "label": "开始游戏 · replace", "variant": "emphasis", "labelAt": [325, 148] },
+    { "id": "title-quit", "from": "title", "to": "quit", "label": "退出 · QuitEvent", "fromSide": "bottom", "toSide": "left", "via": [[94, 400], [651, 400]], "labelAt": [180, 380] },
+    { "id": "game-levelclear", "from": "game", "to": "levelclear", "label": "通关 · 非末关 · push", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "labelDx": -54, "labelDy": 34 },
+    { "id": "levelclear-game", "from": "levelclear", "to": "game", "label": "下一关 · replace", "variant": "emphasis", "fromSide": "top", "toSide": "bottom", "labelDx": 48, "labelDy": -28 },
+    { "id": "game-endwin", "from": "game", "to": "end", "label": "末关通关 · push", "variant": "emphasis", "fromSide": "right", "toSide": "top", "via": [[615, 145], [740, 145], [740, 278]], "labelAt": [672, 132] },
+    { "id": "game-endlose", "from": "game", "to": "end", "label": "失败 · push", "variant": "security", "fromSide": "right", "toSide": "top", "via": [[615, 169], [690, 169], [690, 278]], "labelAt": [660, 200] },
+    { "id": "end-title", "from": "end", "to": "title", "label": "返回标题 · replace", "fromSide": "right", "toSide": "top", "via": [[773, 88], [94, 88]], "labelAt": [640, 68] },
+    { "id": "end-quit", "from": "end", "to": "quit", "label": "退出 · QuitEvent", "fromSide": "bottom", "toSide": "top", "labelAt": [640, 380] }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "栈式语义",
+      "items": [
+        "update 只更新栈顶 / render 渲染整栈 (scene_manager.cpp:33-50)",
+        "push 保留下层 / replace 清空 / pop 空栈→Quit (scene_manager.cpp:99-166)",
+        "重新开始 → replace 同场景 (game_scene.cpp:365)"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "胜利 / 失败判定",
+      "items": [
+        "击杀+到达≥总数 → LevelClearDelayed (game_rule_system.cpp:67-69)",
+        "homeHp≤0 → GameEndEvent{false} (game_rule_system.cpp:61-66)"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "入口与返回",
+      "items": [
+        "main.cpp:31 trigger PushSceneEvent 压入标题",
+        "返回标题均 replace: game/level_clear/end_scene.cpp:372/75/49",
+        "调试直达: 通关/胜利按钮 (debug_ui_system.cpp:397-399)"
+      ]
+    }
+  ]
+}

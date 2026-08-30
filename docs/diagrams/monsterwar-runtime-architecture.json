@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "MonsterWar — SDL3 + EnTT ECS 2D 游戏运行时架构",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Shallowshades/MonsterWar.git",
+      "revision": "be625d6bf7f8a884b16fc57307d0a5561fd5db4c"
+    },
+    "viewBox": [1270, 585]
+  },
+  "components": [
+    { "id": "input", "type": "backend", "label": "InputManager", "sublabel": "SDL 事件 → dispatcher", "pos": [30, 140], "size": [130, 64],
+      "sources": [{ "path": "src/engine/input/input_manager.cpp" }] },
+    { "id": "app", "type": "backend", "label": "GameApp", "sublabel": "init → loop → close", "pos": [184, 140], "size": [130, 64],
+      "sources": [{ "path": "src/engine/core/game_app.cpp" }] },
+    { "id": "scene-mgr", "type": "backend", "label": "SceneManager", "sublabel": "场景栈 push/pop/replace", "pos": [338, 140], "size": [130, 64],
+      "sources": [{ "path": "src/engine/scene/scene_manager.cpp" }] },
+    { "id": "scene", "type": "backend", "label": "Game Scenes", "sublabel": "Title · Game · Clear · End", "pos": [492, 140], "size": [150, 64],
+      "sources": [{ "path": "src/game/scene/game_scene.cpp" }, { "path": "src/game/scene/title_scene.cpp" }] },
+    { "id": "systems", "type": "backend", "label": "ECS Systems", "sublabel": "engine + game 系统", "pos": [666, 140], "size": [130, 64],
+      "sources": [{ "path": "src/engine/system/render_system.cpp" }, { "path": "src/game/system/combat_resolve_system.cpp" }] },
+    { "id": "registry", "type": "database", "label": "EnTT Registry", "sublabel": "实体/组件 + ctx 定位器", "pos": [820, 140], "size": [130, 64],
+      "sources": [{ "path": "src/game/scene/game_scene.cpp", "label": "ctx emplace" }] },
+    { "id": "render", "type": "backend", "label": "Renderer", "sublabel": "Camera · Text · SDL3", "pos": [974, 140], "size": [130, 64],
+      "sources": [{ "path": "src/engine/render/renderer.cpp" }] },
+    { "id": "sdl", "type": "external", "label": "SDL3 stack", "sublabel": "image · mixer · ttf", "pos": [1128, 140], "size": [130, 64] },
+    { "id": "core", "type": "backend", "label": "Engine Core", "sublabel": "Config · GameState · Time", "pos": [184, 340], "size": [150, 64],
+      "sources": [{ "path": "src/engine/core/context.cpp" }, { "path": "src/engine/core/game_state.cpp" }] },
+    { "id": "debug-ui", "type": "frontend", "label": "DebugUISystem", "sublabel": "ImGui 四分支", "pos": [492, 340], "size": [130, 64],
+      "sources": [{ "path": "src/game/system/debug_ui_system.cpp" }] },
+    { "id": "resources", "type": "database", "label": "ResourceManager", "sublabel": "纹理/字体/音频缓存", "pos": [974, 340], "size": [130, 64],
+      "sources": [{ "path": "src/engine/resource/resource_manager.cpp" }] },
+    { "id": "imgui", "type": "external", "label": "ImGui", "sublabel": "调试 GUI", "pos": [492, 495], "size": [130, 64] },
+    { "id": "entt", "type": "external", "label": "EnTT", "sublabel": "registry + dispatcher", "pos": [820, 495], "size": [130, 64] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Engine 层 — 可复用，绝不引用 game", "wraps": ["input", "app", "core", "scene-mgr", "registry", "render", "resources"] },
+    { "kind": "region", "label": "Game 层（game/）— 拥有游戏规则", "wraps": ["scene", "systems", "debug-ui"] },
+    { "kind": "security-group", "label": "调试工具（ImGui）— 仅 Playing/Paused 渲染", "wraps": ["debug-ui", "imgui"] }
+  ],
+  "connections": [
+    { "id": "evt", "from": "input", "to": "app", "label": "SDL 事件", "variant": "emphasis", "labelDy": 56 },
+    { "id": "loop", "from": "app", "to": "scene-mgr", "label": "update(delta) / render()", "variant": "emphasis", "labelDy": 56 },
+    { "id": "dispatch", "from": "scene-mgr", "to": "scene", "label": "分发到场景栈", "variant": "emphasis", "labelDy": 56 },
+    { "id": "runsys", "from": "scene", "to": "systems", "label": "逐帧运行系统", "variant": "emphasis", "labelDy": 56 },
+    { "id": "rw", "from": "systems", "to": "registry", "label": "读写实体/组件", "variant": "emphasis", "labelDy": 56 },
+    { "id": "draw", "from": "registry", "to": "render", "label": "RenderSystem 绘制", "variant": "emphasis", "labelDy": 56 },
+    { "id": "present", "from": "render", "to": "sdl", "label": "present", "variant": "emphasis", "fromSide": "right", "toSide": "left", "labelDy": 56 },
+    { "id": "init-core", "from": "app", "to": "core", "label": "初始化", "fromSide": "bottom", "toSide": "top", "labelAt": [249, 253] },
+    { "id": "setstate", "from": "scene", "to": "core", "label": "setState", "fromSide": "bottom", "toSide": "top" },
+    { "id": "tex", "from": "resources", "to": "render", "label": "纹理/字体", "fromSide": "top", "toSide": "bottom", "labelAt": [1039, 270] },
+    { "id": "gate", "from": "debug-ui", "to": "core", "label": "isPlaying/Paused 门控", "variant": "security", "fromSide": "left", "toSide": "right" },
+    { "id": "ctx", "from": "debug-ui", "to": "registry", "label": "读共享数据 (ctx)", "fromSide": "right", "toSide": "bottom", "labelAt": [680, 350] },
+    { "id": "frames", "from": "debug-ui", "to": "imgui", "label": "ImGui 帧", "fromSide": "bottom", "toSide": "top", "labelAt": [557, 452] },
+    { "id": "events", "from": "registry", "to": "entt", "label": "事件总线", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "labelAt": [885, 452] }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "主循环（主要数据路径）", "items": [
+      "每帧：handleEvents → update(delta) → render → dispatcher::update",
+      "input → GameApp → SceneManager → Scene → ECS 系统 → registry → Renderer → present",
+      "SceneManager：只 update 栈顶、render 整个栈（push = 覆盖层）",
+      "Scene::init() 返回 bool，失败即 QuitEvent 快速退出"
+    ] },
+    { "dot": "emerald", "title": "ECS 数据流", "items": [
+      "每个 Scene 持有独立 entt::registry；实体 = 组件组合",
+      "registry.ctx() 定位器：SessionData / BlueprintManager / UIConfig / LevelConfig 等",
+      "Context：DI 容器，持有全部引擎模块引用",
+      "蓝图 JSON 建实体；LevelLoader 把 Tiled → ECS；AudioSystem 响应 PlaySoundEvent"
+    ] },
+    { "dot": "amber", "title": "外部依赖与可靠性", "items": [
+      "SDL3 + image/mixer/ttf（vendored）；EnTT registry + dispatcher 事件总线",
+      "ImGui：仅 isPlaying()/isPaused() 渲染（安全组边界）；spdlog / glm / json",
+      "SDL3.4 适配：缓存/恢复逻辑分辨率（0x0）；纹理加载先判空；/MP + Ninja 并行编译"
+    ] }
+  ]
+}

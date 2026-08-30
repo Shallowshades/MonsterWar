@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "单位生命周期",
+    "subtitle": "生成 → 战斗 → 冷却 → 死亡 / 移除",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "viewBox": [1080, 660]
+  },
+  "lanes": [
+    { "id": "main", "label": "主进度" },
+    { "id": "waiting", "label": "等待 / 中断" },
+    { "id": "exits", "label": "退出路径" },
+    { "id": "terminal", "label": "终态" }
+  ],
+  "states": [
+    { "id": "spawn", "type": "start", "label": "生成", "sublabel": "玩家放置 / 敌人波次", "lane": "main", "col": 0, "step": "01", "tag": "入口" },
+    { "id": "active", "type": "active", "label": "在场行动", "sublabel": "寻路 / 攻击 / 治疗", "lane": "main", "col": 2, "step": "02", "tag": "战斗" },
+    { "id": "injured", "type": "neutral", "label": "受伤", "sublabel": "InjuredTag hp<max", "lane": "main", "col": 3, "step": "03", "tag": "血量" },
+    { "id": "dying", "type": "decision", "label": "死亡判定", "sublabel": "hp ≤ 0 → DeadTag", "lane": "main", "col": 4, "step": "04", "tag": "判定" },
+    { "id": "attack-cd", "type": "waiting", "label": "攻击冷却", "sublabel": "AttackReadyTag 缺失", "lane": "waiting", "col": 0, "tag": "间隔" },
+    { "id": "skill-cd", "type": "waiting", "label": "技能冷却", "sublabel": "SkillReadyTag 缺失", "lane": "waiting", "col": 1, "tag": "间隔" },
+    { "id": "arrived", "type": "failure", "label": "到达基地", "sublabel": "EnemyArriveHomeEvent", "lane": "exits", "col": 0, "yOffset": 78, "tag": "敌人" },
+    { "id": "dead", "type": "failure", "label": "死亡", "sublabel": "DeadTag 已标记", "lane": "terminal", "col": 0, "step": "05", "tag": "待清理" },
+    { "id": "removed", "type": "neutral", "label": "移除销毁", "sublabel": "RemoveDeadSystem destroy()", "lane": "terminal", "col": 1, "step": "06", "tag": "终态" },
+    { "id": "retreat", "type": "failure", "label": "撤退", "sublabel": "Retreat → RemoveUnit", "lane": "terminal", "col": 2, "tag": "玩家" }
+  ],
+  "transitions": [
+    { "id": "spawn-active", "from": "spawn", "to": "active", "label": "构建完成 / 波次生成", "variant": "emphasis", "labelAt": [248, 142] },
+    { "id": "active-injured", "from": "active", "to": "injured", "label": "受击", "labelAt": [477, 142] },
+    { "id": "injured-dying", "from": "injured", "to": "dying", "label": "hp≤0", "variant": "security", "labelAt": [633, 218] },
+    { "id": "active-attackcd", "from": "active", "to": "attack-cd", "label": "攻击出手", "route": "straight", "fromSide": "bottom", "toSide": "top", "labelAt": [402, 226] },
+    { "id": "active-skillcd", "from": "active", "to": "skill-cd", "label": "施放技能" },
+    { "id": "active-arrived", "from": "active", "to": "arrived", "label": "到达终点", "via": [[343, 188], [318, 188], [318, 385]], "toSide": "left", "labelAt": [318, 252] },
+    { "id": "active-retreat", "from": "active", "to": "retreat", "label": "撤退事件", "variant": "security", "fromSide": "top", "toSide": "top", "via": [[402, 80], [779, 80], [779, 430], [710, 430]] },
+    { "id": "dying-dead", "from": "dying", "to": "dead", "label": "emplace DeadTag", "variant": "security", "fromSide": "bottom", "toSide": "top", "via": [[710, 420], [402, 420]], "labelAt": [710, 322] },
+    { "id": "dead-removed", "from": "dead", "to": "removed", "label": "统一销毁", "variant": "emphasis", "labelAt": [477, 522] }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "主生命周期", "items": [
+      "Spawn → Active → 受伤 → 死亡判定 → Dead → Removed 六步",
+      "死亡打 DeadTag, RemoveDeadSystem 下一帧统一 destroy (remove_dead_system.cpp:17-24)"
+    ] },
+    { "dot": "amber", "title": "等待与中断", "items": [
+      "攻击/技能冷却 = ReadyTag 缺失, 计时满加回 (timer_system.cpp:22-51)",
+      "被阻挡 = BlockedBy + velocity=0, 阻挡者死亡自动解锁 (block_system.cpp:25-30)"
+    ] },
+    { "dot": "rose", "title": "所有退出路径", "items": [
+      "到达基地 → EnemyArriveHomeEvent + DeadTag (follow_path_system.cpp:50-51)",
+      "撤退 → RetreatEvent 返还 cost → DeadTag (game_rule_system.cpp:94-101)"
+    ] }
+  ]
+}
