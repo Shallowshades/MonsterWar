@@ -29,7 +29,7 @@ EndScene::EndScene(engine::core::Context& context, bool is_win)
 
 EndScene::~EndScene() = default;
 
-void EndScene::init() {
+bool EndScene::init() {
     if (mIsWin) {
         mContext.getAudioPlayer().playMusic("win"_hs, 0);
     } else {
@@ -37,6 +37,7 @@ void EndScene::init() {
     }
     // 进入游戏结束状态（GameScene::render 依此门控调试UI，避免两套窗口叠加冲突）
     mContext.getGameState().setState(engine::core::State::GameOver);
+    return Scene::init();
 }
 
 void EndScene::render() {

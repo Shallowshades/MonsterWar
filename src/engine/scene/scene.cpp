@@ -18,9 +18,10 @@ namespace engine::scene {
 
 	Scene::~Scene() = default;
 
-	void Scene::init() {
+	bool Scene::init() {
 		mIsInitialized = true;     // 子类应该最后调用父类的 init 方法
 		spdlog::trace("场景 '{}' 初始化完成。", mSceneName);
+		return true;
 	}
 
 	void Scene::update(float delta_time) {

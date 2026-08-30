@@ -442,9 +442,9 @@ target_link_libraries(${TARGET}
 # 使用target_compile_options()只影响主目标，不影响依赖库
 
 if(MSVC)
-    # Visual Studio: 启用所有警告 + UTF-8编码支持
-    target_compile_options(${TARGET} PRIVATE /W3 /utf-8)
-    # 不要弹出控制台窗口
+    # Visual Studio: 启用所有警告 + UTF-8编码支持 + 多文件并行编译(/MP 加速构建)
+    target_compile_options(${TARGET} PRIVATE /W3 /utf-8 /MP)
+    # 使用控制台子系统（便于查看 spdlog 日志；不隐藏控制台窗口）
     target_link_options(${TARGET} PRIVATE "/SUBSYSTEM:CONSOLE")
 elseif(WIN32 AND (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
     # MinGW/Clang on Windows: 设置UTF-8编码
@@ -492,6 +492,22 @@ endif()
 add_custom_command(TARGET ${TARGET} PRE_BUILD
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_BINARY_DIR}/copy_assets_$<CONFIG>.cmake
     COMMENT "检查并复制资源文件"
+)
+
+# 复制 imgui.ini（仅当目标位置不存在时），保证 ImGui 调试窗口布局持久化到 exe 目录
+file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/copy_imgui_ini_$<CONFIG>.cmake CONTENT "
+# 生成的 imgui.ini 复制脚本
+set(IMGUI_INI_SOURCE \"${CMAKE_CURRENT_LIST_DIR}/imgui.ini\")
+set(IMGUI_INI_TARGET \"$<TARGET_FILE_DIR:${TARGET}>/imgui.ini\")
+if(EXISTS \"\${IMGUI_INI_SOURCE}\" AND NOT EXISTS \"\${IMGUI_INI_TARGET}\")
+    file(COPY \"\${IMGUI_INI_SOURCE}\" DESTINATION \"$<TARGET_FILE_DIR:${TARGET}>\")
+    message(STATUS \"复制 imgui.ini 到可执行文件目录\")
+endif()
+")
+
+add_custom_command(TARGET ${TARGET} PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_BINARY_DIR}/copy_imgui_ini_$<CONFIG>.cmake
+    COMMENT "复制 imgui.ini 到可执行文件目录"
 )
 
 # ============================================

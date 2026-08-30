@@ -24,14 +24,15 @@ SDL_Texture* TextureManager::loadTexture(entt::id_type id, std::string_view file
 	// 如果没加载则尝试加载纹理
 	SDL_Texture* rawTexture = IMG_LoadTexture(mRenderer, filePath.data());
 
-	// 载入纹理时，设置纹理缩放模式为最邻近插值(必不可少，否则TileLayer渲染中会出现边缘空隙/模糊)
-	if (!SDL_SetTextureScaleMode(rawTexture, SDL_SCALEMODE_NEAREST)) {
-		spdlog::warn("无法设置纹理缩放模式为最邻近插值");
-	}
-
+	// 先检查加载是否成功（rawTexture 为 null 时调用 SDL_SetTextureScaleMode 会崩溃）
 	if (!rawTexture) {
 		spdlog::error("加载纹理失败: '{}': {}", filePath.data(), SDL_GetError());
 		return nullptr;
+	}
+
+	// 载入纹理时，设置纹理缩放模式为最邻近插值(必不可少，否则TileLayer渲染中会出现边缘空隙/模糊)
+	if (!SDL_SetTextureScaleMode(rawTexture, SDL_SCALEMODE_NEAREST)) {
+		spdlog::warn("无法设置纹理缩放模式为最邻近插值: {}", SDL_GetError());
 	}
 
 	// 使用带有自定义删除器的 unique_ptr 存储加载的纹理

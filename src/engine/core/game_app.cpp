@@ -191,7 +191,10 @@ bool engine::core::GameApp::initSDL() {
 	// 设置逻辑分辨率 (窗口大小 * 逻辑缩放比例)
 	int logical_width = static_cast<int>(static_cast<float>(mConfig->mWindowWidth) * mConfig->mWindowLogicalScale);
 	int logical_height = static_cast<int>(static_cast<float>(mConfig->mWindowHeight) * mConfig->mWindowLogicalScale);
-	SDL_SetRenderLogicalPresentation(mSDLRenderer, logical_width, logical_height, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+	if (!SDL_SetRenderLogicalPresentation(mSDLRenderer, logical_width, logical_height, SDL_LOGICAL_PRESENTATION_LETTERBOX)) {
+		spdlog::error("{} 设置逻辑分辨率失败! SDL错误: {}", mLogTag.data(), SDL_GetError());
+		return false;
+	}
 	spdlog::trace("{} 初始化SDL成功", mLogTag.data());
 	return true;
 }
@@ -333,9 +336,9 @@ bool engine::core::GameApp::initImGui() {
 	ImGui::StyleColorsDark();
 	// ImGui::StyleColorsLight();
 
-	// 设置缩放
-	float main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());     // 与系统缩放一致
-	// float main_scale = 1.0f;     // 或者直接设置更加稳定
+	// 设置缩放（固定为1.0，不再跟随系统DPI，避免高DPI显示器上窗口偏大/布局不稳定）
+	// float main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());     // 与系统缩放一致
+	float main_scale = 1.0f;     // 或者直接设置更加稳定
 	ImGuiStyle& style = ImGui::GetStyle();
 	style.ScaleAllSizes(main_scale);        // 固定样式缩放比例。
 	style.FontScaleDpi = main_scale;        // 设置初始字体缩放比例。

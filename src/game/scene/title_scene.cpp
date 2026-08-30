@@ -26,6 +26,7 @@
 #include "../../engine/loader/level_loader.h"
 #include <spdlog/spdlog.h>
 #include <entt/entity/registry.hpp>
+#include <utility>
 
 using namespace entt::literals;
 
@@ -37,30 +38,30 @@ namespace game::scene {
 		std::shared_ptr<game::data::UIConfig> ui_config,
 		std::shared_ptr<game::data::LevelConfig> level_config)
 		: engine::scene::Scene("TitleScene", context)
-		, mBlueprintManager(blueprint_manager)
-		, mSessionData(session_data)
-		, mUIConfig(ui_config)
-		, mLevelConfig(level_config) {
+		, mBlueprintManager(std::move(blueprint_manager))
+		, mSessionData(std::move(session_data))
+		, mUIConfig(std::move(ui_config))
+		, mLevelConfig(std::move(level_config)) {
 		spdlog::info("TitleScene 构造完成");
 	}
 
 	TitleScene::~TitleScene() = default;
 
-	void TitleScene::init() {
-		if (!initSessionData()) { spdlog::error("初始化会话数据失败"); return; }
-		if (!initLevelConfig()) { spdlog::error("初始化关卡配置失败"); return; }
-		if (!initBlueprintManager()) { spdlog::error("初始化蓝图管理器失败"); return; }
-		if (!initUIConfig()) { spdlog::error("初始化UI配置失败"); return; }
-		if (!loadTitleLevel()) { spdlog::error("加载标题关卡失败"); return; }
-		if (!initSystems()) { spdlog::error("初始化系统失败"); return; }
-		if (!initRegistryContext()) { spdlog::error("初始化注册表上下文失败"); return; }
-		if (!initUI()) { spdlog::error("初始化UI失败"); return; }
+	bool TitleScene::init() {
+		if (!initSessionData()) { spdlog::error("初始化会话数据失败"); return false; }
+		if (!initLevelConfig()) { spdlog::error("初始化关卡配置失败"); return false; }
+		if (!initBlueprintManager()) { spdlog::error("初始化蓝图管理器失败"); return false; }
+		if (!initUIConfig()) { spdlog::error("初始化UI配置失败"); return false; }
+		if (!loadTitleLevel()) { spdlog::error("加载标题关卡失败"); return false; }
+		if (!initSystems()) { spdlog::error("初始化系统失败"); return false; }
+		if (!initRegistryContext()) { spdlog::error("初始化注册表上下文失败"); return false; }
+		if (!initUI()) { spdlog::error("初始化UI失败"); return false; }
 
 		// 进入标题状态，并重置游戏速度（从战斗倍速返回标题时也生效）
 		mContext.getGameState().setState(engine::core::State::Title);
 		mContext.getTime().setTimeScale(1.0f);
 
-		Scene::init();
+		return Scene::init();
 	}
 
 	void TitleScene::update(float delta_time) {

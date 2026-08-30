@@ -104,9 +104,14 @@ namespace engine::scene {
 
 		spdlog::debug("{} 正在将场景 '{}' 压入栈中", mLogTag.data(), scene->getName());
 
-		// 初始化新场景
+		// 初始化新场景（失败则退出游戏，避免在未初始化场景上运行）
 		if (!scene->getIsInitialized()) {
-			scene->init();
+			if (!scene->init()) {
+				spdlog::error("{} 场景 '{}' 初始化失败。", mLogTag.data(), scene->getName());
+				scene->clean();
+				mContext.getDispatcher().trigger<engine::utils::QuitEvent>();
+				return;
+			}
 		}
 
 		// 将新场景移入栈顶
@@ -128,7 +133,7 @@ namespace engine::scene {
 
 		if (mSceneStack.empty()) {
 			spdlog::warn("{} : 弹出最后一个场景, 退出游戏", mLogTag.data());
-			mContext.getDispatcher().enqueue<engine::utils::QuitEvent>();
+			mContext.getDispatcher().trigger<engine::utils::QuitEvent>();
 		}
 	}
 
@@ -146,9 +151,14 @@ namespace engine::scene {
 			mSceneStack.pop_back();
 		}
 
-		// 初始化新场景
+		// 初始化新场景（失败则退出游戏，避免在未初始化场景上运行）
 		if (!scene->getIsInitialized()) {
-			scene->init();
+			if (!scene->init()) {
+				spdlog::error("{} 场景 '{}' 初始化失败。", mLogTag.data(), scene->getName());
+				scene->clean();
+				mContext.getDispatcher().trigger<engine::utils::QuitEvent>();
+				return;
+			}
 		}
 
 		// 将新场景移入栈顶

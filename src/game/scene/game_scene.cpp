@@ -2,6 +2,7 @@
 #include "title_scene.h"
 #include "level_clear_scene.h"
 #include "end_scene.h"
+#include <utility>
 #include "../factory/entity_factory.h"
 #include "../factory/blueprint_manager.h"
 #include "../loader/entity_builder_mw.h"
@@ -61,71 +62,71 @@ namespace game::scene {
 		std::shared_ptr<game::data::UIConfig> ui_config,
 		std::shared_ptr<game::data::LevelConfig> level_config)
 		: engine::scene::Scene("GameScene", context)
-		, mBlueprintManager(blueprint_manager)
-		, mSessionData(session_data)
-		, mUIConfig(ui_config)
-		, mLevelConfig(level_config) {
+		, mBlueprintManager(std::move(blueprint_manager))
+		, mSessionData(std::move(session_data))
+		, mUIConfig(std::move(ui_config))
+		, mLevelConfig(std::move(level_config)) {
 		spdlog::info("GameScene 构造完成");
 	}
 
 	GameScene::~GameScene() {
 	}
 
-	void GameScene::init() {
+	bool GameScene::init() {
 		if (!initSessionData()) {
 			spdlog::error("初始化会话数据失败");
-			return;
+			return false;
 		}
 
 		if (!initLevelConfig()) {
 			spdlog::error("初始化关卡配置失败");
-			return;
+			return false;
 		}
 
 		if (!initUIConfig()) {
 			spdlog::error("初始化UI配置失败");
-			return;
+			return false;
 		}
 
 		if (!loadLevel()) {
 			spdlog::error("加载关卡失败");
-			return;
+			return false;
 		}
 
 		if (!initEventConnections()) {
 			spdlog::error("初始化事件连接失败");
-			return;
+			return false;
 		}
 		if (!initInputConnections()) {
 			spdlog::error("初始化输入连接失败");
-			return;
+			return false;
 		}
 		if (!initEntityFactory()) {
 			spdlog::error("初始化实体工厂失败");
-			return;
+			return false;
 		}
 		if (!initRegistryContext()) {
 			spdlog::error("初始化注册表上下文失败");
-			return;
+			return false;
 		}
 		if (!initUnitsPortraitUI()) {
 			spdlog::error("初始化单位肖像UI失败");
-			return;
+			return false;
 		}
 		if (!initSystems()) {
 			spdlog::error("初始化系统失败");
-			return;
+			return false;
 		}
 		if (!initEnemySpawner()) {
 			spdlog::error("初始化敌人生成器失败");
-			return;
+			return false;
 		}
 		testSessionData();
 
 		// 场景初始化完成后进入正常游戏状态（用于暂停系统的状态机）
 		mContext.getGameState().setState(engine::core::State::Playing);
 		mContext.getAudioPlayer().playMusic("battle_bgm"_hs);    // 设置战斗场景背景音乐
-		Scene::init();
+		return Scene::init();
 	}
 
 	void GameScene::update(float delta_time) {

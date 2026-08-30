@@ -18,6 +18,7 @@
 #include "../../engine/utils/events.h"
 #include <spdlog/spdlog.h>
 #include <entt/entity/registry.hpp>
+#include <utility>
 
 using namespace entt::literals;
 
@@ -30,10 +31,10 @@ LevelClearScene::LevelClearScene(engine::core::Context& context,
     std::shared_ptr<game::data::SessionData> session_data,
     game::data::GameStats& game_stats)
     : engine::scene::Scene("LevelClearScene", context)
-    , mBlueprintManager(blueprint_manager)
-    , mUIConfig(ui_config)
-    , mLevelConfig(level_config)
-    , mSessionData(session_data)
+    , mBlueprintManager(std::move(blueprint_manager))
+    , mUIConfig(std::move(ui_config))
+    , mLevelConfig(std::move(level_config))
+    , mSessionData(std::move(session_data))
     , mGameStats(game_stats) {
     // 直接在构造函数中初始化调试UI系统（结算场景只需ImGui显示）
     mDebugUISystem = std::make_unique<game::system::DebugUISystem>(mRegistry, mContext);
@@ -41,10 +42,10 @@ LevelClearScene::LevelClearScene(engine::core::Context& context,
 
 LevelClearScene::~LevelClearScene() = default;
 
-void LevelClearScene::init() {
+bool LevelClearScene::init() {
     if (!mUIConfig || !mLevelConfig || !mSessionData || !mBlueprintManager) {
         spdlog::error("LevelClearScene: ui_config, level_config, session_data 或 blueprint_manager 必须有值");
-        return;
+        return false;
     }
     // 进入关卡过关状态（GameScene::render 依此门控调试UI，避免两套窗口叠加冲突）
     mContext.getGameState().setState(engine::core::State::LevelClear);
@@ -54,6 +55,7 @@ void LevelClearScene::init() {
     mRegistry.ctx().emplace<std::shared_ptr<game::factory::BlueprintManager>>(mBlueprintManager);
     mRegistry.ctx().emplace<std::shared_ptr<game::data::UIConfig>>(mUIConfig);
     mContext.getAudioPlayer().playMusic("win"_hs, 0);    // 播放通关音乐（播放一次）
+    return Scene::init();
 }
 
 void LevelClearScene::render() {

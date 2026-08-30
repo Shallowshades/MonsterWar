@@ -59,7 +59,7 @@ namespace game::scene {
 			std::shared_ptr<game::data::LevelConfig> level_config = nullptr);
 		~GameScene();
 
-		void init() override;
+		bool init() override;
 		void update(float delta_time) override;
 		void render() override;
 		void clean() override;

@@ -75,21 +75,21 @@ main.cpp
 
 ### 游戏层组件（`game::component`）
 
-| 组件                  | 文件                     | 说明                               |
-| --------------------- | ------------------------ | ---------------------------------- |
-| EnemyComponent        | `enemy_component.h`      | 敌人目标路径节点 ID + 移动速度     |
-| StatsComponent        | `stats_component.h`      | RPG 属性（HP/ATK/DEF/射程/攻速等） |
-| ClassNameComponent    | `class_name_component.h` | 职业名称或敌人类型（ID + 名称）    |
-| PlayerComponent       | `player_component.h`     | 玩家单位，出击消耗                 |
-| BlockerComponent      | `blocker_component.h`    | 阻挡者（最大/当前阻挡数量）        |
-| BlockedByComponent    | `blocked_by_component.h` | 被阻挡者（记录阻挡自己的实体）     |
-| TargetComponent       | `target_component.h`     | 攻击目标（锁定要攻击的实体）       |
-| ProjectileComponent   | `projectile_component.h` | 投射物（目标、伤害、弧线飞行参数） |
-| ProjectileIDComponent | `projectile_component.h` | 投射物ID，附加在远程角色上         |
-| UnitPrepComponent     | `unit_prep_component.h`  | 预备出击单位（幽灵）：角色ID/类型/范围/cost |
-| PlaceOccupiedComponent | `place_occupied_component.h` | 放置点占用（记录占用该放置点的单位） |
-| SkillComponent        | `skill_component.h`        | 技能（技能ID、显示特效实体、名称/描述、冷却/持续、两个计时器） |
-| CostRegenComponent    | `cost_regen_component.h`   | COST 恢复速率（被动技能等额外回 COST） |
+| 组件                   | 文件                         | 说明                                                           |
+| ---------------------- | ---------------------------- | -------------------------------------------------------------- |
+| EnemyComponent         | `enemy_component.h`          | 敌人目标路径节点 ID + 移动速度                                 |
+| StatsComponent         | `stats_component.h`          | RPG 属性（HP/ATK/DEF/射程/攻速等）                             |
+| ClassNameComponent     | `class_name_component.h`     | 职业名称或敌人类型（ID + 名称）                                |
+| PlayerComponent        | `player_component.h`         | 玩家单位，出击消耗                                             |
+| BlockerComponent       | `blocker_component.h`        | 阻挡者（最大/当前阻挡数量）                                    |
+| BlockedByComponent     | `blocked_by_component.h`     | 被阻挡者（记录阻挡自己的实体）                                 |
+| TargetComponent        | `target_component.h`         | 攻击目标（锁定要攻击的实体）                                   |
+| ProjectileComponent    | `projectile_component.h`     | 投射物（目标、伤害、弧线飞行参数）                             |
+| ProjectileIDComponent  | `projectile_component.h`     | 投射物ID，附加在远程角色上                                     |
+| UnitPrepComponent      | `unit_prep_component.h`      | 预备出击单位（幽灵）：角色ID/类型/范围/cost                    |
+| PlaceOccupiedComponent | `place_occupied_component.h` | 放置点占用（记录占用该放置点的单位）                           |
+| SkillComponent         | `skill_component.h`          | 技能（技能ID、显示特效实体、名称/描述、冷却/持续、两个计时器） |
+| CostRegenComponent     | `cost_regen_component.h`     | COST 恢复速率（被动技能等额外回 COST）                         |
 
 ## ECS 系统
 
@@ -105,27 +105,27 @@ main.cpp
 
 ### 游戏层系统（`game::system`）
 
-| 系统                 | 文件                         | 说明                                                                              |
-| -------------------- | ---------------------------- | --------------------------------------------------------------------------------- |
-| FollowPathSystem     | `follow_path_system.cpp`     | 敌人沿路径节点移动，到达终点触发 EnemyArriveHomeEvent                             |
-| RemoveDeadSystem     | `remove_dead_system.cpp`     | 延迟清理标记 DeadTag 的死亡实体                                                   |
-| BlockSystem          | `block_system.cpp`           | 检测阻挡距离，设置敌人速度为 0 并切换阻挡动画                                     |
-| TimerSystem          | `timer_system.cpp`           | 推进攻击冷却 + 技能冷却/持续计时器，冷却结束添加对应就绪标签、发技能事件          |
-| SetTargetSystem      | `set_target_system.cpp`      | 为无目标角色寻找目标（玩家找敌人、远程敌人找玩家、治疗者找低血量盟友）            |
-| AttackStarterSystem  | `attack_starter_system.cpp`  | AttackReadyTag 实体触发攻击动画，添加 ActionLockTag                               |
-| OrientationSystem    | `orientation_system.cpp`     | 根据目标位置/阻挡者/移动方向翻转精灵朝向                                          |
-| AnimationStateSystem | `animation_state_system.cpp` | 监听 AnimationFinishedEvent，恢复循环动画（idle/walk）                            |
-| AnimationEventSystem | `animation_event_system.cpp` | 监听 AnimationEvent（动画帧事件），发出 AttackEvent / HealEvent / PlaySoundEvent  |
-| CombatResolveSystem  | `combat_resolve_system.cpp`  | 监听 AttackEvent / HealEvent，计算伤害/治疗量，处理死亡和阻挡计数                 |
-| ProjectileSystem     | `projectile_system.cpp`      | 响应 EmitProjectileEvent 创建投射物实体，更新飞行弧线轨迹，到达后发出 AttackEvent |
-| EffectSystem         | `effect_system.cpp`          | 监听 EnemyDeadEffectEvent / EffectEvent，通过实体工厂创建死亡/通用特效            |
-| HealthBarSystem      | `health_bar_system.cpp`      | 渲染受伤单位的血量条（按血量百分比变色）                                          |
-| GameRuleSystem       | `game_rule_system.cpp`       | 游戏规则：cost 恢复、敌人到达基地扣血/胜负判定、单位升级/撤退、通关延迟切换场景     |
-| PlaceUnitSystem      | `place_unit_system.cpp`      | 出击准备/放置：幽灵跟随鼠标、检测放置点、落子出兵、扣费、占用放置点、取消          |
-| RenderRangeSystem    | `render_range_system.cpp`    | 渲染预备/已放置远程单位的攻击范围圆（半透明绿色，`ShowRangeTag`）                 |
+| 系统                 | 文件                         | 说明                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| -------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FollowPathSystem     | `follow_path_system.cpp`     | 敌人沿路径节点移动，到达终点触发 EnemyArriveHomeEvent                                                                                                                                                                                                                                                                                                                                                                                                         |
+| RemoveDeadSystem     | `remove_dead_system.cpp`     | 延迟清理标记 DeadTag 的死亡实体                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| BlockSystem          | `block_system.cpp`           | 检测阻挡距离，设置敌人速度为 0 并切换阻挡动画                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| TimerSystem          | `timer_system.cpp`           | 推进攻击冷却 + 技能冷却/持续计时器，冷却结束添加对应就绪标签、发技能事件                                                                                                                                                                                                                                                                                                                                                                                      |
+| SetTargetSystem      | `set_target_system.cpp`      | 为无目标角色寻找目标（玩家找敌人、远程敌人找玩家、治疗者找低血量盟友）                                                                                                                                                                                                                                                                                                                                                                                        |
+| AttackStarterSystem  | `attack_starter_system.cpp`  | AttackReadyTag 实体触发攻击动画，添加 ActionLockTag                                                                                                                                                                                                                                                                                                                                                                                                           |
+| OrientationSystem    | `orientation_system.cpp`     | 根据目标位置/阻挡者/移动方向翻转精灵朝向                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| AnimationStateSystem | `animation_state_system.cpp` | 监听 AnimationFinishedEvent，恢复循环动画（idle/walk）                                                                                                                                                                                                                                                                                                                                                                                                        |
+| AnimationEventSystem | `animation_event_system.cpp` | 监听 AnimationEvent（动画帧事件），发出 AttackEvent / HealEvent / PlaySoundEvent                                                                                                                                                                                                                                                                                                                                                                              |
+| CombatResolveSystem  | `combat_resolve_system.cpp`  | 监听 AttackEvent / HealEvent，计算伤害/治疗量，处理死亡和阻挡计数                                                                                                                                                                                                                                                                                                                                                                                             |
+| ProjectileSystem     | `projectile_system.cpp`      | 响应 EmitProjectileEvent 创建投射物实体，更新飞行弧线轨迹，到达后发出 AttackEvent                                                                                                                                                                                                                                                                                                                                                                             |
+| EffectSystem         | `effect_system.cpp`          | 监听 EnemyDeadEffectEvent / EffectEvent，通过实体工厂创建死亡/通用特效                                                                                                                                                                                                                                                                                                                                                                                        |
+| HealthBarSystem      | `health_bar_system.cpp`      | 渲染受伤单位的血量条（按血量百分比变色）                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| GameRuleSystem       | `game_rule_system.cpp`       | 游戏规则：cost 恢复、敌人到达基地扣血/胜负判定、单位升级/撤退、通关延迟切换场景                                                                                                                                                                                                                                                                                                                                                                               |
+| PlaceUnitSystem      | `place_unit_system.cpp`      | 出击准备/放置：幽灵跟随鼠标、检测放置点、落子出兵、扣费、占用放置点、取消                                                                                                                                                                                                                                                                                                                                                                                     |
+| RenderRangeSystem    | `render_range_system.cpp`    | 渲染预备/已放置远程单位的攻击范围圆（半透明绿色，`ShowRangeTag`）                                                                                                                                                                                                                                                                                                                                                                                             |
 | DebugUISystem        | `debug_ui_system.cpp`        | 调试 UI：ImGui 每帧逻辑+渲染，四分支——`update()`（战斗分支：悬浮/肖像 tooltip + 角色状态[升级U/撤退R/技能] + 关卡信息 + 设置工具[暂停P/重开/倍速/音量] + 调试工具[加钱/通关] + 存档面板）+ `updateTitle(TitleScene&)`（标题分支：Logo + 4 按钮 + 角色信息 + 读档面板）+ `updateLevelClear(LevelClearScene&)`（通关结算分支：结算文本 + 统计与角色表格 + 下一关/返回标题/保存按钮）+ `updateEnd(EndScene&)`（游戏结束分支：胜利/失败大字 + 返回标题/退出按钮） |
-| SelectionSystem      | `selection_system.cpp`       | 选择单位：每帧悬浮检测（写 `hovered_unit` ctx）+ 左键选中玩家单位 + 右键清除选中 |
-| SkillSystem          | `skill_system.cpp`          | 技能系统：事件驱动三态流转（就绪/激活/持续结束），显示标识增删、Buff 乘除、被动清理 |
+| SelectionSystem      | `selection_system.cpp`       | 选择单位：每帧悬浮检测（写 `hovered_unit` ctx）+ 左键选中玩家单位 + 右键清除选中                                                                                                                                                                                                                                                                                                                                                                              |
+| SkillSystem          | `skill_system.cpp`           | 技能系统：事件驱动三态流转（就绪/激活/持续结束），显示标识增删、Buff 乘除、被动清理                                                                                                                                                                                                                                                                                                                                                                           |
 
 ## 关卡加载系统（Builder 模式）
 
@@ -304,8 +304,8 @@ DebugUISystem::updateLevelClear()    渲染（LevelClearScene）：beginFrame �
 DebugUISystem::updateEnd()           渲染（EndScene）：beginFrame → 胜利/失败大字 → 返回标题/退出 → endFrame
 ```
 
-- **initImGui** (`engine::core`) — ImGui 初始化：`CreateContext`、键盘/手柄导航、`StyleColorsDark`、系统 DPI 缩放（`SDL_GetDisplayContentScale`）、窗口/弹窗透明度、中文字体 `VonwaonBitmap-16px.ttf`（`GetGlyphRangesChineseSimplifiedCommon`，失败回退默认字体）、`ImGui_ImplSDL3_InitForSDLRenderer` + `ImGui_ImplSDLRenderer3_Init`；在 `initSceneManager` 后、首个场景创建前调用；`close()` 里 Shutdown 三件套（在 `SDL_DestroyRenderer` 之前）
-- **逻辑分辨率开关** (`game_state.h/.cpp`) — `disableLogicalPresentation()` / `enableLogicalPresentation()`：读当前逻辑尺寸后用 `SDL_LOGICAL_PRESENTATION_DISABLED` / `LETTERBOX` 重设。ImGui 对 letterbox 支持差，画 ImGui 前临时关闭（鼠标 1:1 到物理像素）、画完恢复
+- **initImGui** (`engine::core`) — ImGui 初始化：`CreateContext`、键盘/手柄导航、`StyleColorsDark`、**固定缩放 1.0**（弃用系统 DPI 缩放，保证高 DPI 显示器上布局稳定）、窗口/弹窗透明度、中文字体 `VonwaonBitmap-16px.ttf`（`GetGlyphRangesChineseSimplifiedCommon`，失败回退默认字体）、`ImGui_ImplSDL3_InitForSDLRenderer` + `ImGui_ImplSDLRenderer3_Init`；在 `initSceneManager` 后、首个场景创建前调用；`close()` 里 Shutdown 三件套（在 `SDL_DestroyRenderer` 之前）
+- **逻辑分辨率开关** (`game_state.h/.cpp`) — `disableLogicalPresentation()` / `enableLogicalPresentation()`：ImGui 对 letterbox 支持差，画 ImGui 前临时关闭（鼠标 1:1 到物理像素）、画完恢复。**缓存/恢复模式**：关闭前把"最近一次有效的宽/高/模式"缓存进 `GameState` 私有成员，恢复用缓存而非现场读——SDL3.4 后 `SDL_GetRenderLogicalPresentation` 在逻辑分辨率禁用时返回 `0x0`，旧"读当前再设"模式会把 `0x0` 写回；`getLogicalSize()` 读到禁用态时回退缓存、构造时 `syncLogicalPresentationState()` 同步一次
 - **输入接线** (`input_manager.cpp`) — 轮询循环里 `ImGui_ImplSDL3_ProcessEvent`；`processEvent` 开头 `ImGui::GetIO().WantCaptureMouse` 拦截，ImGui 捕获鼠标时游戏不响应（调试 UI 不穿透到放置/战斗操作）
 - **DebugUISystem** (`game::system`) — 四分支：`update()`（战斗分支，挂 `GameScene::render` 最后）每帧 `beginFrame` → `renderHoveredUnit` + `renderSelectedUnit` + 角色信息 + 设置/调试工具 + 存档面板 → `endFrame`；`updateTitle(TitleScene&)`（标题分支，挂 `TitleScene::render` 最后）→ `renderTitleLogo` + `renderTitleButtons`（4 按钮直接调 TitleScene 私有回调，`friend`）+ `renderUnitInfoUI`（14 列可排序角色表格 + 升级按钮）+ `renderLoadPanelUI`（3 个 SLOT 读档按钮）→ `endFrame`；`updateLevelClear(LevelClearScene&)`（通关结算分支）→ `renderLevelClearText`（结算大字）+ `renderLevelClearTable`（统计 + 角色表格 + 奖励点数）+ `renderLevelClearButtons`（下一关/返回标题/保存）→ `endFrame`；`updateEnd(EndScene&)`（游戏结束分支）→ `renderEndText`（胜利/失败大字）+ `renderEndButtons`（返回标题/退出）→ `endFrame`
 - **渲染门控** — 战斗分支 `update()` 仅在 `GameScene::render()` 里 `isPlaying() || isPaused()` 时调用：LevelClear/End 场景把状态切到 LevelClear/GameOver 后，战斗 ImGui 自动停用，与新场景自己的 ImGui 窗口不重叠；四个场景的 ImGui 都挂在各自 `render()` 最后（`Scene::render()` 之后），盖在最上层，在 `present()` 前写进 SDL 渲染器
@@ -395,14 +395,14 @@ GameScene(Context& context,
 
 ### DebugUI 四大窗口
 
-| 窗口 | 内容 |
-|------|------|
-| 悬浮 tooltip（原） | 场上悬浮单位属性（玩家/敌人实体） |
-| 肖像 tooltip（新） | 出击面板肖像悬浮 → `getUnitData(name_id)` + 蓝图 `statModify` 重算属性（角色档案，非场上实体） |
-| 角色状态 + 升级/撤退（新） | 升级 U：扣 `player.mCost`、COST 不足 `BeginDisabled` 置灰；撤退 R：返还 `cost * 0.5` |
-| 关卡信息（新） | 基地血量 / COST / 剩余波次 / 下一波倒计时 / 击杀 / 当前关卡 |
-| 设置工具（新） | 暂停/继续（P 键）、重新开始 / 返回标题 / 保存、游戏倍速（0.5/1/2 按钮 + SliderFloat → `Time::setTimeScale`）、音乐/音效音量、显示调试工具开关 |
-| 调试工具（新） | COST+10 / COST+100、通关（发 `LevelClearEvent`），由设置工具勾选控制显隐 |
+| 窗口                       | 内容                                                                                                                                          |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| 悬浮 tooltip（原）         | 场上悬浮单位属性（玩家/敌人实体）                                                                                                             |
+| 肖像 tooltip（新）         | 出击面板肖像悬浮 → `getUnitData(name_id)` + 蓝图 `statModify` 重算属性（角色档案，非场上实体）                                                |
+| 角色状态 + 升级/撤退（新） | 升级 U：扣 `player.mCost`、COST 不足 `BeginDisabled` 置灰；撤退 R：返还 `cost * 0.5`                                                          |
+| 关卡信息（新）             | 基地血量 / COST / 剩余波次 / 下一波倒计时 / 击杀 / 当前关卡                                                                                   |
+| 设置工具（新）             | 暂停/继续（P 键）、重新开始 / 返回标题 / 保存、游戏倍速（0.5/1/2 按钮 + SliderFloat → `Time::setTimeScale`）、音乐/音效音量、显示调试工具开关 |
+| 调试工具（新）             | COST+10 / COST+100、通关（发 `LevelClearEvent`），由设置工具勾选控制显隐                                                                      |
 
 - **Context 增加 Time 引用**（`getTime()`，`game_app.cpp` 传 `*mTime` 实参）——设置工具倍速需要访问 Time
 - **SessionData 增加 `getUnitData(name_id)`**——肖像 tooltip 按角色名哈希查数据（`operator[]` 不存在则默认构造）
@@ -467,12 +467,6 @@ GameScene(Context& context,
 - **2 参构造器** `(Context&, bool is_win = false)`——按胜败选 BGM（win/lose）并 `setState(GameOver)`；`render()` 挂 `updateEnd(*this)`：`renderEndText` 用 `SetWindowFontScale(5.0f)` 画大字「胜利/失败」，`renderEndButtons` 提供返回标题 / 退出
 - **GameEndEvent 接线**（`game_scene.cpp`）— 监听器改为 `onGameEndEvent(const GameEndEvent&)`（带参才能读 `event.mIsWin`），`requestPushScene(EndScene{event.mIsWin})`；GameRuleSystem 基地被毁发 `GameEndEvent{false}`
 
-### 本课新增接线（其余全就绪）
-
-`LevelClearEvent → GameScene::onLevelClear` 监听接线、`GameEndEvent` 处理器签名带参、两个新场景文件 + CMakeLists 条目、GameState 加 `State::LevelClear`。判定链两侧（击杀侧/到达侧）、延迟计时、奖励公式所需的 GameStats/SessionData API 本地早已就绪。
-
-详见 `docs/notes/012-level-clear-end-scene.md`。
-
 ## 战斗系统
 
 实现了基于 ECS 标签和冷却计时的自动战斗循环。
@@ -532,58 +526,58 @@ HealthBarSystem (血量条渲染)
 
 ECS 空标签（tag），用于标记实体状态，配合 view 的 `exclude` 做筛选：
 
-| 标签             | 文件     | 说明                                                  |
-| ---------------- | -------- | ----------------------------------------------------- |
-| DeadTag          | `tags.h` | 标记死亡实体，下一帧由 RemoveDeadSystem 清理          |
-| AttackReadyTag   | `tags.h` | 攻击冷却结束，可发起攻击                              |
-| ActionLockTag    | `tags.h` | 行动锁定（播放攻击动画时禁止移动）                    |
-| InjuredTag       | `tags.h` | 生命值未满，供治疗者检测                              |
-| FaceLeftTag      | `tags.h` | 默认朝左的角色类型（朝向右时翻转精灵）                |
-| HealerTag        | `tags.h` | 治疗单位类型                                          |
-| MeleeUnitTag     | `tags.h` | 近战单位类型                                          |
-| RangedUnitTag    | `tags.h` | 远程单位类型                                          |
+| 标签             | 文件     | 说明                                                       |
+| ---------------- | -------- | ---------------------------------------------------------- |
+| DeadTag          | `tags.h` | 标记死亡实体，下一帧由 RemoveDeadSystem 清理               |
+| AttackReadyTag   | `tags.h` | 攻击冷却结束，可发起攻击                                   |
+| ActionLockTag    | `tags.h` | 行动锁定（播放攻击动画时禁止移动）                         |
+| InjuredTag       | `tags.h` | 生命值未满，供治疗者检测                                   |
+| FaceLeftTag      | `tags.h` | 默认朝左的角色类型（朝向右时翻转精灵）                     |
+| HealerTag        | `tags.h` | 治疗单位类型                                               |
+| MeleeUnitTag     | `tags.h` | 近战单位类型                                               |
+| RangedUnitTag    | `tags.h` | 远程单位类型                                               |
 | OneShotRemoveTag | `tags.h` | 一次性动画实体（特效/死亡特效），播完标记 DeadTag 自动移除 |
-| HasHealthBarTag  | `tags.h` | 需要显示血量条的实体（玩家/敌人单位）                 |
-| MeleePlaceTag    | `tags.h` | 近战放置区域（地图放置点）                            |
-| RangedPlaceTag   | `tags.h` | 远程放置区域（地图放置点）                            |
-| ShowRangeTag     | `tags.h` | 预备远程单位：显示攻击范围圆                          |
-| SkillReadyTag    | `tags.h` | 技能冷却结束，可以施放                                 |
-| SkillActiveTag   | `tags.h` | 技能激活中（施放后到持续时间结束）                     |
-| PassiveSkillTag  | `tags.h` | 被动技能（落子即放、永不过期，计时器排除）            |
+| HasHealthBarTag  | `tags.h` | 需要显示血量条的实体（玩家/敌人单位）                      |
+| MeleePlaceTag    | `tags.h` | 近战放置区域（地图放置点）                                 |
+| RangedPlaceTag   | `tags.h` | 远程放置区域（地图放置点）                                 |
+| ShowRangeTag     | `tags.h` | 预备远程单位：显示攻击范围圆                               |
+| SkillReadyTag    | `tags.h` | 技能冷却结束，可以施放                                     |
+| SkillActiveTag   | `tags.h` | 技能激活中（施放后到持续时间结束）                         |
+| PassiveSkillTag  | `tags.h` | 被动技能（落子即放、永不过期，计时器排除）                 |
 
 ### 游戏层常量（`game::defs`）
 
-| 常量                | 文件          | 说明                                                         |
-| ------------------- | ------------- | ------------------------------------------------------------ |
-| BLOCK_RADIUS        | `constants.h` | 阻挡检测半径（40.0），小于此距离视为被阻挡                   |
-| UNIT_RADIUS         | `constants.h` | 角色自身半径（20.0），用于计算攻击范围（射程 + UNIT_RADIUS） |
-| HEALTH_BAR_SIZE     | `constants.h` | 血量条大小（48.0 × 8.0）                                     |
-| HEALTH_BAR_OFFSET_Y | `constants.h` | 血量条竖直方向偏移（8.0，水平方向居中）                      |
-| PLACE_RADIUS        | `constants.h` | 放置吸附半径（40.0），鼠标靠近放置点中心小于此距离即可放置   |
-| HOVER_RADIUS        | `constants.h` | 鼠标悬浮检测半径（30.0），鼠标与单位中心距离小于此值视为悬浮 |
-| RANGE_COLOR         | `constants.h` | 攻击范围圆颜色（半透明绿 {0,1,0,0.3}）                        |
-| SKILL_DISPLAY_OFFSET | `constants.h` | 技能显示标识相对角色的偏移（{0,-96}，角色头顶上方）           |
+| 常量                 | 文件          | 说明                                                         |
+| -------------------- | ------------- | ------------------------------------------------------------ |
+| BLOCK_RADIUS         | `constants.h` | 阻挡检测半径（40.0），小于此距离视为被阻挡                   |
+| UNIT_RADIUS          | `constants.h` | 角色自身半径（20.0），用于计算攻击范围（射程 + UNIT_RADIUS） |
+| HEALTH_BAR_SIZE      | `constants.h` | 血量条大小（48.0 × 8.0）                                     |
+| HEALTH_BAR_OFFSET_Y  | `constants.h` | 血量条竖直方向偏移（8.0，水平方向居中）                      |
+| PLACE_RADIUS         | `constants.h` | 放置吸附半径（40.0），鼠标靠近放置点中心小于此距离即可放置   |
+| HOVER_RADIUS         | `constants.h` | 鼠标悬浮检测半径（30.0），鼠标与单位中心距离小于此值视为悬浮 |
+| RANGE_COLOR          | `constants.h` | 攻击范围圆颜色（半透明绿 {0,1,0,0.3}）                       |
+| SKILL_DISPLAY_OFFSET | `constants.h` | 技能显示标识相对角色的偏移（{0,-96}，角色头顶上方）          |
 
 ### 玩家类型枚举（`game::defs::PlayerType`）
 
-| 值      | 说明                               |
-| ------- | ---------------------------------- |
-| UNKNOWN | 未定义（默认值）                   |
-| MELEE   | 近战型，只能放置在近战区域         |
-| RANGED  | 远程型，只能放置在远程区域         |
-| MIXED   | 混合型（暂不实现，未来可扩展）     |
+| 值      | 说明                           |
+| ------- | ------------------------------ |
+| UNKNOWN | 未定义（默认值）               |
+| MELEE   | 近战型，只能放置在近战区域     |
+| RANGED  | 远程型，只能放置在远程区域     |
+| MIXED   | 混合型（暂不实现，未来可扩展） |
 
 ### 输入绑定（当前状态）
 
-| 输入       | 快捷键         | 行为                                                           |
-| ---------- | -------------- | -------------------------------------------------------------- |
-| 鼠标左键   | `mouse_left`   | 放置幽灵单位 / 选中悬浮的玩家单位（`PlaceUnitSystem` + `SelectionSystem`）|
-| 鼠标右键   | `mouse_right`  | 取消放置（移除幽灵单位）；清除单位选中（`SelectionSystem`，右键穿透）      |
-| A / D 键   | `move_left`/`move_right` | 出击面板左右滚动（由 `UnitsPortraitUI` 处理）      |
-| P 键       | `ImGui`        | 暂停 / 继续游戏（`DebugUISystem` 设置工具 `SetNextItemShortcut`） |
-| U 键       | `ImGui`        | 升级选中单位（`DebugUISystem` 选中面板 `SetNextItemShortcut`）     |
-| R 键       | `ImGui`        | 撤退选中单位，返还 50% COST（`DebugUISystem` 选中面板 `SetNextItemShortcut`） |
-| S 键       | `ImGui`        | 施放选中单位的技能（`DebugUISystem` 选中面板 `SetNextItemShortcut`） |
+| 输入     | 快捷键                   | 行为                                                                          |
+| -------- | ------------------------ | ----------------------------------------------------------------------------- |
+| 鼠标左键 | `mouse_left`             | 放置幽灵单位 / 选中悬浮的玩家单位（`PlaceUnitSystem` + `SelectionSystem`）    |
+| 鼠标右键 | `mouse_right`            | 取消放置（移除幽灵单位）；清除单位选中（`SelectionSystem`，右键穿透）         |
+| A / D 键 | `move_left`/`move_right` | 出击面板左右滚动（由 `UnitsPortraitUI` 处理）                                 |
+| P 键     | `ImGui`                  | 暂停 / 继续游戏（`DebugUISystem` 设置工具 `SetNextItemShortcut`）             |
+| U 键     | `ImGui`                  | 升级选中单位（`DebugUISystem` 选中面板 `SetNextItemShortcut`）                |
+| R 键     | `ImGui`                  | 撤退选中单位，返还 50% COST（`DebugUISystem` 选中面板 `SetNextItemShortcut`） |
+| S 键     | `ImGui`                  | 施放选中单位的技能（`DebugUISystem` 选中面板 `SetNextItemShortcut`）          |
 
 ### 动画帧事件
 
@@ -657,12 +651,12 @@ ECS 空标签（tag），用于标记实体状态，配合 view 的 `exclude` �
 - **Config** (`engine::core`) — 基于 JSON 的配置系统，自动创建默认配置
 - **Context** (`engine::core`) — 依赖注入容器，持有所有引擎模块引用（Renderer、Camera、ResourceManager 等）
 - **Time** (`engine::core`) — 高性能时间管理，提供 delta time 和时间缩放功能
-- **GameState** (`engine::core`) — 游戏状态枚举（Title/Playing/Paused/GameOver/LevelClear）与 `isXxx()` 访问器，封装 SDL_Window 和 SDL_Renderer
+- **GameState** (`engine::core`) — 游戏状态枚举（Title/Playing/Paused/GameOver/LevelClear）与 `isXxx()` 访问器，封装 SDL_Window 和 SDL_Renderer；逻辑分辨率缓存/恢复（disable/enable 用缓存，适配 SDL3.4 禁用时返回 0x0）
 - **Renderer** (`engine::render`) — SDL3 渲染封装，支持纹理绘制、世界坐标矩形（填充/边框）绘制、混合模式和 alpha 调制
 - **Camera** (`engine::render`) — 相机位置、视口管理、世界坐标与屏幕坐标转换
 - **TextRenderer** (`engine::render`) — 字体加载与文本渲染（基于 SDL_ttf）
 - **ResourceManager** (`engine::resource`) — 纹理/字体/音频的统一资源管理门面类
-- **Scene / SceneManager** (`engine::scene`) — 场景栈管理，支持 push/pop/replace 切换
+- **Scene / SceneManager** (`engine::scene`) — 场景栈管理，支持 push/pop/replace 切换；`Scene::init()` 返回 bool，SceneManager 检查失败即快速退出（QuitEvent）
 - **UI 系统** (`engine::ui`) — 基于状态的交互式 UI（按钮、标签、面板、图片）
   - 使用 State 模式：Normal → Hover → Pressed 状态切换
   - UIInteractive 基类扩展自 UIElement，支持三态图片和点击回调

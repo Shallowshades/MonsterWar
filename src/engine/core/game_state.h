@@ -70,6 +70,12 @@ private:
 	SDL_Window* mWindow = nullptr;              ///< @brief SDL窗口，用于获取窗口大小
 	SDL_Renderer* mRenderer = nullptr;          ///< @brief SDL渲染器，用于获取逻辑分辨率
 	State mCurrentState = State::Title;        ///< @brief 当前游戏状态
+	int mLogicalWidth = 0;                      ///< @brief 最近一次有效的逻辑宽度（缓存，供 ImGui 关闭/恢复逻辑分辨率用）
+	int mLogicalHeight = 0;                     ///< @brief 最近一次有效的逻辑高度
+	SDL_RendererLogicalPresentation mLogicalMode = SDL_LOGICAL_PRESENTATION_DISABLED;  ///< @brief 最近一次有效的逻辑呈现模式
+	bool mLogicalPresentationDisabled = false; ///< @brief 是否为 ImGui 暂时关闭了逻辑分辨率
+
+	bool syncLogicalPresentationState();       ///< @brief 从渲染器读取并缓存当前逻辑分辨率状态
 };
 
 } // namespace engine::core
