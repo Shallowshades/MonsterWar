@@ -230,13 +230,16 @@ endmacro()
 # 依赖配置
 # ============================================
 # SDL3
+# 注意：跟随参考仓库 8aceada 提交升至 3.4.2（SDL_mixer 3.2 需要 SDL3 >= 3.4.0）。
+#       旧版 prebuilt SDL3 (3.2.24) 已删除，新编 3.4.2 已安装回 prebuilt，find_package 命中。
+#       SDL3 以 SHARED 构建，保证 prebuilt 的 SDL3_image/SDL3_ttf DLL 仍可加载。
 find_or_fetch_dependency(
     SDL3
     SDL3
     "https://github.com/libsdl-org/SDL.git"
-    "release-3.2.24"
-    "external/SDL-release-3.2.24"
-    AUTO  # 使用全局BUILD_SHARED_LIBS设置
+    "release-3.4.2"
+    "external/SDL-release-3.4.2"
+    SHARED  # 生成 SDL3.dll
 )
 
 # SDL3_image
@@ -255,13 +258,17 @@ find_or_fetch_dependency(
 )
 
 # SDL3_mixer
+# 注意：3.2 起 API 全面重写（MIX_Audio/MIX_Track 取代 Mix_Chunk/Mix_Music）
+# 注意：跟随参考仓库 8aceada 提交固定为 release-3.2.0；
+#       tarball 不含 git 子模块，已手动补齐 external/ 下全部 10 个子模块源码
+#       （libxmp 因网络断连由人工下载），全部解码器与参考仓库一致启用，无禁用。
 find_or_fetch_dependency(
     SDL3_mixer
     SDL3_mixer
     "https://github.com/libsdl-org/SDL_mixer.git"
-    "30c1301055a35ee87b8679279b6fc88e10d28fa3"
-    "external/SDL_mixer-30c1301"
-    AUTO  # 使用全局BUILD_SHARED_LIBS设置
+    "release-3.2.0"
+    "external/SDL_mixer-release-3.2.0"
+    SHARED  # 生成 SDL3_mixer.dll，与 SDL3 同为动态
 )
 
 # SDL3_ttf

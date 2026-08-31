@@ -661,7 +661,7 @@ ECS 空标签（tag），用于标记实体状态，配合 view 的 `exclude` �
   - 使用 State 模式：Normal → Hover → Pressed 状态切换
   - UIInteractive 基类扩展自 UIElement，支持三态图片和点击回调
 - **InputManager** (`engine::input`) — 输入事件处理，通过 entt::dispatcher 分发
-- **AudioPlayer** (`engine::audio`) — 音频播放（音效 Mix_Chunk + 音乐 Mix_Music）
+- **AudioPlayer** (`engine::audio`) — 音频播放（SDL_mixer 3.2 新 API：音效 `MIX_PlayAudio` 即发即忘 + 音乐单条 `MIX_Track`，音量用 `MIX_SetMixerGain`/`MIX_SetTrackGain`）
 
 ## 项目结构
 
@@ -755,9 +755,9 @@ cmake --build build --config Debug --clean-first
 
 | 类别     | 技术          | 版本   | 说明                         |
 | -------- | ------------- | ------ | ---------------------------- |
-| 渲染     | SDL3          | 3.2.x  | 底层图形窗口与硬件加速渲染   |
+| 渲染     | SDL3          | 3.4.x  | 底层图形窗口与硬件加速渲染   |
 | 图像加载 | SDL3_image    | 3.2.x  | 支持 PNG/JPG 等格式加载      |
-| 音频     | SDL3_mixer    | 开发版 | OGG/MP3 音效与音乐播放       |
+| 音频     | SDL3_mixer    | 3.2.x  | 音效与音乐播放（MIX_Audio + MIX_Track） |
 | 字体     | SDL3_ttf      | 3.2.x  | TrueType 字体渲染            |
 | ECS      | EnTT          | 3.15   | 轻量级实体组件系统           |
 | JSON     | nlohmann/json | 3.12   | JSON 解析与序列化            |

@@ -101,19 +101,19 @@ void ResourceManager::clearTextures() {
 }
 
 // --- 音频接口实现 ---
-Mix_Chunk* ResourceManager::loadSound(entt::id_type id, std::string_view filePath) {
+MIX_Audio* ResourceManager::loadSound(entt::id_type id, std::string_view filePath) {
     return mAudioManager->loadSound(id, filePath);
 }
 
-Mix_Chunk* ResourceManager::loadSound(entt::hashed_string strHash) {
+MIX_Audio* ResourceManager::loadSound(entt::hashed_string strHash) {
     return mAudioManager->loadSound(strHash);
 }
 
-Mix_Chunk* ResourceManager::getSound(entt::id_type id, std::string_view filePath) {
+MIX_Audio* ResourceManager::getSound(entt::id_type id, std::string_view filePath) {
     return mAudioManager->getSound(id, filePath);
 }
 
-Mix_Chunk* ResourceManager::getSound(entt::hashed_string strHash) {
+MIX_Audio* ResourceManager::getSound(entt::hashed_string strHash) {
     return mAudioManager->getSound(strHash);
 }
 
@@ -125,19 +125,19 @@ void ResourceManager::clearSounds() {
     mAudioManager->clearSounds();
 }
 
-Mix_Music* ResourceManager::loadMusic(entt::id_type id, std::string_view filePath) {
+MIX_Audio* ResourceManager::loadMusic(entt::id_type id, std::string_view filePath) {
     return mAudioManager->loadMusic(id, filePath);
 }
 
-Mix_Music* ResourceManager::loadMusic(entt::hashed_string strHash) {
+MIX_Audio* ResourceManager::loadMusic(entt::hashed_string strHash) {
     return mAudioManager->loadMusic(strHash);
 }
 
-Mix_Music* ResourceManager::getMusic(entt::id_type id, std::string_view filePath) {
+MIX_Audio* ResourceManager::getMusic(entt::id_type id, std::string_view filePath) {
     return mAudioManager->getMusic(id, filePath);
 }
 
-Mix_Music* ResourceManager::getMusic(entt::hashed_string strHash) {
+MIX_Audio* ResourceManager::getMusic(entt::hashed_string strHash) {
     return mAudioManager->getMusic(strHash);
 }
 
@@ -147,6 +147,10 @@ void ResourceManager::unloadMusic(entt::id_type id) {
 
 void ResourceManager::clearMusic() {
     mAudioManager->clearMusic();
+}
+
+MIX_Mixer* ResourceManager::getMixer() {
+    return mAudioManager->getMixer();
 }
 
 // --- 字体接口实现 ---

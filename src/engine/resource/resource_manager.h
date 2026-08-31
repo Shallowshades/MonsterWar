@@ -19,8 +19,8 @@
 
 struct SDL_Renderer;
 struct SDL_Texture;
-struct Mix_Chunk;
-struct Mix_Music;
+struct MIX_Audio;
+struct MIX_Mixer;
 struct TTF_Font;
 
 /**
@@ -79,21 +79,24 @@ public:
 	glm::vec2 getTextureSize(entt::hashed_string str_hs);									///< @brief 获取指定纹理的尺寸(通过字符串哈希值)
 	void clearTextures();																	///< @brief 清空所有纹理资源
 
-	// -- Sound Effects (Chunks) --
-	Mix_Chunk* loadSound(entt::id_type id, std::string_view filePath);						///< @brief 载入音效资源(通过id + 文件路径)
-	Mix_Chunk* loadSound(entt::hashed_string str_hs);										///< @brief 载入音效资源(通过字符串哈希值)
-	Mix_Chunk* getSound(entt::id_type id, std::string_view filePath = "");					///< @brief 尝试获取已加载音效的指针，如果未加载则尝试加载(通过id + 文件路径)
-	Mix_Chunk* getSound(entt::hashed_string str_hs);										///< @brief 尝试获取已加载音效的指针，如果未加载则尝试加载(通过字符串哈希值)
+	// -- Sound Effects (Audio) --
+	MIX_Audio* loadSound(entt::id_type id, std::string_view filePath);						///< @brief 载入音效资源(通过id + 文件路径)
+	MIX_Audio* loadSound(entt::hashed_string str_hs);										///< @brief 载入音效资源(通过字符串哈希值)
+	MIX_Audio* getSound(entt::id_type id, std::string_view filePath = "");					///< @brief 尝试获取已加载音效的指针，如果未加载则尝试加载(通过id + 文件路径)
+	MIX_Audio* getSound(entt::hashed_string str_hs);										///< @brief 尝试获取已加载音效的指针，如果未加载则尝试加载(通过字符串哈希值)
 	void unloadSound(entt::id_type id);														///< @brief 卸载指定的音效资源
 	void clearSounds();																		///< @brief 清空所有音效资源
 
 	// -- Music --
-	Mix_Music* loadMusic(entt::id_type id, std::string_view filePath);						///< @brief 载入音乐资源(通过id + 文件路径)
-	Mix_Music* loadMusic(entt::hashed_string str_hs);										///< @brief 载入音乐资源(通过字符串哈希值)
-	Mix_Music* getMusic(entt::id_type id, std::string_view filePath = "");					///< @brief 尝试获取已加载音乐的指针，如果未加载则尝试加载(通过id + 文件路径)
-	Mix_Music* getMusic(entt::hashed_string str_hs);										///< @brief 尝试获取已加载音乐的指针，如果未加载则尝试加载(通过字符串哈希值)
+	MIX_Audio* loadMusic(entt::id_type id, std::string_view filePath);						///< @brief 载入音乐资源(通过id + 文件路径)
+	MIX_Audio* loadMusic(entt::hashed_string str_hs);										///< @brief 载入音乐资源(通过字符串哈希值)
+	MIX_Audio* getMusic(entt::id_type id, std::string_view filePath = "");					///< @brief 尝试获取已加载音乐的指针，如果未加载则尝试加载(通过id + 文件路径)
+	MIX_Audio* getMusic(entt::hashed_string str_hs);										///< @brief 尝试获取已加载音乐的指针，如果未加载则尝试加载(通过字符串哈希值)
 	void unloadMusic(entt::id_type id);														///< @brief 卸载指定的音乐资源
 	void clearMusic();																		///< @brief 清空所有音乐资源
+
+	// -- Audio Mixer --
+	MIX_Mixer* getMixer();																	///< @brief 获取混音器句柄(供 AudioPlayer 播放使用)
 
 	// -- Fonts --
 	TTF_Font* loadFont(entt::id_type id, int pointSize, std::string_view filePath);			///< @brief 载入字体资源(通过id + 文件路径)
