@@ -165,13 +165,16 @@ namespace engine::input {
 		mActionStates.clear();
 
 		// 如果配置中没有定义鼠标按钮动作(通常不需要配置), 则添加默认映射, 用于UI
-		if (actionsToKeyname.find("MouseLeftClick") == actionsToKeyname.end()) {
-			spdlog::debug("{} 配置中没有定义 'MouseLeftClick' 动作, 添加默认映射到 'MouseLeft'.", mLogTag.data());
-			actionsToKeyname["MouseLeftClick"] = { "MouseLeft" };
+		// NOTE: 动作名必须与游戏实际订阅的 mouse_left/mouse_right 完全一致（Button状态机/SelectionSystem/PlaceUnitSystem）。
+		// 配置缺失时（如 wasm 首次运行 assets/save/config.json 不存在，回退到默认映射），
+		// 若此处仍用旧的 MouseLeftClick 命名，则 hashed id 不一致 → mouse_left 信号永不触发 → 鼠标点击完全失效。
+		if (actionsToKeyname.find("mouse_left") == actionsToKeyname.end()) {
+			spdlog::debug("{} 配置中没有定义 'mouse_left' 动作, 添加默认映射到 'MouseLeft'.", mLogTag.data());
+			actionsToKeyname["mouse_left"] = { "MouseLeft" };
 		}
-		if (actionsToKeyname.find("MouseRightClick") == actionsToKeyname.end()) {
-			spdlog::debug("{} 配置中没有定义 'MouseRightClick' 动作, 添加默认映射到 'MouseRight'.", mLogTag.data());
-			actionsToKeyname["MouseRightClick"] = { "MouseRight" };
+		if (actionsToKeyname.find("mouse_right") == actionsToKeyname.end()) {
+			spdlog::debug("{} 配置中没有定义 'mouse_right' 动作, 添加默认映射到 'MouseRight'.", mLogTag.data());
+			actionsToKeyname["mouse_right"] = { "MouseRight" };
 		}
 
 		// 遍历 动作 -> 按键名称 的映射

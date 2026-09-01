@@ -64,6 +64,9 @@ namespace engine::core {
 			{"jump", {"J", "Space"}},
 			{"attack", {"K", "MouseLeft"}},
 			{"pause", {"P", "Escape"}},
+			// 鼠标按钮映射（UI/选择/放置系统均订阅 mouse_left/mouse_right，缺失则点击失效）
+			{"mouse_left", {"MouseLeft"}},
+			{"mouse_right", {"MouseRight"}},
 			// 可以继续添加更多的默认动作
 		};
 	};

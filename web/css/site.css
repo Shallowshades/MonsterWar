@@ -1,0 +1,110 @@
+:root {
+  --bg: #0b0d12;
+  --card: #171a21;
+  --border: #232830;
+  --accent: #4f8cff;
+  --text: #e6e6e6;
+  --muted: #9aa3b2;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 页头 */
+.site-header {
+  text-align: center;
+  padding: 48px 20px 20px;
+}
+.site-title { font-size: 30px; letter-spacing: 1px; }
+.tagline { color: var(--muted); margin-top: 8px; font-size: 15px; }
+
+/* 项目卡片网格 */
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px;
+  flex: 1;
+}
+.project-card {
+  display: flex;
+  gap: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  text-decoration: none;
+  color: inherit;
+  transition: transform .15s, border-color .15s, box-shadow .15s;
+}
+.project-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.project-card.featured { border-color: var(--accent); }
+.card-icon {
+  font-size: 40px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.card-body { flex: 1; min-width: 0; }
+.card-name { font-size: 20px; margin-bottom: 6px; }
+.card-desc { color: var(--muted); font-size: 14px; line-height: 1.6; }
+.card-tags { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+.tag {
+  background: rgba(79,140,255,0.12);
+  color: var(--accent);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+.card-platforms { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted); }
+
+/* 流程图区 */
+.diagram-section {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 20px 40px;
+}
+.diagram-section.hidden { display: none; }
+.diagram-section h2 { font-size: 20px; margin-bottom: 16px; }
+.diagram-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.diagram-item {
+  display: block;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  text-decoration: none;
+  color: var(--text);
+  font-size: 14px;
+  transition: border-color .15s;
+}
+.diagram-item:hover { border-color: var(--accent); }
+
+.site-footer {
+  text-align: center;
+  padding: 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.site-footer a { color: var(--muted); }
+
+.error { color: #ff6b6b; text-align: center; padding: 40px; }

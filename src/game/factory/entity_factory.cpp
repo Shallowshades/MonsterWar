@@ -121,10 +121,9 @@ namespace game::factory {
             blueprint.mStats.mRange,
             cost);
         // 补充渲染组件（显示优先度很高）与显示攻击范围标志
+        // 近战/远程都显示放置选区圈（近战圈半径 = 自身 + 攻击范围，见 RenderRangeSystem）
         mRegistry.emplace<engine::component::RenderComponent>(entity, 100);
-        if (blueprint.mPlayer.mType == game::defs::PlayerType::RANGED) {
-            mRegistry.emplace<game::defs::ShowRangeTag>(entity);
-        }
+        mRegistry.emplace<game::defs::ShowRangeTag>(entity);
         return entity;
     }
 

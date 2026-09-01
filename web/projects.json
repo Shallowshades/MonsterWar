@@ -1,0 +1,28 @@
+{
+  "site": {
+    "name": "Duckboobee 游戏门户",
+    "tagline": "浏览器直接玩，无需下载安装"
+  },
+  "projects": [
+    {
+      "id": "monsterwar",
+      "name": "MonsterWar",
+      "desc": "SDL3 + EnTT ECS 打造的 2D 塔防游戏：建造防御塔，抵御一波波怪物进攻。支持桌面与移动端触屏。",
+      "icon": "⚔️",
+      "href": "games/monsterwar/",
+      "platforms": ["desktop", "mobile"],
+      "featured": true,
+      "tags": ["SDL3", "C++", "WebAssembly"],
+      "diagrams": [
+        { "name": "运行时架构", "file": "games/monsterwar/diagrams/monsterwar-runtime-architecture.html" },
+        { "name": "单帧时序", "file": "games/monsterwar/diagrams/monsterwar-frame-sequence.html" },
+        { "name": "单位生命周期", "file": "games/monsterwar/diagrams/monsterwar-unit-lifecycle.html" },
+        { "name": "数据流", "file": "games/monsterwar/diagrams/monsterwar-dataflow.html" },
+        { "name": "场景生命周期", "file": "games/monsterwar/diagrams/monsterwar-scene-lifecycle.html" },
+        { "name": "部署工作流", "file": "games/monsterwar/diagrams/monsterwar-placement-workflow.html" },
+        { "name": "技能工作流", "file": "games/monsterwar/diagrams/monsterwar-skill-workflow.html" },
+        { "name": "波次工作流", "file": "games/monsterwar/diagrams/monsterwar-wave-workflow.html" }
+      ]
+    }
+  ]
+}

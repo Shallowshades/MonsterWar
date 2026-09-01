@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>MonsterWar</title>
+  <link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+  <!-- SDL3 渲染目标：id 必须为 canvas -->
+  <canvas id="canvas"></canvas>
+
+  <!-- 顶部栏：返回门户 + 全屏 -->
+  <div id="topbar">
+    <a id="back-btn" href="../../index.html">← 返回门户</a>
+    <button id="fullscreen-btn" type="button">⛶ 全屏</button>
+  </div>
+
+  <!-- 加载屏（wasm 下载 + 引擎初始化期间显示） -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <div id="loading-title">MonsterWar 加载中...</div>
+    <div id="loading-status">正在下载游戏引擎</div>
+    <div class="hint">首次加载约 18MB，请耐心等待</div>
+  </div>
+
+  <!-- Emscripten 产物（MODULARIZE 暴露全局 createMonsterWar） -->
+  <!-- ?v= 为缓存破坏：wasm 与 JS 胶水每次重编译都会变，两者必须同步 +1，否则旧胶水+新 wasm 会报 ASM_CONSTS 错 -->
+  <script src="wasm/monsterwar.js?v=5"></script>
+  <script src="js/game.js?v=7"></script>
+</body>
+</html>

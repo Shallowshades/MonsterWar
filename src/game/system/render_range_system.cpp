@@ -24,8 +24,13 @@ namespace game::system {
         for (auto entity : view_prep) {
             auto& transform = view_prep.get<engine::component::TransformComponent>(entity);
             auto& prep = view_prep.get<game::component::UnitPrepComponent>(entity);
+            // 圈半径：远程 = 攻击范围；近战 = 自身半径 + 攻击范围（保证近战也有可见的放置选区）
+            float radius = prep.mRange;
+            if (prep.mType == game::defs::PlayerType::MELEE) {
+                radius = game::defs::UNIT_RADIUS + prep.mRange;
+            }
             // 攻击范围显示为透明绿色圆形
-            renderer.drawFilledCircle(camera, transform.mPosition, prep.mRange, game::defs::RANGE_COLOR);
+            renderer.drawFilledCircle(camera, transform.mPosition, radius, game::defs::RANGE_COLOR);
         }
         // 地图上的单位（已放置的远程单位显示攻击范围圆）
         auto view_remote = registry.view<game::defs::ShowRangeTag, engine::component::TransformComponent, game::component::StatsComponent>();

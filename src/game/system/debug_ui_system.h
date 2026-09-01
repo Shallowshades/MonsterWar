@@ -58,6 +58,10 @@ private:
     void beginFrame();
     void endFrame();
 
+    // 创建不捕获鼠标的 tooltip（替代 ImGui::BeginTooltip）：悬浮卡片/单位时，
+    // 默认 tooltip 会令 io.WantCaptureMouse=true，InputManager 会丢弃鼠标事件 → 点击被吞
+    bool beginHoverTooltip(const char* id);
+
     // 封装每个UI显示模块
     void renderHoveredUnit();     // 显示鼠标悬浮单位的 tooltip
     void renderSelectedUnit();    // 显示鼠标选中单位的角色状态窗口

@@ -428,14 +428,21 @@ namespace engine::loader {
 		try {
 			// 获取地图文件的父目录（相对于可执行文件） "assets/maps/level1.tmj" -> "assets/maps"
 			auto map_dir = std::filesystem::path(file_path).parent_path();
-			// 合并路径（相对于可执行文件）并返回。 /* std::filesystem::canonical：解析路径中的当前目录（.）和上级目录（..）导航符，
-											  /*  得到一个干净的路径 */
-			auto final_path = std::filesystem::canonical(map_dir / relative_path);
+			// 合并路径（相对于可执行文件）并返回
+			auto combined = map_dir / relative_path;
+#ifdef __EMSCRIPTEN__
+			// wasm 下 libc++ 的 canonical 不可用（底层需访问真实文件系统），改用纯词法折叠
+			auto final_path = combined.lexically_normal();
+#else
+			/* std::filesystem::canonical：解析路径中的当前目录（.）和上级目录（..）导航符，得到一个干净的路径 */
+			auto final_path = std::filesystem::canonical(combined);
+#endif
 			return final_path.string();
 		}
 		catch (const std::exception& e) {
 			spdlog::error("解析路径失败: {}", e.what());
-			return std::string(relative_path);
+			// fallback: 返回折叠后的干净路径, 而不是未归一化的相对路径
+			return (std::filesystem::path(file_path).parent_path() / relative_path).lexically_normal().string();
 		}
 	}
 

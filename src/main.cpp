@@ -23,7 +23,7 @@ void initializeEnvironment() {
 
 int main(int, char**) {
 	initializeEnvironment();
-	spdlog::set_level(spdlog::level::trace);
+	// spdlog::set_level(spdlog::level::trace);
 	engine::core::GameApp app;
 	app.registerSceneSetup([](engine::core::Context& context) {
 		// GameApp 在调用 run 方法之前, 先创建并设置初始场景（标题场景）

@@ -1,0 +1,88 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+
+/* SDL 渲染目标。canvas 固定为游戏原生分辨率（如 1280x720），
+   实际显示尺寸/位置由 JS（game.js fitCanvas）用 CSS transform 统一缩放居中，
+   CSS 不设 width/height/position，避免 SDL_CreateWindow 时被误判为"外部接管尺寸"。 */
+canvas#canvas {
+  display: block;
+  background: #000;
+  touch-action: none;            /* 阻止滚动/缩放手势干扰游戏操作 */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* 顶部栏：悬浮于画布之上 */
+#topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(4px);
+}
+#topbar a, #topbar button {
+  color: #fff;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+#topbar button:hover, #topbar a:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* 加载屏 */
+#loading {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: #0b0d12;
+  color: #e6e6e6;
+  text-align: center;
+  padding: 20px;
+}
+#loading.hidden { display: none; }
+.spinner {
+  width: 42px;
+  height: 42px;
+  border: 4px solid #333;
+  border-top-color: #4f8cff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#loading-title { font-size: 18px; }
+#loading-status { color: #9aa3b2; font-size: 13px; }
+.hint { color: #6b7280; font-size: 12px; }
+
+/* 移动端适配：顶栏更高、按钮更大，便于触屏 */
+body.mobile #topbar { padding: 10px 14px; }
+body.mobile #topbar a, body.mobile #topbar button { padding: 8px 14px; font-size: 15px; }
+body.mobile #loading-title { font-size: 20px; }
+
+/* 刘海屏安全区（iOS） */
+@supports (padding: env(safe-area-inset-top)) {
+  #topbar { padding-top: calc(8px + env(safe-area-inset-top)); }
+}

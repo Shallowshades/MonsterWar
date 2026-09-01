@@ -78,6 +78,10 @@ namespace engine::core {
 		void handleEvents();
 		void update(float delta);
 		void render();
+		/**
+		 * @brief 单帧逻辑（桌面 while 循环体 / wasm emscripten_set_main_loop 回调共用）
+		 */
+		void frame();
 		void close();
 
 		// 各模块的初始化/创建函数, 在init()中调用

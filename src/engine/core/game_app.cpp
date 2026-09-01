@@ -1,4 +1,7 @@
 #include <SDL3/SDL.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten/emscripten.h>
+#endif
 #include <spdlog/spdlog.h>
 #include <entt/signal/dispatcher.hpp>
 #include <imgui.h>
@@ -33,21 +36,37 @@ void engine::core::GameApp::run() {
 		return;
 	}
 
-
+#ifdef __EMSCRIPTEN__
+	// fps=0 -> 由 requestAnimationFrame 驱动；
+	// simulate_infinite_loop=1 必须为 1，否则 main() 返回后栈上 GameApp 析构、回调悬垂崩溃
+	emscripten_set_main_loop_arg([](void* userdata) {
+		static_cast<GameApp*>(userdata)->frame();
+	}, this, 0, 1);
+#else
 	while (mIsRunning) {
-		mTime->update();
-		float delta = mTime->getDeltaTime(); // 每帧的时间间隔
-		handleEvents();
-		update(delta);
-		render();
-
-		// 分发事件（让新创建的实体先更新再渲染）
-		mDispatcher->update();
-
-		// spdlog::info("Delta Time: {}", delta);
+		frame();
 	}
-
 	close();
+#endif
+}
+
+void engine::core::GameApp::frame() {
+	mTime->update();
+	float delta = mTime->getDeltaTime(); // 每帧的时间间隔
+	handleEvents();
+	update(delta);
+	render();
+
+	// 分发事件（让新创建的实体先更新再渲染）
+	mDispatcher->update();
+
+#ifdef __EMSCRIPTEN__
+	// QuitEvent -> onQuitEvent() 置 mIsRunning=false，此处终止主循环并清理
+	if (!mIsRunning) {
+		emscripten_cancel_main_loop();
+		close();
+	}
+#endif
 }
 
 void engine::core::GameApp::registerSceneSetup(std::function<void(engine::core::Context&)> func) {
@@ -150,7 +169,12 @@ bool engine::core::GameApp::initDispatcher() {
 
 bool engine::core::GameApp::initConfig() {
 	try {
+#ifdef __EMSCRIPTEN__
+		// wasm 下把 config 写到 IDBFS 持久化目录 assets/save/，刷新页面不丢失
+		mConfig = std::make_unique<engine::core::Config>("assets/save/config.json");
+#else
 		mConfig = std::make_unique<engine::core::Config>("assets/config.json");
+#endif
 	}
 	catch (const std::exception& e) {
 		spdlog::error("{} 初始化配置失败: {}", mLogTag.data(), e.what());
@@ -161,14 +185,31 @@ bool engine::core::GameApp::initConfig() {
 }
 
 bool engine::core::GameApp::initSDL() {
+#ifdef __EMSCRIPTEN__
+	// 移动端触屏 -> 鼠标事件，复用现有 InputManager 的鼠标点击逻辑（必须在 SDL_Init 前设置）
+	SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "1");
+#endif
 	if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
 		spdlog::error("{} 无法创建窗口! SDL错误: {}", mLogTag.data(), SDL_GetError());
 		return false;
 	}
 
+#ifdef __EMSCRIPTEN__
+	// wasm: canvas 固定为游戏设计分辨率 1600x1216（与桌面 logical 一致；地图 title/level 均为 1600x1216）。
+	// 若沿用配置默认 1280x720，相机只能看到 1600x1216 世界的左上角 → 画面"不完整"。
+	// 窗口 = 逻辑 = 1600x1216（恒等映射，不依赖 SDL letterbox 缩放，wasm 最稳），由 JS 侧 CSS transform 缩放/居中。
+	// 不用 FILL_DOCUMENT/HIGH_PIXEL_DENSITY/RESIZABLE：避免 SDL 接管 canvas 尺寸与 JS 缩放冲突。
+	constexpr int kGameWidth = 1600;
+	constexpr int kGameHeight = 1216;
+	int window_width = kGameWidth;
+	int window_height = kGameHeight;
+	Uint32 window_flags = 0;
+#else
 	int window_width = static_cast<int>(static_cast<float>(mConfig->mWindowWidth) * mConfig->mWindowScale);
 	int window_height = static_cast<int>(static_cast<float>(mConfig->mWindowHeight) * mConfig->mWindowScale);
-	mWindow = SDL_CreateWindow(mConfig->mWindowTitle.c_str(), window_width, window_height, SDL_WINDOW_RESIZABLE);
+	Uint32 window_flags = SDL_WINDOW_RESIZABLE;
+#endif
+	mWindow = SDL_CreateWindow(mConfig->mWindowTitle.c_str(), window_width, window_height, window_flags);
 	if (mWindow == nullptr) {
 		spdlog::error("{} 无法创建窗口! SDL错误: {}", mLogTag.data(), SDL_GetError());
 		return false;
@@ -189,8 +230,13 @@ bool engine::core::GameApp::initSDL() {
 	spdlog::trace("{} Vsync设置为: {}", mLogTag.data(), mConfig->mVsyncEnabled ? "Enable" : "Disable");
 
 	// 设置逻辑分辨率 (窗口大小 * 逻辑缩放比例)
+#ifdef __EMSCRIPTEN__
+	int logical_width = kGameWidth;
+	int logical_height = kGameHeight;
+#else
 	int logical_width = static_cast<int>(static_cast<float>(mConfig->mWindowWidth) * mConfig->mWindowLogicalScale);
 	int logical_height = static_cast<int>(static_cast<float>(mConfig->mWindowHeight) * mConfig->mWindowLogicalScale);
+#endif
 	if (!SDL_SetRenderLogicalPresentation(mSDLRenderer, logical_width, logical_height, SDL_LOGICAL_PRESENTATION_LETTERBOX)) {
 		spdlog::error("{} 设置逻辑分辨率失败! SDL错误: {}", mLogTag.data(), SDL_GetError());
 		return false;
@@ -329,6 +375,9 @@ bool engine::core::GameApp::initImGui() {
 
 	/* 可选配置开始 */
 	ImGuiIO& io = ImGui::GetIO();
+#ifdef __EMSCRIPTEN__
+	io.IniFilename = nullptr;   // wasm 无持久 cwd，避免每次运行往内存文件系统写 imgui.ini
+#endif
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 

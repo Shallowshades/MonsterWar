@@ -122,6 +122,19 @@ namespace game::system {
         }
     }
 
+    bool DebugUISystem::beginHoverTooltip(const char* id) {
+        // 默认 ImGui::BeginTooltip() 的窗口会参与输入 → 悬浮时 io.WantCaptureMouse=true，
+        // 而 InputManager 在 WantCaptureMouse 时丢弃所有 SDL 鼠标事件 → 悬浮卡片后点击被吞（"点不了"）。
+        // 手动创建带 NoInputs 的 tooltip（FindHoveredWindowEx 会跳过 NoInputs 窗口，不进 g.HoveredWindow，
+        // 点击帧 mouse_avail 也为 false，鼠标不归属 ImGui），并把 tooltip 放在鼠标上方（pivot 底边中点），
+        // 既不影响点击穿透，也不遮住要点击的卡片。
+        ImGui::SetNextWindowPos(ImGui::GetMousePos(), ImGuiCond_Always, ImVec2(0.5f, 1.0f));
+        return ImGui::Begin(id, nullptr,
+            ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove |
+            ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings |
+            ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs);
+    }
+
     void DebugUISystem::renderHoveredPortrait() {
         // 确定鼠标悬浮的单位肖像存在
         if (mHoveredPortrait == entt::null) return;
@@ -139,9 +152,9 @@ namespace game::system {
         const auto range = stats.mRange;
         const auto& class_name = class_blueprint.mDisplayInfo.mName;
 
-        // 显示Tooltip信息
-        if (!ImGui::BeginTooltip()) {
-            ImGui::EndTooltip();
+        // 显示Tooltip信息（NoInputs，不拦截点击）
+        if (!beginHoverTooltip("##portrait_tooltip")) {
+            ImGui::End();
             spdlog::error("鼠标悬浮单位肖像窗口打开失败");
             return;
         }
@@ -157,7 +170,7 @@ namespace game::system {
         ImGui::Text("防御力: %d", static_cast<int>(std::round(def)));
         ImGui::SameLine();
         ImGui::Text("攻击范围: %d", static_cast<int>(std::round(range)));
-        ImGui::EndTooltip();
+        ImGui::End();
     }
 
     void DebugUISystem::renderHoveredUnit() {
@@ -165,9 +178,9 @@ namespace game::system {
         auto& entity = mRegistry.ctx().get<entt::entity&>("hovered_unit"_hs);
         if (entity == entt::null || !mRegistry.valid(entity)) return;
 
-        // Tooltip 是悬浮在鼠标上的小窗口，可以显示单位信息
-        if (!ImGui::BeginTooltip()) {
-            ImGui::EndTooltip();
+        // Tooltip 是悬浮在鼠标上的小窗口，可以显示单位信息（NoInputs，不拦截点击）
+        if (!beginHoverTooltip("##unit_tooltip")) {
+            ImGui::End();
             spdlog::error("鼠标悬浮单位窗口打开失败");
             return;
         }
@@ -188,7 +201,7 @@ namespace game::system {
         ImGui::Text("防御力: %d", static_cast<int>(std::round(stats.mDef)));
         ImGui::Text("攻击范围: %d", static_cast<int>(std::round(stats.mRange)));
         ImGui::Text("攻击间隔: %.2f", stats.mAtkInterval);
-        ImGui::EndTooltip();
+        ImGui::End();
     }
 
     void DebugUISystem::renderSelectedUnit() {

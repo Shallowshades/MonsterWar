@@ -8,7 +8,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # 指定搜索路径（用于find_package在编译期查找库）
-set(CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/prebuilt)
+# wasm 下 prebuilt 是 Windows 的 COFF 库，emcc 无法链接，绝不能 find_package 命中
+if(NOT EMSCRIPTEN)
+    set(CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/prebuilt)
+endif()
 
 # 指定目标名称
 set(TARGET ${PROJECT_NAME}-${CMAKE_SYSTEM_NAME})
@@ -81,7 +84,11 @@ macro(find_or_fetch_dependency DEP_NAME PACKAGE_NAME GIT_REPO GIT_TAG LOCAL_PATH
     message(STATUS "正在处理依赖: ${DEP_NAME}")
     
     # 确定该库的链接类型
-    if("${LINK_TYPE}" STREQUAL "STATIC")
+    if(EMSCRIPTEN)
+        # wasm 只能静态链接（无 .so/.dll），且本地 prebuilt 是 Windows COFF 库必须跳过
+        set(_LIB_IS_SHARED OFF)
+        set(_LINK_TYPE_STR "静态(wasm)")
+    elseif("${LINK_TYPE}" STREQUAL "STATIC")
         set(_LIB_IS_SHARED OFF)
         set(_LINK_TYPE_STR "静态")
     elseif("${LINK_TYPE}" STREQUAL "SHARED")
@@ -95,9 +102,13 @@ macro(find_or_fetch_dependency DEP_NAME PACKAGE_NAME GIT_REPO GIT_TAG LOCAL_PATH
             set(_LINK_TYPE_STR "静态(全局)")
         endif()
     endif()
-    
-    # 首先尝试查找本地已安装的包
-    find_package(${PACKAGE_NAME} QUIET)
+
+    # 首先尝试查找本地已安装的包（wasm 下跳过：prebuilt 是 COFF 库，emcc 无法链接）
+    if(NOT EMSCRIPTEN)
+        find_package(${PACKAGE_NAME} QUIET)
+    else()
+        message(STATUS "  ⚠ wasm: 跳过 find_package，强制使用本地源码/FetchContent")
+    endif()
     
     if(${PACKAGE_NAME}_FOUND OR ${DEP_NAME}_FOUND)
         message(STATUS "  ✓ 找到本地安装的 ${PACKAGE_NAME}")
@@ -225,6 +236,34 @@ macro(find_or_fetch_dependency DEP_NAME PACKAGE_NAME GIT_REPO GIT_TAG LOCAL_PATH
         endif()
     endif()
 endmacro()
+
+# ============================================
+# wasm (Emscripten) 专属配置
+# 必须在依赖 add_subdirectory 之前设置，否则 vendored 选项不生效
+# ============================================
+if(EMSCRIPTEN)
+    # SDL_image/ttf/mixer 的解码器全部用仓库 vendored 源码（wasm 下系统/预编译不可用，必须显式打开）
+    set(SDLIMAGE_VENDORED ON CACHE BOOL "" FORCE)
+    set(SDLTTF_VENDORED   ON CACHE BOOL "" FORCE)
+    set(SDLMIXER_VENDORED ON CACHE BOOL "" FORCE)
+    # 图片解码器只保留 PNG（游戏资产全是 55 张 png），关掉其余需 vendored 解码库的格式，减小体积
+    set(SDLIMAGE_AVIF  OFF CACHE BOOL "" FORCE)
+    set(SDLIMAGE_JPG   OFF CACHE BOOL "" FORCE)
+    set(SDLIMAGE_TIF   OFF CACHE BOOL "" FORCE)
+    set(SDLIMAGE_WEBP  OFF CACHE BOOL "" FORCE)
+    # 文字渲染只需 freetype（中文栅格化），关掉 harfbuzz 复杂文本整形与 plutosvg 彩色 emoji
+    set(SDLTTF_HARFBUZZ OFF CACHE BOOL "" FORCE)
+    set(SDLTTF_PLUTOSVG OFF CACHE BOOL "" FORCE)
+    # 音频解码器只保留 wav(内置) + ogg(stb_vorbis) + mp3(dr_mp3)，砍掉其余依赖缩体积
+    set(SDLMIXER_MP3_MPG123      OFF CACHE BOOL "" FORCE)
+    set(SDLMIXER_VORBIS_VORBISFILE OFF CACHE BOOL "" FORCE)
+    set(SDLMIXER_FLAC    OFF CACHE BOOL "" FORCE)
+    set(SDLMIXER_MOD     OFF CACHE BOOL "" FORCE)
+    set(SDLMIXER_OPUS    OFF CACHE BOOL "" FORCE)
+    set(SDLMIXER_MIDI    OFF CACHE BOOL "" FORCE)
+    set(SDLMIXER_GME     OFF CACHE BOOL "" FORCE)
+    set(SDLMIXER_WAVPACK OFF CACHE BOOL "" FORCE)
+endif()
 
 # ============================================
 # 依赖配置
@@ -448,7 +487,10 @@ target_link_libraries(${TARGET}
 # 注意：必须在add_executable()之后设置，确保目标已定义
 # 使用target_compile_options()只影响主目标，不影响依赖库
 
-if(MSVC)
+if(EMSCRIPTEN)
+    # Emscripten: 开启 C++ 异常（仓库全链路 throw/catch）+ 标准警告
+    target_compile_options(${TARGET} PRIVATE -fexceptions -Wall -Wextra)
+elseif(MSVC)
     # Visual Studio: 启用所有警告 + UTF-8编码支持 + 多文件并行编译(/MP 加速构建)
     target_compile_options(${TARGET} PRIVATE /W3 /utf-8 /MP)
     # 使用控制台子系统（便于查看 spdlog 日志；不隐藏控制台窗口）
@@ -462,9 +504,45 @@ else()
 endif()
 
 # ============================================
+# wasm 链接参数与产物归位（Emscripten）
+# ============================================
+if(EMSCRIPTEN)
+    # 输出名统一为 monsterwar：生成的 JS 内部按输出名查找 monsterwar.wasm，
+    # 必须与部署目录 web/games/monsterwar/wasm/ 中的文件名一致，否则 fetch 404
+    set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME "monsterwar")
+    target_link_options(${TARGET} PRIVATE
+        -O3
+        -sMAX_WEBGL_VERSION=2
+        -sMIN_WEBGL_VERSION=2
+        -sALLOW_MEMORY_GROWTH=1
+        -sINITIAL_MEMORY=134217728
+        -sMODULARIZE=1
+        -sEXPORT_NAME=createMonsterWar
+        "-sEXPORTED_RUNTIME_METHODS=[FS,IDBFS,callMain]"
+        -sFORCE_FILESYSTEM=1
+        -lidbfs.js
+        -sINVOKE_RUN=0
+        -sDISABLE_EXCEPTION_CATCHING=0
+        "--embed-file=${CMAKE_SOURCE_DIR}/assets@/assets"
+    )
+
+    # 把 Emscripten 产物归位到 web/games/monsterwar/wasm/（部署时整目录上传）
+    add_custom_command(TARGET ${TARGET} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/web/games/monsterwar/wasm
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE:${TARGET}> ${CMAKE_SOURCE_DIR}/web/games/monsterwar/wasm/monsterwar.js
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE_DIR:${TARGET}>/$<TARGET_FILE_BASE_NAME:${TARGET}>.wasm ${CMAKE_SOURCE_DIR}/web/games/monsterwar/wasm/monsterwar.wasm
+        COMMENT "复制 wasm 产物到 web/games/monsterwar/wasm/"
+    )
+endif()
+
+# ============================================
 # 编译前配置
 # ============================================
 
+# wasm 下 assets 由 --embed-file 在链接期打包，无需 PRE_BUILD 复制
+if(NOT EMSCRIPTEN)
 # 可执行文件不再生成在根目录，因此需要复制 assets 到 exe 所在目录
 file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/copy_assets_$<CONFIG>.cmake CONTENT "
 # 生成的Assets复制脚本
@@ -500,7 +578,10 @@ add_custom_command(TARGET ${TARGET} PRE_BUILD
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_BINARY_DIR}/copy_assets_$<CONFIG>.cmake
     COMMENT "检查并复制资源文件"
 )
+endif()
 
+# wasm 下 ImGui 已禁用 ini（initImGui 设 io.IniFilename = nullptr），无需复制
+if(NOT EMSCRIPTEN)
 # 复制 imgui.ini（仅当目标位置不存在时），保证 ImGui 调试窗口布局持久化到 exe 目录
 file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/copy_imgui_ini_$<CONFIG>.cmake CONTENT "
 # 生成的 imgui.ini 复制脚本
@@ -516,6 +597,7 @@ add_custom_command(TARGET ${TARGET} PRE_BUILD
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_BINARY_DIR}/copy_imgui_ini_$<CONFIG>.cmake
     COMMENT "复制 imgui.ini 到可执行文件目录"
 )
+endif()
 
 # ============================================
 # 编译后配置
