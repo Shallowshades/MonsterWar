@@ -204,78 +204,9 @@ namespace engine::input {
 	}
 
 	void InputManager::handleFingerEvent(const SDL_Event& event) {
-		// FINGER 坐标是归一化窗口坐标(0~1)，先转窗口像素，再转逻辑坐标
-		SDL_Window* window = SDL_GetRenderWindow(mSDLRenderer);
-		int window_w = 0, window_h = 0;
-		if (window) {
-			SDL_GetWindowSize(window, &window_w, &window_h);
-		}
-		float px = event.tfinger.x * static_cast<float>(window_w);
-		float py = event.tfinger.y * static_cast<float>(window_h);
-		glm::vec2 pixel_pos{ px, py };
-		glm::vec2 logical_pos;
-		SDL_RenderCoordinatesFromWindow(mSDLRenderer, pixel_pos.x, pixel_pos.y, &logical_pos.x, &logical_pos.y);
-
-		// 把触摸事件同步成鼠标事件给 ImGui，保证标题/结算等 ImGui 界面在触屏可用
-		SDL_Event mouse_event{};
-		mouse_event.button.windowID = event.tfinger.windowID;
-		mouse_event.button.which = SDL_TOUCH_MOUSEID;
-		mouse_event.button.x = pixel_pos.x;
-		mouse_event.button.y = pixel_pos.y;
-		if (event.type == SDL_EVENT_FINGER_MOTION) {
-			mouse_event.type = SDL_EVENT_MOUSE_MOTION;
-			mouse_event.motion.x = pixel_pos.x;
-			mouse_event.motion.y = pixel_pos.y;
-		} else {
-			mouse_event.type = (event.type == SDL_EVENT_FINGER_DOWN) ? SDL_EVENT_MOUSE_BUTTON_DOWN : SDL_EVENT_MOUSE_BUTTON_UP;
-			mouse_event.button.button = SDL_BUTTON_LEFT;
-			mouse_event.button.down = (event.type == SDL_EVENT_FINGER_DOWN);
-			mouse_event.button.clicks = 1;
-		}
-		ImGui_ImplSDL3_ProcessEvent(&mouse_event);
-
-		// 同步鼠标位置，让现有鼠标驱动逻辑在触摸设备上也能工作
-		mMousePosition = pixel_pos;
-		mLogicalMousePosition = logical_pos;
-		mTouchPosition = logical_pos;
-
-		// 命中UI时标记本次点击被UI消费（仍会分发动作给UI，游戏系统自行检查跳过）
-		if (event.type == SDL_EVENT_FINGER_DOWN || event.type == SDL_EVENT_FINGER_UP || event.type == SDL_EVENT_FINGER_CANCELED) {
-			mClickConsumed = mUiHitTester && mUiHitTester(mLogicalMousePosition);
-		}
-
-		switch (event.type) {
-		case SDL_EVENT_FINGER_DOWN:
-			if (mIsTouchActive) return; // 只跟踪第一个手指，避免多指干扰
-			mIsTouchActive = true;
-			mActiveFingerId = event.tfinger.fingerID;
-			mTouchStartPosition = logical_pos;
-			// 触摸按下映射为鼠标左键，复用现有 UI/放置/选中逻辑
-			updateActionState(entt::hashed_string("mouse_left"), true, false);
-			updateActionState(entt::hashed_string("touch_begin"), true, false);
-			break;
-		case SDL_EVENT_FINGER_MOTION:
-			if (!mIsTouchActive || event.tfinger.fingerID != mActiveFingerId) return;
-			// 移动只更新位置，不重复触发 mouse_left PRESSED
-			break;
-		case SDL_EVENT_FINGER_UP:
-		case SDL_EVENT_FINGER_CANCELED:
-			if (!mIsTouchActive || event.tfinger.fingerID != mActiveFingerId) return;
-			mIsTouchActive = false;
-			mActiveFingerId = 0;
-			// 触摸抬起映射为鼠标左键释放，触发 UI 点击 / 放置确认
-			updateActionState(entt::hashed_string("mouse_left"), false, false);
-			if (event.type == SDL_EVENT_FINGER_UP) {
-				updateActionState(entt::hashed_string("touch_end"), true, false);
-			} else {
-				updateActionState(entt::hashed_string("touch_cancel"), true, false);
-			}
-			break;
-		default:
-			break;
-		}
+		// 触摸已由 SDL_HINT_TOUCH_MOUSE_EVENTS=1 合成鼠标事件，这里不再自行处理 FINGER，避免双路径触发。
+		(void)event;
 	}
-
 	void InputManager::initializeMappings(const engine::core::Config* config) {
 		spdlog::trace("{} 初始化输入映射", mLogTag.data());
 		if (!config) {

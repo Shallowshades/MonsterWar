@@ -104,7 +104,7 @@
       // 缓存破坏：21MB 的 monsterwar.wasm 极易被浏览器缓存成旧构建（症状：画面仍左上角顶格）。
       // 用构建标记做查询串强制重取（本地 http.server / 生产 nginx 均忽略查询串）。
       locateFile: function (path, prefix) {
-        if (/\.wasm$/.test(path)) return prefix + path + '?v=20260901e';
+        if (/\.wasm$/.test(path)) return prefix + path + '?v=20260901g';
         return prefix + path;
       }
     })
