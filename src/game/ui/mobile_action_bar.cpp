@@ -18,6 +18,7 @@
 #include "../defs/events.h"
 #include "../../engine/core/context.h"
 #include "../../engine/core/game_state.h"
+#include "../../engine/core/time.h"
 #include "../../engine/input/input_manager.h"
 #include "../../engine/ui/ui_panel.h"
 #include "../../engine/ui/ui_button.h"
@@ -29,6 +30,7 @@
 #include <spdlog/spdlog.h>
 #include <cmath>
 #include <utility>
+#include <functional>
 
 using namespace entt::literals;
 
@@ -168,6 +170,65 @@ namespace game::ui {
         mCancelPlaceButton = cancel_place.first.get();
         mUIManager.addElement(std::move(cancel_place.first));
         mCancelPlaceButton->setVisible(false);
+
+        // 移动端全局 HUD：暂停/倍速（仅在触摸设备显示）
+        if (mContext.getInputManager().isTouchDevice()) {
+            auto hud_button_size = glm::vec2(56.0f, 56.0f);
+            float hud_x = window_size.x - hud_button_size.x - 12.0f;
+            float hud_y = 12.0f;
+
+            auto make_hud_button = [&](std::string_view text, const glm::vec2& pos, std::function<void()> callback)
+                -> std::pair<std::unique_ptr<engine::ui::UIButton>, engine::ui::UILabel*> {
+                auto button = std::make_unique<engine::ui::UIButton>(mContext,
+                    btn_image, btn_image, btn_image,
+                    pos,
+                    hud_button_size,
+                    std::move(callback));
+                button->setId(entt::hashed_string(text.data()));
+                auto label = std::make_unique<engine::ui::UILabel>(mContext.getTextRenderer(),
+                    text,
+                    ui_config->getUnitPanelFontPath(),
+                    16,
+                    engine::utils::FColor::white(),
+                    glm::vec2(2.0f, hud_button_size.y * 0.5f - 12.0f));
+                auto* label_ptr = label.get();
+                button->addChild(std::move(label));
+                return { std::move(button), label_ptr };
+            };
+
+            // 暂停/继续
+            {
+                auto [button, label] = make_hud_button("⏸", glm::vec2(hud_x, hud_y), [this]() {
+                    auto& game_state = mContext.getGameState();
+                    if (game_state.isPaused()) {
+                        game_state.setState(engine::core::State::Playing);
+                    } else {
+                        game_state.setState(engine::core::State::Paused);
+                    }
+                    mContext.getInputManager().consumeNextClick();
+                });
+                mPauseButton = button.get();
+                mPauseLabel = label;
+                mUIManager.addElement(std::move(button));
+            }
+
+            // 倍速 1x/2x
+            {
+                auto [button, label] = make_hud_button("1x", glm::vec2(hud_x - hud_button_size.x - 8.0f, hud_y), [this]() {
+                    auto& time = mContext.getTime();
+                    float scale = time.getTimeScale();
+                    scale = (scale >= 2.0f) ? 1.0f : 2.0f;
+                    time.setTimeScale(scale);
+                    if (mSpeedLabel) {
+                        mSpeedLabel->setText(scale >= 2.0f ? "2x" : "1x");
+                    }
+                    mContext.getInputManager().consumeNextClick();
+                });
+                mSpeedButton = button.get();
+                mSpeedLabel = label;
+                mUIManager.addElement(std::move(button));
+            }
+        }
         refreshVisibility();
     }
 
@@ -178,6 +239,15 @@ namespace game::ui {
         if (mCancelPlaceButton) {
             auto& touch_mode = mRegistry.ctx().get<game::defs::TouchMode&>("touch_mode"_hs);
             mCancelPlaceButton->setVisible(touch_mode == game::defs::TouchMode::PLACING);
+        }
+
+        // 全局 HUD 标签刷新
+        if (mPauseLabel) {
+            mPauseLabel->setText(mContext.getGameState().isPaused() ? "▶" : "⏸");
+        }
+        if (mSpeedLabel) {
+            float scale = mContext.getTime().getTimeScale();
+            mSpeedLabel->setText(scale >= 2.0f ? "2x" : "1x");
         }
 
         auto& entity = mRegistry.ctx().get<entt::entity&>("selected_unit"_hs);
