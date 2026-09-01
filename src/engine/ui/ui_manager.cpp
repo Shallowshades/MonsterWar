@@ -1,6 +1,8 @@
 #include "ui_manager.h"
 #include "ui_panel.h"
 #include "ui_element.h"
+#include "ui_interactive.h"
+#include <functional>
 #include <spdlog/spdlog.h>
 
 namespace engine::ui {
@@ -50,6 +52,24 @@ void UIManager::render(engine::core::Context& context) {
 
 UIPanel* UIManager::getRootElement() const {
 	return mRootElement.get();
+}
+
+bool UIManager::isPointOverInteractive(const glm::vec2& point) const {
+	if (!mRootElement) return false;
+
+	std::function<bool(const UIElement*)> check = [&](const UIElement* elem) -> bool {
+		if (!elem || !elem->isVisible()) return false;
+		if (auto interactive = dynamic_cast<const UIInteractive*>(elem);
+			interactive && interactive->isInteractive() && interactive->isPointInside(point)) {
+			return true;
+		}
+		for (const auto& child : elem->getChildren()) {
+			if (check(child.get())) return true;
+		}
+		return false;
+	};
+
+	return check(mRootElement.get());
 }
 
 } // namespace engine::ui

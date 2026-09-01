@@ -1,6 +1,7 @@
 #include "scene.h"
 #include "scene_manager.h"
 #include "../core/context.h"
+#include "../input/input_manager.h"
 #include "../ui/ui_manager.h"
 #include "../utils/events.h"
 #include <spdlog/spdlog.h>
@@ -20,6 +21,11 @@ namespace engine::scene {
 
 	bool Scene::init() {
 		mIsInitialized = true;     // 子类应该最后调用父类的 init 方法
+
+		// 注册UI命中测试，供 InputManager 判断点击是否落在可交互UI上（防止UI点击穿透到游戏）
+		mContext.getInputManager().setUiHitTester([this](const glm::vec2& point) {
+			return mUIManager->isPointOverInteractive(point);
+		});
 		spdlog::trace("场景 '{}' 初始化完成。", mSceneName);
 		return true;
 	}

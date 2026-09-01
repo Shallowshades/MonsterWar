@@ -26,6 +26,7 @@
 #include "../../engine/component/name_component.h"
 #include "../../engine/core/context.h"
 #include "../../engine/core/game_state.h"
+#include "../../engine/input/input_manager.h"
 #include "../../engine/core/time.h"
 #include "../../engine/audio/audio_player.h"
 #include "../../engine/resource/resource_manager.h"
@@ -59,6 +60,9 @@ namespace game::system {
     }
 
     void DebugUISystem::update() {
+        // 移动端隐藏战斗内 ImGui 调试窗（升级/撤退/技能改由 MobileActionBar 提供）
+        if (mContext.getInputManager().isTouchDevice()) return;
+
         beginFrame();
         renderHoveredPortrait();
         renderHoveredUnit();

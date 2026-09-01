@@ -16,7 +16,9 @@
 #include <vector>
 #include <array>
 #include <variant>
+#include <functional>
 #include <SDL3/SDL_render.h>
+#include <SDL3/SDL_events.h>
 #include <glm/vec2.hpp>
 #include <entt/signal/sigh.hpp>
 #include <entt/signal/fwd.hpp>
@@ -75,8 +77,21 @@ namespace engine::input {
 		glm::vec2 getMousePosition() const;																			///< @brief 获取鼠标位置(屏幕坐标)
 		glm::vec2 getLogicalMousePosition() const;																	///< @brief 获取鼠标位置(逻辑坐标)
 
+		// --- 触摸输入 ---
+		bool isTouchDevice() const;																					///< @brief 当前是否为触摸设备
+		bool isTouchActive() const;																					///< @brief 当前是否有触摸按下
+		glm::vec2 getTouchPosition() const;																			///< @brief 获取触摸位置(逻辑坐标)
+		glm::vec2 getTouchStartPosition() const;																	///< @brief 获取本次触摸开始位置(逻辑坐标)
+
+		// --- UI 点击消费 ---
+		void setUiHitTester(std::function<bool(const glm::vec2&)> tester);										///< @brief 设置UI命中测试回调, 用于标记UI消费点击
+		bool isClickConsumed() const;																				///< @brief 当前点击是否已被UI消费
+		void consumeNextClick();																					///< @brief 手动消费下一次点击
+		void clearClickConsumed();																					///< @brief 清除点击消费标记
+
 	private:
 		void processEvent(const SDL_Event& event);																	///< @brief 处理SDL事件, 将按键转换为动作状态
+		void handleFingerEvent(const SDL_Event& event);																///< @brief 处理触摸FINGER事件, 映射为鼠标/触摸动作
 		void initializeMappings(const engine::core::Config* config);												///< @brief 根据Config配置初始化映射表
 
 		void updateActionState(entt::id_type, bool isInputActive, bool isRepeatEvent);								///< @brief 辅助更新动作状态
@@ -93,6 +108,17 @@ namespace engine::input {
 		bool mShouldQuit = false;																					///< @brief 推出标志
 		glm::vec2 mMousePosition;																					///< @brief 鼠标位置(针对屏幕坐标)
 		glm::vec2 mLogicalMousePosition;																			///< @brief 鼠标位置(针对逻辑坐标)
+
+		// --- 触摸状态 ---
+		bool mIsTouchDevice = false;																				///< @brief 是否为触摸设备
+		bool mIsTouchActive = false;																				///< @brief 当前是否有触摸按下
+		SDL_FingerID mActiveFingerId = 0;																			///< @brief 当前活动手指ID
+		glm::vec2 mTouchPosition;																					///< @brief 触摸位置(逻辑坐标)
+		glm::vec2 mTouchStartPosition;																				///< @brief 本次触摸开始位置(逻辑坐标)
+
+		// --- UI 点击消费 ---
+		std::function<bool(const glm::vec2&)> mUiHitTester;															///< @brief UI命中测试回调
+		bool mClickConsumed = false;																				///< @brief 当前帧/事件点击是否已被UI消费
 	};
 } // engine::input
 

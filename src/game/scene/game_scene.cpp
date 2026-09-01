@@ -30,6 +30,7 @@
 #include "../system/selection_system.h"
 #include "../system/skill_system.h"
 #include "../ui/units_portrait_ui.h"
+#include "../ui/mobile_action_bar.h"
 #include "../defs/tags.h"
 #include "../../engine/component/transform_component.h"
 #include "../../engine/component/velocity_component.h"
@@ -113,6 +114,10 @@ namespace game::scene {
 			spdlog::error("初始化单位肖像UI失败");
 			return false;
 		}
+		if (!initMobileActionBar()) {
+			spdlog::error("初始化移动端操作栏失败");
+			return false;
+		}
 		if (!initSystems()) {
 			spdlog::error("初始化系统失败");
 			return false;
@@ -141,6 +146,7 @@ namespace game::scene {
 			mYsortSystem->update(mRegistry);
 			mSelectionSystem->update();
 			mUnitsPortraitUI->update(delta_time);
+			mMobileActionBar->update(delta_time);
 			Scene::update(delta_time);
 			return;
 		}
@@ -162,7 +168,8 @@ namespace game::scene {
 
 		mEnemySpawner->update(delta_time);						// 敌人生成器（按波次生成敌人）
 
-		mUnitsPortraitUI->update(delta_time);					// 肖像UI（遮盖更新、左右滚动）
+		mUnitsPortraitUI->update(delta_time);
+		mMobileActionBar->update(delta_time);
 
 		Scene::update(delta_time);
 	}
@@ -305,6 +312,11 @@ namespace game::scene {
 
 	bool GameScene::initUnitsPortraitUI() {
 		mUnitsPortraitUI = std::make_unique<game::ui::UnitsPortraitUI>(mRegistry, *mUIManager, mContext);
+		return true;
+	}
+
+	bool GameScene::initMobileActionBar() {
+		mMobileActionBar = std::make_unique<game::ui::MobileActionBar>(mRegistry, *mUIManager, mContext);
 		return true;
 	}
 

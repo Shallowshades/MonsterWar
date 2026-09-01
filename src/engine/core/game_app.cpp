@@ -186,8 +186,8 @@ bool engine::core::GameApp::initConfig() {
 
 bool engine::core::GameApp::initSDL() {
 #ifdef __EMSCRIPTEN__
-	// 移动端触屏 -> 鼠标事件，复用现有 InputManager 的鼠标点击逻辑（必须在 SDL_Init 前设置）
-	SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "1");
+	// 移动端触屏：关闭 SDL 自动合成鼠标事件，由 InputManager 自行把 FINGER 映射为鼠标/触摸动作
+	SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
 #endif
 	if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
 		spdlog::error("{} 无法创建窗口! SDL错误: {}", mLogTag.data(), SDL_GetError());

@@ -42,6 +42,7 @@ public:
 	void addElement(std::unique_ptr<UIElement> element);    ///< @brief 添加一个UI元素到根节点的child_容器中。
 	UIPanel* getRootElement() const;                        ///< @brief 获取根UIPanel元素的指针。
 	void clearElements();                                   ///< @brief 清除所有UI元素，通常用于重置UI状态。
+	bool isPointOverInteractive(const glm::vec2& point) const;  ///< @brief 判断点是否落在任一可交互UI元素上
 
 	// --- 核心循环方法 ---
 	void update(float deltaTime, engine::core::Context&);

@@ -430,6 +430,7 @@ set(SOURCES
     src/game/system/skill_system.cpp
     src/game/spawner/enemy_spawner.cpp
     src/game/ui/units_portrait_ui.cpp
+    src/game/ui/mobile_action_bar.cpp
 )
 
 # --- 添加 ImGui 开始 ---

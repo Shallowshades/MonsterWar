@@ -145,7 +145,25 @@ namespace game::system {
 
     bool PlaceUnitSystem::onPlaceUnit() {
         // 目标放置位置有效才继续
-        if (mTargetPlaceEntity == entt::null) return false;
+        if (mContext.getInputManager().isClickConsumed()) return false;
+
+        // 使用当前鼠标/触摸位置实时检测，避免输入回调早于 update 导致 mTargetPlaceEntity 过期
+        auto mouse_pos_screen = mContext.getInputManager().getLogicalMousePosition();
+        auto mouse_pos_world = mContext.getCamera().screenToWorld(mouse_pos_screen);
+        auto view_prep_find = mRegistry.view<game::component::UnitPrepComponent>();
+        mTargetPlaceEntity = entt::null;
+        for (auto entity : view_prep_find) {
+            const auto& unit_prep_component = mRegistry.get<game::component::UnitPrepComponent>(entity);
+            checkTargetPlace(mouse_pos_world, unit_prep_component.mType);
+            if (mTargetPlaceEntity != entt::null) break;
+        }
+        if (mTargetPlaceEntity == entt::null) {
+            // 有准备单位但点到了非法/空白位置：取消放置（移动端点空白取消）
+            if (!view_prep_find.empty()) {
+                onCancelPrepUnit();
+            }
+            return false;
+        }
 
         // 获取目标位置坐标（放置点中心）
         const auto& transform = mRegistry.get<engine::component::TransformComponent>(mTargetPlaceEntity);

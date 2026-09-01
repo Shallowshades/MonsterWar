@@ -15,6 +15,7 @@
 #include <entt/core/hashed_string.hpp>
 #include <entt/entity/registry.hpp>
 #include <entt/signal/dispatcher.hpp>
+#include <functional>
 #include <spdlog/spdlog.h>
 #include <glm/common.hpp>
 #include <cmath>
@@ -151,6 +152,34 @@ namespace game::ui {
 
         mAnchorPanel->sortChildrenByOrderIndex();  // 对anchor_panel中的子元素(frame_panel)进行排序
         arrangeUnitsPortraitUI();                  // 按顺序排列anchor_panel中的子元素(frame_panel)的位置
+
+        // --- 移动端：左右滚动箭头（独立于 anchor_panel，避免被 arrange 重排） ---
+        auto arrow_size = glm::vec2(48.0f, frame_size.y);
+        auto arrow_y = window_size.y - frame_size.y - 2.0f * padding;
+        auto& arrow_image = ui_config->getPortraitFrame(1);
+
+        auto make_arrow = [&](std::string_view text, const glm::vec2& pos, std::function<void()> callback) {
+            auto arrow = std::make_unique<engine::ui::UIButton>(mContext,
+                arrow_image, arrow_image, arrow_image,
+                pos,
+                arrow_size,
+                std::move(callback));
+            arrow->setId(entt::hashed_string(text.data()));
+            arrow->addChild(std::make_unique<engine::ui::UILabel>(mContext.getTextRenderer(),
+                text,
+                ui_config->getUnitPanelFontPath(),
+                28,
+                engine::utils::FColor::white(),
+                glm::vec2(8.0f, arrow_size.y * 0.5f - 18.0f)));
+            return arrow;
+        };
+
+        mUIManager.addElement(make_arrow("◀", glm::vec2(4.0f, arrow_y), [this]() {
+            movePortraitPanelLeft(0.1f);
+        }));
+        mUIManager.addElement(make_arrow("▶", glm::vec2(window_size.x - arrow_size.x - 4.0f, arrow_y), [this]() {
+            movePortraitPanelRight(0.1f);
+        }));
     }
 
     void UnitsPortraitUI::arrangeUnitsPortraitUI() {

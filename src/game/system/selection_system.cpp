@@ -71,16 +71,23 @@ namespace game::system {
 
     // --- 输入控制回调函数 ---
     bool SelectionSystem::onMouseLeftClick() {
-        auto hovered_unit = mRegistry.ctx().get<entt::entity&>("hovered_unit"_hs);
-        if (hovered_unit == entt::null || !mRegistry.valid(hovered_unit)) return false;
-        // 如果鼠标悬浮单位是玩家，则选中单位，并清除之前选中的单位
-        if (auto player = mRegistry.try_get<game::component::PlayerComponent>(hovered_unit); player) {
-            clearCurrentSelection();
-            mRegistry.ctx().get<entt::entity&>("selected_unit"_hs) = hovered_unit;
-            // 添加范围显示标签
-            mRegistry.emplace_or_replace<game::defs::ShowRangeTag>(hovered_unit);
-            return true;
+        if (mContext.getInputManager().isClickConsumed()) return false;
+
+        // 使用当前鼠标/触摸位置直接点选，不依赖上一帧 hover 状态（触摸没有 hover）
+        auto mouse_pos = mContext.getInputManager().getLogicalMousePosition();
+        auto view_player = mRegistry.view<engine::component::TransformComponent, game::component::PlayerComponent>();
+        for (auto entity : view_player) {
+            auto& transform = view_player.get<engine::component::TransformComponent>(entity);
+            if (engine::utils::distanceSquared(transform.mPosition, mouse_pos) <= game::defs::HOVER_RADIUS * game::defs::HOVER_RADIUS) {
+                clearCurrentSelection();
+                mRegistry.ctx().get<entt::entity&>("selected_unit"_hs) = entity;
+                // 添加范围显示标签
+                mRegistry.emplace_or_replace<game::defs::ShowRangeTag>(entity);
+                return true;
+            }
         }
+        // 没点中玩家单位：清除选中（触摸点空白取消选中）
+        clearCurrentSelection();
         return false;
     }
 

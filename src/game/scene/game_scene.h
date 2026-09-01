@@ -25,6 +25,7 @@
 
 namespace game::ui {
 	class UnitsPortraitUI;
+	class MobileActionBar;
 }
 namespace game::factory {
 	class EntityFactory;
@@ -73,6 +74,7 @@ namespace game::scene {
 		[[nodiscard]] bool initEntityFactory();
 		[[nodiscard]] bool initRegistryContext();
 		[[nodiscard]] bool initUnitsPortraitUI();
+		[[nodiscard]] bool initMobileActionBar();
 		[[nodiscard]] bool initSystems();
 		[[nodiscard]] bool initLevelConfig();
 		[[nodiscard]] bool initEnemySpawner();
@@ -118,6 +120,7 @@ namespace game::scene {
 		std::unique_ptr<game::system::SkillSystem> mSkillSystem;             // 技能系统（技能施放/显示、Buff管理）
 
 		std::unique_ptr<game::ui::UnitsPortraitUI> mUnitsPortraitUI;         // 封装的单位肖像UI，负责管理单位肖像UI的创建、更新和排列
+		std::unique_ptr<game::ui::MobileActionBar> mMobileActionBar;         // 移动端操作栏（升级/撤退/技能/取消）
 
 		std::unordered_map<int, game::data::WaypointNode> mWaypointNodes;  // 路径节点ID到节点数据的映射
 		std::vector<int> mStartPoints;                                     // 起点ID列表
