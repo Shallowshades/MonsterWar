@@ -140,7 +140,8 @@ namespace engine::input {
 
 	void InputManager::processEvent(const SDL_Event& event) {
 		// 如果 ImGui 捕获了鼠标，则不处理该事件(避免穿透到游戏中)
-		if (ImGui::GetIO().WantCaptureMouse) {
+		// 触摸设备上移动端战斗不渲染 ImGui，若仍被旧 ImGui 状态捕获会导致完全无法点击，因此触摸设备放行
+		if (ImGui::GetIO().WantCaptureMouse && !mIsTouchDevice) {
 			return;
 		}
 

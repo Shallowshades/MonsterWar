@@ -19,7 +19,15 @@ void UINormalState::enter() {
 void UINormalState::update(float, engine::core::Context& context) {
 	auto& inputManager = context.getInputManager();
 	auto mousePosition = inputManager.getLogicalMousePosition();
-	if (mOwner->isPointInside(mousePosition)) {         // 如果鼠标进入UI元素内，则延迟切换到悬停状态
+	if (mOwner->isPointInside(mousePosition)) {
+		// 触摸/快速点击可能在同一次事件循环内完成 按下+抬起，此时尚未进入 Hover/Pressed 状态。
+		// 这里直接捕获 mouse_left 的释放信号触发点击，保证移动端可点。
+		if (inputManager.isActionReleased("mouse_left"_hs)) {
+			mOwner->clicked();
+			mOwner->setNextState(std::make_unique<UIHoverState>(mOwner));
+			return;
+		}
+		// 如果鼠标进入UI元素内，则延迟切换到悬停状态
 		mOwner->setNextState(std::make_unique<UIHoverState>(mOwner));
 	}
 }
