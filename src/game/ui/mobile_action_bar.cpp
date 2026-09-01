@@ -264,6 +264,7 @@ namespace game::ui {
         if (mUpgradeButton && mUpgradeLabel) {
             mUpgradeLabel->setText("升级 -" + std::to_string(player.mCost));
             mUpgradeButton->setInteractive(game_stats.mCost >= player.mCost);
+            mUpgradeLabel->setTextFColor(game_stats.mCost >= player.mCost ? engine::utils::FColor::white() : engine::utils::FColor::grey());
         }
 
         // 撤退：显示返还，始终可用
@@ -271,6 +272,7 @@ namespace game::ui {
             auto return_cost = static_cast<int>(player.mCost * 0.5f);
             mRetreatLabel->setText("撤退 +" + std::to_string(return_cost));
             mRetreatButton->setInteractive(true);
+            mRetreatLabel->setTextFColor(engine::utils::FColor::white());
         }
 
         // 技能：显示冷却/就绪，未就绪时禁用
@@ -286,6 +288,7 @@ namespace game::ui {
                 mSkillLabel->setText("技能");
             }
             mSkillButton->setInteractive(ready);
+            mSkillLabel->setTextFColor(ready ? engine::utils::FColor::white() : engine::utils::FColor::grey());
         }
     }
 
