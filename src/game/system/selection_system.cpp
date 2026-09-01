@@ -72,6 +72,9 @@ namespace game::system {
     // --- 输入控制回调函数 ---
     bool SelectionSystem::onMouseLeftClick() {
         if (mContext.getInputManager().isClickConsumed()) return false;
+        // 放置模式不处理选中，避免和放置冲突
+        auto& touch_mode = mRegistry.ctx().get<game::defs::TouchMode&>("touch_mode"_hs);
+        if (touch_mode == game::defs::TouchMode::PLACING) return false;
 
         // 使用当前鼠标/触摸位置直接点选，不依赖上一帧 hover 状态（触摸没有 hover）
         auto mouse_pos = mContext.getInputManager().getLogicalMousePosition();

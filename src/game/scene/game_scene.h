@@ -15,6 +15,7 @@
 #include "../data/game_stats.h"
 #include "../data/level_config.h"
 #include "../defs/events.h"
+#include "../defs/constants.h"
 #include "../system/fwd.h"
 #include "../../engine/scene/scene.h"
 #include "../../engine/system/fwd.h"
@@ -141,6 +142,7 @@ namespace game::scene {
 		entt::entity mSelectedUnit{ entt::null };    // 游戏中鼠标选中的单位
 		entt::entity mHoveredUnit{ entt::null };     // 游戏中鼠标悬浮的单位
 		bool mShowSavePanel{ false };                // 是否显示存档面板（经 ctx 暴露给调试UI）
+		game::defs::TouchMode mTouchMode{ game::defs::TouchMode::NONE };  // 当前交互模式（触摸/鼠标通用）
 	};
 
 } // game::scene

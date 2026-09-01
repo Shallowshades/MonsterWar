@@ -121,6 +121,9 @@ namespace game::system {
         // 先移除其他单位准备类型实体
         onCancelPrepUnit();
 
+        // 进入放置模式
+        mRegistry.ctx().get<game::defs::TouchMode&>("touch_mode"_hs) = game::defs::TouchMode::PLACING;
+
         // 在鼠标所在的位置创建单位准备类型实体
         auto screen_position = mContext.getInputManager().getLogicalMousePosition();
         auto position = mContext.getCamera().screenToWorld(screen_position);
@@ -146,6 +149,9 @@ namespace game::system {
     bool PlaceUnitSystem::onPlaceUnit() {
         // 目标放置位置有效才继续
         if (mContext.getInputManager().isClickConsumed()) return false;
+        // 只有放置模式才允许放置
+        auto& touch_mode = mRegistry.ctx().get<game::defs::TouchMode&>("touch_mode"_hs);
+        if (touch_mode != game::defs::TouchMode::PLACING) return false;
 
         // 使用当前鼠标/触摸位置实时检测，避免输入回调早于 update 导致 mTargetPlaceEntity 过期
         auto mouse_pos_screen = mContext.getInputManager().getLogicalMousePosition();
@@ -204,6 +210,9 @@ namespace game::system {
                 mContext.getDispatcher().enqueue(game::defs::SkillActiveEvent{ unit_entity });
             }
         }
+        // 放置成功，退出放置模式
+        mRegistry.ctx().get<game::defs::TouchMode&>("touch_mode"_hs) = game::defs::TouchMode::NONE;
+
         // 播放放置音效
         mContext.getAudioPlayer().playSound("unit_placed"_hs);
         return true;
@@ -216,6 +225,8 @@ namespace game::system {
             mRegistry.emplace_or_replace<game::defs::DeadTag>(entity);
             spdlog::info("移除单位准备类型实体: {}", entt::to_integral(entity));
         }
+        // 退出放置模式
+        mRegistry.ctx().get<game::defs::TouchMode&>("touch_mode"_hs) = game::defs::TouchMode::NONE;
         return false;   // 让鼠标右键可以穿透
     }
 

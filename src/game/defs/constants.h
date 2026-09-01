@@ -38,6 +38,13 @@ namespace game::defs {
         MIXED       ///< @brief 混合型，可以放在任意区域（暂不实现，未来可拓展）
     };
 
+    /// @brief 触摸/鼠标交互模式
+    enum class TouchMode {
+        NONE,       ///< @brief 默认模式：可选中/取消选中
+        PLACING,    ///< @brief 放置模式：点肖像后正在放置单位
+        SELECTING   ///< @brief 选中模式：点选单位（预留，当前与NONE行为一致）
+    };
+
 }   // namespace game::defs
 
 #endif // GAME_CONSTANTS_H

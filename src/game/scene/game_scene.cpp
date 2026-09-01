@@ -307,6 +307,7 @@ namespace game::scene {
 		mRegistry.ctx().emplace_as<entt::entity&>("selected_unit"_hs, mSelectedUnit);
 		mRegistry.ctx().emplace_as<entt::entity&>("hovered_unit"_hs, mHoveredUnit);
 		mRegistry.ctx().emplace_as<bool&>("show_save_panel"_hs, mShowSavePanel);
+		mRegistry.ctx().emplace_as<game::defs::TouchMode&>("touch_mode"_hs, mTouchMode);
 		return true;
 	}
 
