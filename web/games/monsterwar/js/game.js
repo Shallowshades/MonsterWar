@@ -63,9 +63,10 @@
     attempt = attempt || 0;
     var gw = canvas.width;
     var gh = canvas.height;
-    if (!gw || !gh) {
+    if (!gw || !gh || (gw < 1000 && gh < 1000)) {
       // SDL 尚未设置 canvas 尺寸（如 callMain 尚未完成），下一帧重试
-      if (attempt < 10) requestAnimationFrame(function () { fitCanvas(attempt + 1); });
+      // 注意：canvas 默认是 300x150，如果太早执行会把游戏按 300x150 缩放，导致比例错误
+      if (attempt < 30) requestAnimationFrame(function () { fitCanvas(attempt + 1); });
       return;
     }
     try {
