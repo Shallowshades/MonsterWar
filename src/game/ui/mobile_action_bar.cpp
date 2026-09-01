@@ -159,11 +159,26 @@ namespace game::ui {
 
         mUIManager.addElement(std::move(anchor));
         mAnchorPanel = static_cast<engine::ui::UIPanel*>(mUIManager.getRootElement()->getChildById("mobile_action_bar"_hs));
+
+        // 放置模式取消按钮（独立于操作栏，放置中显示）
+        auto cancel_place = make_button("取消放置", glm::vec2((window_size.x - 120.0f) * 0.5f, window_size.y - frame_size.y - 2.0f * ui_config->getUnitPanelPadding() - 56.0f), [this]() {
+            mContext.getDispatcher().enqueue(game::defs::CancelPlacementEvent{});
+            mContext.getInputManager().consumeNextClick();
+        });
+        mCancelPlaceButton = cancel_place.first.get();
+        mUIManager.addElement(std::move(cancel_place.first));
+        mCancelPlaceButton->setVisible(false);
         refreshVisibility();
     }
 
     void MobileActionBar::refreshVisibility() {
         if (!mAnchorPanel) return;
+
+        // 放置模式取消按钮显示/隐藏
+        if (mCancelPlaceButton) {
+            auto& touch_mode = mRegistry.ctx().get<game::defs::TouchMode&>("touch_mode"_hs);
+            mCancelPlaceButton->setVisible(touch_mode == game::defs::TouchMode::PLACING);
+        }
 
         auto& entity = mRegistry.ctx().get<entt::entity&>("selected_unit"_hs);
         bool visible = entity != entt::null && mRegistry.valid(entity) &&

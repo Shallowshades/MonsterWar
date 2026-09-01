@@ -58,6 +58,7 @@ private:
     engine::ui::UILabel* mUpgradeLabel{ nullptr };
     engine::ui::UILabel* mRetreatLabel{ nullptr };
     engine::ui::UILabel* mSkillLabel{ nullptr };
+    engine::ui::UIButton* mCancelPlaceButton{ nullptr };
 };
 
 }   // namespace game::ui

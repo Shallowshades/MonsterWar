@@ -61,6 +61,7 @@ namespace game::system {
         // 事件回调函数
         void onPrepUnitEvent(const game::defs::PrepUnitEvent& event);           ///< @brief 准备单位事件
         void onRemoveUnitEvent(const game::defs::RemovePlayerUnitEvent& event); ///< @brief 移除(地图上)玩家单位事件
+        void onCancelPlacementEvent(const game::defs::CancelPlacementEvent& event); ///< @brief 取消放置事件
 
         // 输入控制回调函数
         bool onPlaceUnit();         ///< @brief 放置单位（鼠标左键点击）

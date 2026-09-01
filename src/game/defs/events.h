@@ -126,6 +126,9 @@ namespace game::defs {
     /// @brief 返回标题场景事件
     struct BackToTitleEvent {};
 
+    /// @brief 取消放置事件（移动端取消放置按钮）
+    struct CancelPlacementEvent {};
+
     /// @brief 保存游戏事件
     struct SaveEvent {};
 

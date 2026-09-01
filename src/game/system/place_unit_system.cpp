@@ -44,6 +44,7 @@ namespace game::system {
         auto& dispatcher = mContext.getDispatcher();
         dispatcher.sink<game::defs::PrepUnitEvent>().connect<&PlaceUnitSystem::onPrepUnitEvent>(this);
         dispatcher.sink<game::defs::RemovePlayerUnitEvent>().connect<&PlaceUnitSystem::onRemoveUnitEvent>(this);
+        dispatcher.sink<game::defs::CancelPlacementEvent>().connect<&PlaceUnitSystem::onCancelPlacementEvent>(this);
     }
 
     PlaceUnitSystem::~PlaceUnitSystem() {
@@ -216,6 +217,10 @@ namespace game::system {
         // 播放放置音效
         mContext.getAudioPlayer().playSound("unit_placed"_hs);
         return true;
+    }
+
+    void PlaceUnitSystem::onCancelPlacementEvent(const game::defs::CancelPlacementEvent&) {
+        onCancelPrepUnit();
     }
 
     bool PlaceUnitSystem::onCancelPrepUnit() {
