@@ -18,12 +18,24 @@
     document.body.classList.add('mobile');
   }
 
-  // ---- 全屏 ----
+  // ---- 全屏 + 横屏锁定 ----
+  // 游戏是 1600x1216 横屏，竖屏下只能居中缩成一小条。全屏时把屏幕锁为横屏，
+  // 旋转后 resize 事件触发 fitCanvas 重新计算，游戏填满横屏。
+  // Android Chrome 支持全屏内 screen.orientation.lock；iOS Safari 不支持（catch 兜底，仅全屏不旋转）。
   function toggleFullscreen() {
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(function () {});
+      if (screen.orientation && screen.orientation.unlock) {
+        screen.orientation.unlock().catch(function () {});
+      }
     } else {
-      document.documentElement.requestFullscreen().catch(function () {});
+      document.documentElement.requestFullscreen()
+        .then(function () {
+          if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('landscape').catch(function () {});
+          }
+        })
+        .catch(function () {});
     }
   }
   fullscreenBtn.addEventListener('click', toggleFullscreen);
@@ -40,20 +52,6 @@
   }
   document.addEventListener('pointerdown', resumeAudio);
   document.addEventListener('keydown', resumeAudio);
-
-  // ---- 诊断：读取 WebGL 实际绘制缓冲 + GL 视口，判断游戏渲染是否填满 canvas ----
-  // SDL 已持有 canvas 的 webgl2 上下文；getContext 传相同类型会返回同一个上下文，不会干扰 SDL。
-  function probeGL() {
-    try {
-      var gl = canvas.getContext('webgl2') || canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-      if (!gl) return 'GL context n/a';
-      var vp = gl.getParameter(gl.VIEWPORT);
-      return 'GL buf ' + gl.drawingBufferWidth + 'x' + gl.drawingBufferHeight +
-        '\nviewport ' + (vp ? vp.join(',') : 'n/a');
-    } catch (e) {
-      return 'GL probe err: ' + e.message;
-    }
-  }
 
   // ---- 画面适配：canvas 固定为游戏原生分辨率，用 CSS transform 等比缩放并居中到视口 ----
   // 背景：SDL 的 letterbox（逻辑分辨率）在 wasm 的 GLES2 后端不缩放，游戏会以原生像素顶在左上角。
@@ -95,20 +93,6 @@
   window.addEventListener('resize', fitCanvas);
   window.addEventListener('orientationchange', fitCanvas);
 
-  // ---- 临时诊断：记录指针事件，验证 SDL 收到的窗口坐标是否与视觉位置一致 ----
-  // 换算方式与 SDL_emscriptenevents.c Emscripten_UpdateMouseFromEvent 一致：
-  //   mx = (clientX - rect.left) * (canvas.width / rect.width)
-  // 若 mx 与"直觉逻辑坐标"（点击处对应 canvas 像素）一致，则 SDL 侧无坐标问题。
-  document.addEventListener('pointerdown', function (e) {
-    var r = canvas.getBoundingClientRect();
-    var mx = (e.clientX - r.left) * (canvas.width / r.width);
-    var my = (e.clientY - r.top) * (canvas.height / r.height);
-    console.log('[ptr] client', Math.round(e.clientX) + ',' + Math.round(e.clientY),
-      ' rect', Math.round(r.left) + ',' + Math.round(r.top) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height),
-      ' -> sdl-coord', Math.round(mx) + ',' + Math.round(my),
-      ' (canvas', canvas.width + 'x' + canvas.height + ')');
-  });
-
   // ---- 启动 ----
   function boot() {
     // createMonsterWar 由 wasm/monsterwar.js 暴露（MODULARIZE + EXPORT_NAME），返回 Promise<Module>
@@ -133,28 +117,6 @@
         module.callMain();          // -sINVOKE_RUN=0：必须手动调用，main() 内部注册 rAF 主循环
         fitCanvas();
         loadingEl.classList.add('hidden');
-        // 诊断：屏显（无需开控制台）+ 控制台。即时 + 首帧后各量一次 canvas 最终盒，
-        // 确认加载的是新构建（canvas 应为 1280x720）以及 CSS transform 是否生效。
-        var dbg = document.createElement('div');
-        dbg.style.cssText = 'position:fixed;bottom:10px;left:10px;z-index:99;background:rgba(0,0,0,.65);' +
-          'color:#4f8cff;font:12px/1.5 monospace;padding:6px 10px;border-radius:6px;pointer-events:none;white-space:pre;';
-        document.body.appendChild(dbg);
-        var hideTimer = null;
-        function measure() {
-          var r = canvas.getBoundingClientRect();
-          var msg = 'canvas ' + canvas.width + 'x' + canvas.height +
-            '\nviewport ' + window.innerWidth + 'x' + window.innerHeight +
-            '\nbox ' + Math.round(r.width) + 'x' + Math.round(r.height) +
-            ' @' + Math.round(r.left) + ',' + Math.round(r.top) +
-            '\ntransform ' + (canvas.style.transform || '(none)') +
-            '\n' + probeGL();
-          console.log('[MonsterWar] ' + msg.replace(/\n/g, ' · '));
-          dbg.textContent = msg;
-          if (hideTimer) clearTimeout(hideTimer);
-          hideTimer = setTimeout(function () { dbg.remove(); }, 20000);
-        }
-        measure();
-        setTimeout(measure, 800);   // 等首帧渲染后再量一次，看 transform / GL 视口是否被重置
         return module;
       })
       .then(function (module) { schedulePersist(module); })
