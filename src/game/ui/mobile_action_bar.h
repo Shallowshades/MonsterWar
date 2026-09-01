@@ -20,6 +20,8 @@ namespace engine::core {
 namespace engine::ui {
     class UIPanel;
     class UIManager;
+    class UIButton;
+    class UILabel;
 }
 
 namespace game::ui {
@@ -50,6 +52,12 @@ private:
     engine::core::Context& mContext;
 
     engine::ui::UIPanel* mAnchorPanel{ nullptr };
+    engine::ui::UIButton* mUpgradeButton{ nullptr };
+    engine::ui::UIButton* mRetreatButton{ nullptr };
+    engine::ui::UIButton* mSkillButton{ nullptr };
+    engine::ui::UILabel* mUpgradeLabel{ nullptr };
+    engine::ui::UILabel* mRetreatLabel{ nullptr };
+    engine::ui::UILabel* mSkillLabel{ nullptr };
 };
 
 }   // namespace game::ui

@@ -28,6 +28,7 @@
 #include <entt/core/hashed_string.hpp>
 #include <spdlog/spdlog.h>
 #include <cmath>
+#include <utility>
 
 using namespace entt::literals;
 
@@ -71,57 +72,79 @@ namespace game::ui {
         // 使用通用肖像框作为按钮底图（移动端先保证可点，后续可换正式按钮资源）
         auto& btn_image = ui_config->getPortraitFrame(1);
 
-        auto make_button = [&](std::string_view text, const glm::vec2& pos, std::function<void()> callback) {
+        auto make_button = [&](std::string_view text, const glm::vec2& pos, std::function<void()> callback)
+            -> std::pair<std::unique_ptr<engine::ui::UIButton>, engine::ui::UILabel*> {
             auto button = std::make_unique<engine::ui::UIButton>(mContext,
                 btn_image, btn_image, btn_image,
                 pos,
                 glm::vec2(button_size, button_size),
                 std::move(callback));
             button->setId(entt::hashed_string(text.data()));
-            button->addChild(std::make_unique<engine::ui::UILabel>(mContext.getTextRenderer(),
+
+            auto label = std::make_unique<engine::ui::UILabel>(mContext.getTextRenderer(),
                 text,
                 ui_config->getUnitPanelFontPath(),
                 18,
                 engine::utils::FColor::white(),
-                glm::vec2(4.0f, button_size - 26.0f)));
-            return button;
+                glm::vec2(4.0f, button_size - 26.0f));
+            auto* label_ptr = label.get();
+            button->addChild(std::move(label));
+
+            return { std::move(button), label_ptr };
         };
 
         float x = padding;
         const float step = button_size + padding;
 
         // 升级
-        anchor->addChild(make_button("升级", glm::vec2(x, padding), [this]() {
-            auto& entity = mRegistry.ctx().get<entt::entity&>("selected_unit"_hs);
-            if (entity == entt::null || !mRegistry.valid(entity)) return;
-            if (auto player = mRegistry.try_get<game::component::PlayerComponent>(entity); player) {
+        {
+            auto [button, label] = make_button("升级", glm::vec2(x, padding), [this]() {
+                auto& entity = mRegistry.ctx().get<entt::entity&>("selected_unit"_hs);
+                if (entity == entt::null || !mRegistry.valid(entity)) return;
+                auto player = mRegistry.try_get<game::component::PlayerComponent>(entity);
+                if (!player) return;
+                auto& game_stats = mRegistry.ctx().get<game::data::GameStats&>();
+                if (game_stats.mCost < player->mCost) return;
                 mContext.getDispatcher().enqueue(game::defs::UpgradeUnitEvent{ entity, player->mCost });
                 mContext.getInputManager().consumeNextClick();
-            }
-        }));
+            });
+            mUpgradeButton = button.get();
+            mUpgradeLabel = label;
+            anchor->addChild(std::move(button));
+        }
         x += step;
 
         // 撤退
-        anchor->addChild(make_button("撤退", glm::vec2(x, padding), [this]() {
-            auto& entity = mRegistry.ctx().get<entt::entity&>("selected_unit"_hs);
-            if (entity == entt::null || !mRegistry.valid(entity)) return;
-            if (auto player = mRegistry.try_get<game::component::PlayerComponent>(entity); player) {
+        {
+            auto [button, label] = make_button("撤退", glm::vec2(x, padding), [this]() {
+                auto& entity = mRegistry.ctx().get<entt::entity&>("selected_unit"_hs);
+                if (entity == entt::null || !mRegistry.valid(entity)) return;
+                auto player = mRegistry.try_get<game::component::PlayerComponent>(entity);
+                if (!player) return;
                 auto return_cost = static_cast<int>(player->mCost * 0.5f);
                 mContext.getDispatcher().enqueue(game::defs::RetreatEvent{ entity, return_cost });
                 mContext.getInputManager().consumeNextClick();
-            }
-        }));
+            });
+            mRetreatButton = button.get();
+            mRetreatLabel = label;
+            anchor->addChild(std::move(button));
+        }
         x += step;
 
         // 技能
-        anchor->addChild(make_button("技能", glm::vec2(x, padding), [this]() {
-            auto& entity = mRegistry.ctx().get<entt::entity&>("selected_unit"_hs);
-            if (entity == entt::null || !mRegistry.valid(entity)) return;
-            if (mRegistry.all_of<game::defs::SkillReadyTag>(entity)) {
-                mContext.getDispatcher().enqueue(game::defs::SkillActiveEvent{ entity });
-                mContext.getInputManager().consumeNextClick();
-            }
-        }));
+        {
+            auto [button, label] = make_button("技能", glm::vec2(x, padding), [this]() {
+                auto& entity = mRegistry.ctx().get<entt::entity&>("selected_unit"_hs);
+                if (entity == entt::null || !mRegistry.valid(entity)) return;
+                if (mRegistry.all_of<game::defs::SkillReadyTag>(entity)) {
+                    mContext.getDispatcher().enqueue(game::defs::SkillActiveEvent{ entity });
+                    mContext.getInputManager().consumeNextClick();
+                }
+            });
+            mSkillButton = button.get();
+            mSkillLabel = label;
+            anchor->addChild(std::move(button));
+        }
         x += step;
 
         // 取消
@@ -132,7 +155,7 @@ namespace game::ui {
             }
             mRegistry.ctx().get<entt::entity&>("selected_unit"_hs) = entt::null;
             mContext.getInputManager().consumeNextClick();
-        }));
+        }).first);
 
         mUIManager.addElement(std::move(anchor));
         mAnchorPanel = static_cast<engine::ui::UIPanel*>(mUIManager.getRootElement()->getChildById("mobile_action_bar"_hs));
@@ -141,10 +164,44 @@ namespace game::ui {
 
     void MobileActionBar::refreshVisibility() {
         if (!mAnchorPanel) return;
+
         auto& entity = mRegistry.ctx().get<entt::entity&>("selected_unit"_hs);
         bool visible = entity != entt::null && mRegistry.valid(entity) &&
             mRegistry.all_of<game::component::PlayerComponent>(entity);
         mAnchorPanel->setVisible(visible);
+
+        if (!visible) return;
+
+        auto player = mRegistry.get<game::component::PlayerComponent>(entity);
+        auto& game_stats = mRegistry.ctx().get<game::data::GameStats&>();
+
+        // 升级：显示费用，COST 不足时禁用
+        if (mUpgradeButton && mUpgradeLabel) {
+            mUpgradeLabel->setText("升级 -" + std::to_string(player.mCost));
+            mUpgradeButton->setInteractive(game_stats.mCost >= player.mCost);
+        }
+
+        // 撤退：显示返还，始终可用
+        if (mRetreatButton && mRetreatLabel) {
+            auto return_cost = static_cast<int>(player.mCost * 0.5f);
+            mRetreatLabel->setText("撤退 +" + std::to_string(return_cost));
+            mRetreatButton->setInteractive(true);
+        }
+
+        // 技能：显示冷却/就绪，未就绪时禁用
+        if (mSkillButton && mSkillLabel) {
+            bool ready = mRegistry.all_of<game::defs::SkillReadyTag>(entity);
+            if (auto skill = mRegistry.try_get<game::component::SkillComponent>(entity); skill) {
+                if (ready) {
+                    mSkillLabel->setText(skill->mName + " 就绪");
+                } else {
+                    mSkillLabel->setText(skill->mName + " CD");
+                }
+            } else {
+                mSkillLabel->setText("技能");
+            }
+            mSkillButton->setInteractive(ready);
+        }
     }
 
 }   // namespace game::ui
