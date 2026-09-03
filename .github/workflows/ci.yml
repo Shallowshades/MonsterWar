@@ -13,6 +13,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Fetch complete SDL deps (with submodules)
+        shell: bash
+        run: |
+          rm -rf external/SDL_mixer-release-3.2.0 external/SDL_image-release-3.2.4 external/SDL_ttf-release-3.2.2
+          git clone --depth 1 --branch release-3.2.0 --recursive https://github.com/libsdl-org/SDL_mixer.git external/SDL_mixer-release-3.2.0
+          git clone --depth 1 --branch release-3.2.4 --recursive https://github.com/libsdl-org/SDL_image.git external/SDL_image-release-3.2.4
+          git clone --depth 1 --branch release-3.2.2 --recursive https://github.com/libsdl-org/SDL_ttf.git external/SDL_ttf-release-3.2.2
+
       - name: Configure CMake
         run: cmake -S . -B build -DCMAKE_DISABLE_FIND_PACKAGE_SDL3=ON -DCMAKE_DISABLE_FIND_PACKAGE_SDL3_image=ON -DCMAKE_DISABLE_FIND_PACKAGE_SDL3_mixer=ON -DCMAKE_DISABLE_FIND_PACKAGE_SDL3_ttf=ON
 
@@ -24,6 +32,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Fetch complete SDL deps (with submodules)
+        shell: bash
+        run: |
+          rm -rf external/SDL_mixer-release-3.2.0 external/SDL_image-release-3.2.4 external/SDL_ttf-release-3.2.2
+          git clone --depth 1 --branch release-3.2.0 --recursive https://github.com/libsdl-org/SDL_mixer.git external/SDL_mixer-release-3.2.0
+          git clone --depth 1 --branch release-3.2.4 --recursive https://github.com/libsdl-org/SDL_image.git external/SDL_image-release-3.2.4
+          git clone --depth 1 --branch release-3.2.2 --recursive https://github.com/libsdl-org/SDL_ttf.git external/SDL_ttf-release-3.2.2
 
       - name: Install dependencies
         run: |
@@ -53,6 +69,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Fetch complete SDL deps (with submodules)
+        shell: bash
+        run: |
+          rm -rf external/SDL_mixer-release-3.2.0 external/SDL_image-release-3.2.4 external/SDL_ttf-release-3.2.2
+          git clone --depth 1 --branch release-3.2.0 --recursive https://github.com/libsdl-org/SDL_mixer.git external/SDL_mixer-release-3.2.0
+          git clone --depth 1 --branch release-3.2.4 --recursive https://github.com/libsdl-org/SDL_image.git external/SDL_image-release-3.2.4
+          git clone --depth 1 --branch release-3.2.2 --recursive https://github.com/libsdl-org/SDL_ttf.git external/SDL_ttf-release-3.2.2
+
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -80,6 +104,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Fetch complete SDL deps (with submodules)
+        shell: bash
+        run: |
+          rm -rf external/SDL_mixer-release-3.2.0 external/SDL_image-release-3.2.4 external/SDL_ttf-release-3.2.2
+          git clone --depth 1 --branch release-3.2.0 --recursive https://github.com/libsdl-org/SDL_mixer.git external/SDL_mixer-release-3.2.0
+          git clone --depth 1 --branch release-3.2.4 --recursive https://github.com/libsdl-org/SDL_image.git external/SDL_image-release-3.2.4
+          git clone --depth 1 --branch release-3.2.2 --recursive https://github.com/libsdl-org/SDL_ttf.git external/SDL_ttf-release-3.2.2
 
       - name: Install dependencies
         run: |
