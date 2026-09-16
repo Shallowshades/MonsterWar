@@ -45,12 +45,15 @@ jobs:
             prebuilt/linux-build.log
           retention-days: 14
 
-      - name: Commit Linux prebuilt to repository
+      - name: Commit Linux prebuilt and build log
         if: always()
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "build: update Linux prebuilt deps [skip ci]"
-          file_pattern: |
-            prebuilt/linux/**
-            prebuilt/linux-build.log
-          commit_options: "--no-verify"
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f prebuilt/linux prebuilt/linux-build.log 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "build: update Linux prebuilt deps [skip ci]"
+            git push origin HEAD:master
+          fi
