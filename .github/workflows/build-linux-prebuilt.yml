@@ -6,6 +6,7 @@ on:
     branches: [ master ]
     paths:
       - scripts/build-linux-prebuilt.sh
+      - .github/workflows/build-linux-prebuilt.yml
 
 permissions:
   contents: write
@@ -29,18 +30,27 @@ jobs:
             libgles2-mesa-dev libgl1-mesa-dev libxkbcommon-dev
 
       - name: Build Linux prebuilt dependencies
-        run: bash scripts/build-linux-prebuilt.sh
+        continue-on-error: true
+        run: |
+          mkdir -p prebuilt
+          bash scripts/build-linux-prebuilt.sh 2>&1 | tee prebuilt/linux-build.log
 
       - name: Upload artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: prebuilt-linux-x64
-          path: prebuilt/linux
+          path: |
+            prebuilt/linux
+            prebuilt/linux-build.log
           retention-days: 14
 
       - name: Commit Linux prebuilt to repository
+        if: always()
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "build: update Linux prebuilt deps [skip ci]"
-          file_pattern: "prebuilt/linux/**"
+          file_pattern: |
+            prebuilt/linux/**
+            prebuilt/linux-build.log
           commit_options: "--no-verify"
