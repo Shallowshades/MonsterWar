@@ -2,6 +2,13 @@ name: Build Linux Prebuilt
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths:
+      - scripts/build-linux-prebuilt.sh
+
+permissions:
+  contents: write
 
 jobs:
   build-linux-prebuilt:
@@ -9,6 +16,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Install build dependencies
         run: |
@@ -22,12 +31,16 @@ jobs:
       - name: Build Linux prebuilt dependencies
         run: bash scripts/build-linux-prebuilt.sh
 
-      - name: Package artifact
-        run: tar czf prebuilt-linux-x64.tar.gz -C prebuilt linux
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: prebuilt-linux-x64
-          path: prebuilt-linux-x64.tar.gz
+          path: prebuilt/linux
           retention-days: 14
+
+      - name: Commit Linux prebuilt to repository
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "build: update Linux prebuilt deps [skip ci]"
+          file_pattern: "prebuilt/linux/**"
+          commit_options: "--no-verify"
