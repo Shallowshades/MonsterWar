@@ -44,6 +44,10 @@ jobs:
 
       - name: Configure with ASan+UBSan
         run: cmake -S . -B build-asan -G Ninja -DCMAKE_BUILD_TYPE=Debug \
+              -DCMAKE_DISABLE_FIND_PACKAGE_SDL3=ON -DCMAKE_DISABLE_FIND_PACKAGE_SDL3_image=ON \
+              -DCMAKE_DISABLE_FIND_PACKAGE_SDL3_mixer=ON -DCMAKE_DISABLE_FIND_PACKAGE_SDL3_ttf=ON \
+              -DCMAKE_DISABLE_FIND_PACKAGE_glm=ON -DCMAKE_DISABLE_FIND_PACKAGE_nlohmann_json=ON \
+              -DCMAKE_DISABLE_FIND_PACKAGE_spdlog=ON -DCMAKE_DISABLE_FIND_PACKAGE_EnTT=ON \
               -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
               -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
               -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
@@ -80,6 +84,10 @@ jobs:
 
       - name: Configure with TSan
         run: cmake -S . -B build-tsan -G Ninja -DCMAKE_BUILD_TYPE=Debug \
+              -DCMAKE_DISABLE_FIND_PACKAGE_SDL3=ON -DCMAKE_DISABLE_FIND_PACKAGE_SDL3_image=ON \
+              -DCMAKE_DISABLE_FIND_PACKAGE_SDL3_mixer=ON -DCMAKE_DISABLE_FIND_PACKAGE_SDL3_ttf=ON \
+              -DCMAKE_DISABLE_FIND_PACKAGE_glm=ON -DCMAKE_DISABLE_FIND_PACKAGE_nlohmann_json=ON \
+              -DCMAKE_DISABLE_FIND_PACKAGE_spdlog=ON -DCMAKE_DISABLE_FIND_PACKAGE_EnTT=ON \
               -DCMAKE_C_FLAGS="-fsanitize=thread -fno-omit-frame-pointer" \
               -DCMAKE_CXX_FLAGS="-fsanitize=thread -fno-omit-frame-pointer" \
               -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=thread"
@@ -115,7 +123,7 @@ jobs:
             libgles2-mesa-dev libgl1-mesa-dev libxkbcommon-dev
 
       - name: Configure
-        run: cmake -S . -B build-valgrind -G Ninja -DCMAKE_BUILD_TYPE=Debug               -DCMAKE_DISABLE_FIND_PACKAGE_SDL3=ON -DCMAKE_DISABLE_FIND_PACKAGE_SDL3_image=ON               -DCMAKE_DISABLE_FIND_PACKAGE_SDL3_mixer=ON -DCMAKE_DISABLE_FIND_PACKAGE_SDL3_ttf=ON
+        run: cmake -S . -B build-valgrind -G Ninja -DCMAKE_BUILD_TYPE=Debug               -DCMAKE_DISABLE_FIND_PACKAGE_SDL3=ON -DCMAKE_DISABLE_FIND_PACKAGE_SDL3_image=ON               -DCMAKE_DISABLE_FIND_PACKAGE_SDL3_mixer=ON -DCMAKE_DISABLE_FIND_PACKAGE_SDL3_ttf=ON               -DCMAKE_DISABLE_FIND_PACKAGE_glm=ON -DCMAKE_DISABLE_FIND_PACKAGE_nlohmann_json=ON               -DCMAKE_DISABLE_FIND_PACKAGE_spdlog=ON -DCMAKE_DISABLE_FIND_PACKAGE_EnTT=ON
 
       - name: Build
         run: cmake --build build-valgrind
