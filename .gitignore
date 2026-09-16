@@ -67,7 +67,7 @@ debug.txt
 .qwen
 
 # 预编译依赖（CI 使用，Windows x64）
-!prebuilt/bin/*.dll
-!prebuilt/lib/*.lib
-!prebuilt/lib/x64/*.lib
-!prebuilt/lib/x64/*.dll
+!prebuilt/windows/bin/*.dll
+!prebuilt/windows/lib/*.lib
+!prebuilt/windows/lib/x64/*.lib
+!prebuilt/windows/lib/x64/*.dll

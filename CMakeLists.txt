@@ -7,8 +7,17 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# 指定平台对应的预编译依赖目录
+if(WIN32)
+    set(PREBUILT_DIR "${CMAKE_SOURCE_DIR}/prebuilt/windows")
+elseif(APPLE)
+    set(PREBUILT_DIR "${CMAKE_SOURCE_DIR}/prebuilt/macos")
+else()
+    set(PREBUILT_DIR "${CMAKE_SOURCE_DIR}/prebuilt/linux")
+endif()
+
 # 指定搜索路径（用于find_package在编译期查找库）
-set(CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/prebuilt)
+set(CMAKE_PREFIX_PATH ${PREBUILT_DIR})
 
 # 指定目标名称
 set(TARGET ${PROJECT_NAME}-${CMAKE_SYSTEM_NAME})
@@ -27,11 +36,11 @@ set(TARGET ${PROJECT_NAME}-${CMAKE_SYSTEM_NAME})
 if(APPLE)
     # macOS使用@executable_path相对路径
     set(CMAKE_INSTALL_RPATH "@executable_path;@executable_path/lib;@executable_path/../lib")
-    set(CMAKE_BUILD_RPATH "${CMAKE_SOURCE_DIR}/lib;${CMAKE_SOURCE_DIR}/prebuilt/lib")
+    set(CMAKE_BUILD_RPATH "${CMAKE_SOURCE_DIR}/lib;${PREBUILT_DIR}/lib")
 elseif(UNIX)
     # Linux使用$ORIGIN相对路径
     set(CMAKE_INSTALL_RPATH "$ORIGIN:$ORIGIN/lib:$ORIGIN/../lib")
-    set(CMAKE_BUILD_RPATH "${CMAKE_SOURCE_DIR}/lib:${CMAKE_SOURCE_DIR}/prebuilt/lib")
+    set(CMAKE_BUILD_RPATH "${CMAKE_SOURCE_DIR}/lib:${PREBUILT_DIR}/lib")
 endif()
 
 # 构建时使用RPATH，不需要设置LD_LIBRARY_PATH就能运行
@@ -97,7 +106,7 @@ macro(find_or_fetch_dependency DEP_NAME PACKAGE_NAME GIT_REPO GIT_TAG LOCAL_PATH
     endif()
     
     # 优先使用仓库内预编译依赖（prebuilt），未命中再回退到系统/默认搜索路径
-    find_package(${PACKAGE_NAME} QUIET PATHS "${CMAKE_SOURCE_DIR}/prebuilt" NO_DEFAULT_PATH)
+    find_package(${PACKAGE_NAME} QUIET PATHS "${PREBUILT_DIR}" "${PREBUILT_DIR}/cmake" "${PREBUILT_DIR}/lib/cmake" NO_DEFAULT_PATH)
     if(NOT ${PACKAGE_NAME}_FOUND AND NOT ${DEP_NAME}_FOUND)
         find_package(${PACKAGE_NAME} QUIET)
     endif()
@@ -529,10 +538,10 @@ if(WIN32)
     message(STATUS "配置Windows DLL自动检测和复制...")
     
     # 1. 复制prebuilt目录中的预编译DLL（如果存在）
-    if(EXISTS ${CMAKE_SOURCE_DIR}/prebuilt/bin)
+    if(EXISTS ${PREBUILT_DIR}/bin)
         add_custom_command(TARGET ${TARGET} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${CMAKE_SOURCE_DIR}/prebuilt/bin $<TARGET_FILE_DIR:${TARGET}>
+            ${PREBUILT_DIR}/bin $<TARGET_FILE_DIR:${TARGET}>
             COMMENT "复制预编译DLL到可执行文件目录"
         )
     endif()
