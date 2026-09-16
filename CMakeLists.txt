@@ -96,8 +96,11 @@ macro(find_or_fetch_dependency DEP_NAME PACKAGE_NAME GIT_REPO GIT_TAG LOCAL_PATH
         endif()
     endif()
     
-    # 首先尝试查找本地已安装的包
-    find_package(${PACKAGE_NAME} QUIET)
+    # 优先使用仓库内预编译依赖（prebuilt），未命中再回退到系统/默认搜索路径
+    find_package(${PACKAGE_NAME} QUIET PATHS "${CMAKE_SOURCE_DIR}/prebuilt" NO_DEFAULT_PATH)
+    if(NOT ${PACKAGE_NAME}_FOUND AND NOT ${DEP_NAME}_FOUND)
+        find_package(${PACKAGE_NAME} QUIET)
+    endif()
     
     if(${PACKAGE_NAME}_FOUND OR ${DEP_NAME}_FOUND)
         message(STATUS "  ✓ 找到本地安装的 ${PACKAGE_NAME}")

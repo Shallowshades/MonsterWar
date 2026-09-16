@@ -65,3 +65,9 @@ debug.txt
 .claude
 .codex
 .qwen
+
+# 预编译依赖（CI 使用，Windows x64）
+!prebuilt/bin/*.dll
+!prebuilt/lib/*.lib
+!prebuilt/lib/x64/*.lib
+!prebuilt/lib/x64/*.dll
