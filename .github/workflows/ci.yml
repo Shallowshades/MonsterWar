@@ -13,7 +13,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure CMake (use committed prebuilt deps)
+      - name: Configure CMake (prebuilt/windows)
         run: cmake -S . -B build
 
       - name: Build
@@ -25,15 +25,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fetch complete SDL deps (with submodules)
-        shell: bash
-        run: |
-          rm -rf external/SDL_mixer-release-3.2.0 external/SDL_image-release-3.2.4 external/SDL_ttf-release-3.2.2
-          git clone --depth 1 --branch release-3.2.0 --recursive https://github.com/libsdl-org/SDL_mixer.git external/SDL_mixer-release-3.2.0
-          git clone --depth 1 --branch release-3.2.4 --recursive https://github.com/libsdl-org/SDL_image.git external/SDL_image-release-3.2.4
-          git clone --depth 1 --branch release-3.2.2 --recursive https://github.com/libsdl-org/SDL_ttf.git external/SDL_ttf-release-3.2.2
-
-      - name: Install dependencies
+      - name: Install runtime/build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build build-essential cmake \
@@ -42,12 +34,8 @@ jobs:
             libasound2-dev libpulse-dev libdbus-1-dev libegl1-mesa-dev \
             libgles2-mesa-dev libgl1-mesa-dev libxkbcommon-dev
 
-      - name: Configure with ASan+UBSan
+      - name: Configure with ASan+UBSan (prebuilt/linux)
         run: cmake -S . -B build-asan -G Ninja -DCMAKE_BUILD_TYPE=Debug \
-              -DCMAKE_DISABLE_FIND_PACKAGE_SDL3=ON -DCMAKE_DISABLE_FIND_PACKAGE_SDL3_image=ON \
-              -DCMAKE_DISABLE_FIND_PACKAGE_SDL3_mixer=ON -DCMAKE_DISABLE_FIND_PACKAGE_SDL3_ttf=ON \
-              -DCMAKE_DISABLE_FIND_PACKAGE_glm=ON -DCMAKE_DISABLE_FIND_PACKAGE_nlohmann_json=ON \
-              -DCMAKE_DISABLE_FIND_PACKAGE_spdlog=ON -DCMAKE_DISABLE_FIND_PACKAGE_EnTT=ON \
               -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
               -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
               -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
@@ -65,15 +53,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fetch complete SDL deps (with submodules)
-        shell: bash
-        run: |
-          rm -rf external/SDL_mixer-release-3.2.0 external/SDL_image-release-3.2.4 external/SDL_ttf-release-3.2.2
-          git clone --depth 1 --branch release-3.2.0 --recursive https://github.com/libsdl-org/SDL_mixer.git external/SDL_mixer-release-3.2.0
-          git clone --depth 1 --branch release-3.2.4 --recursive https://github.com/libsdl-org/SDL_image.git external/SDL_image-release-3.2.4
-          git clone --depth 1 --branch release-3.2.2 --recursive https://github.com/libsdl-org/SDL_ttf.git external/SDL_ttf-release-3.2.2
-
-      - name: Install dependencies
+      - name: Install runtime/build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build build-essential cmake \
@@ -82,12 +62,8 @@ jobs:
             libasound2-dev libpulse-dev libdbus-1-dev libegl1-mesa-dev \
             libgles2-mesa-dev libgl1-mesa-dev libxkbcommon-dev
 
-      - name: Configure with TSan
+      - name: Configure with TSan (prebuilt/linux)
         run: cmake -S . -B build-tsan -G Ninja -DCMAKE_BUILD_TYPE=Debug \
-              -DCMAKE_DISABLE_FIND_PACKAGE_SDL3=ON -DCMAKE_DISABLE_FIND_PACKAGE_SDL3_image=ON \
-              -DCMAKE_DISABLE_FIND_PACKAGE_SDL3_mixer=ON -DCMAKE_DISABLE_FIND_PACKAGE_SDL3_ttf=ON \
-              -DCMAKE_DISABLE_FIND_PACKAGE_glm=ON -DCMAKE_DISABLE_FIND_PACKAGE_nlohmann_json=ON \
-              -DCMAKE_DISABLE_FIND_PACKAGE_spdlog=ON -DCMAKE_DISABLE_FIND_PACKAGE_EnTT=ON \
               -DCMAKE_C_FLAGS="-fsanitize=thread -fno-omit-frame-pointer" \
               -DCMAKE_CXX_FLAGS="-fsanitize=thread -fno-omit-frame-pointer" \
               -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=thread"
@@ -105,15 +81,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fetch complete SDL deps (with submodules)
-        shell: bash
-        run: |
-          rm -rf external/SDL_mixer-release-3.2.0 external/SDL_image-release-3.2.4 external/SDL_ttf-release-3.2.2
-          git clone --depth 1 --branch release-3.2.0 --recursive https://github.com/libsdl-org/SDL_mixer.git external/SDL_mixer-release-3.2.0
-          git clone --depth 1 --branch release-3.2.4 --recursive https://github.com/libsdl-org/SDL_image.git external/SDL_image-release-3.2.4
-          git clone --depth 1 --branch release-3.2.2 --recursive https://github.com/libsdl-org/SDL_ttf.git external/SDL_ttf-release-3.2.2
-
-      - name: Install dependencies
+      - name: Install runtime/build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build build-essential cmake valgrind \
@@ -122,8 +90,8 @@ jobs:
             libasound2-dev libpulse-dev libdbus-1-dev libegl1-mesa-dev \
             libgles2-mesa-dev libgl1-mesa-dev libxkbcommon-dev
 
-      - name: Configure
-        run: cmake -S . -B build-valgrind -G Ninja -DCMAKE_BUILD_TYPE=Debug               -DCMAKE_DISABLE_FIND_PACKAGE_SDL3=ON -DCMAKE_DISABLE_FIND_PACKAGE_SDL3_image=ON               -DCMAKE_DISABLE_FIND_PACKAGE_SDL3_mixer=ON -DCMAKE_DISABLE_FIND_PACKAGE_SDL3_ttf=ON               -DCMAKE_DISABLE_FIND_PACKAGE_glm=ON -DCMAKE_DISABLE_FIND_PACKAGE_nlohmann_json=ON               -DCMAKE_DISABLE_FIND_PACKAGE_spdlog=ON -DCMAKE_DISABLE_FIND_PACKAGE_EnTT=ON
+      - name: Configure (prebuilt/linux)
+        run: cmake -S . -B build-valgrind -G Ninja -DCMAKE_BUILD_TYPE=Debug
 
       - name: Build
         run: cmake --build build-valgrind
