@@ -25,7 +25,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ninja-build build-essential cmake git \
             libx11-dev libxext-dev libxrandr-dev libxinerama-dev libxcursor-dev \
-            libxi-dev libxss-dev libxxf86vm-dev libwayland-dev libdecor-0-dev \
+            libxi-dev libxtst-dev libxss-dev libxxf86vm-dev libwayland-dev libdecor-0-dev \
             libasound2-dev libpulse-dev libdbus-1-dev libegl1-mesa-dev \
             libgles2-mesa-dev libgl1-mesa-dev libxkbcommon-dev
 
